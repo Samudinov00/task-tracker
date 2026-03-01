@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Удалить задачу{% endblock %}
+{% block page_title %}Удалить задачу{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-5">
+    <div class="card shadow-sm border-danger">
+      <div class="card-body p-4 text-center">
+        <i class="bi bi-exclamation-triangle-fill text-danger fs-1 mb-3 d-block"></i>
+        <h5>Удалить задачу?</h5>
+        <p class="text-muted mb-4">
+          «<strong>{{ task.title }}</strong>» — задача в проекте
+          «{{ task.project.name }}».<br>
+          Будут удалены все файлы и комментарии к ней.
+        </p>
+        <form method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger me-2">
+            <i class="bi bi-trash me-1"></i>Удалить
+          </button>
+          <a href="{% url 'projects:kanban' task.project.pk %}"
+             class="btn btn-outline-secondary">Отмена</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Канбан — {{ project.name }}{% endblock %}
+{% block page_title %}{{ project.name }} — Канбан{% endblock %}
+
+{% block extra_css %}
+<style>
+  .kanban-board { overflow-x: auto; padding-bottom: 1rem; }
+  .kanban-column { min-width: 300px; max-width: 360px; flex: 1 1 300px; }
+  .kanban-col-body { min-height: 500px; }
+  .task-card { cursor: grab; }
+  .task-card:active { cursor: grabbing; }
+  .sortable-ghost { opacity: .25; border: 2px dashed #94a3b8 !important; }
+  .sortable-chosen { box-shadow: 0 8px 30px rgba(0,0,0,.18) !important; transform: rotate(1deg); }
+  .sortable-drag { opacity: 0; }
+  .kanban-drop-hint {
+    border: 2px dashed #cbd5e1;
+    border-radius: .625rem;
+    padding: 2rem;
+    text-align: center;
+    color: #94a3b8;
+    font-size: .9rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-1">
+        <li class="breadcrumb-item"><a href="{% url 'projects:project_list' %}">Проекты</a></li>
+        <li class="breadcrumb-item active">{{ project.name }}</li>
+      </ol>
+    </nav>
+    <h1 class="page-header-title">{{ project.name }}</h1>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'projects:project_detail' project.pk %}" class="btn btn-outline-secondary">
+      <i class="bi bi-list-task me-2"></i>Список задач
+    </a>
+    {% if user.is_manager %}
+    <a href="{% url 'projects:task_create' project.pk %}" class="btn btn-primary">
+      <i class="bi bi-plus-lg me-2"></i>Новая задача
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="kanban-board d-flex gap-3 align-items-start">
+
+  {% for col in kanban_columns %}
+  <div class="kanban-column">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold d-flex align-items-center gap-2">
+          <i class="bi {{ col.icon }} text-{{ col.color }}"></i>
+          {{ col.label }}
+        </span>
+        <span class="badge rounded-pill bg-{{ col.color }}-subtle text-{{ col.color }}-emphasis">
+          {{ col.tasks|length }}
+        </span>
+      </div>
+
+      <div class="card-body kanban-col-body p-2"
+           id="col-{{ col.key }}"
+           data-status="{{ col.key }}">
+
+        {% for task in col.tasks %}
+        <div class="card task-card mb-2 border {% if task.is_overdue %}border-danger{% endif %}"
+             data-task-id="{{ task.pk }}"
+             draggable="true">
+          <div class="card-body">
+
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <a href="{% url 'projects:task_detail' task.pk %}"
+                 class="text-decoration-none text-dark fw-semibold" style="font-size:.9rem;line-height:1.4">
+                {{ task.title }}
+              </a>
+              {% if user.is_manager %}
+              <div class="dropdown ms-2 flex-shrink-0">
+                <button class="btn btn-ghost btn-sm p-0 lh-1" style="width:22px" data-bs-toggle="dropdown"
+                        onclick="event.stopPropagation()">
+                  <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow">
+                  <li>
+                    <a class="dropdown-item" href="{% url 'projects:task_edit' task.pk %}">
+                      <i class="bi bi-pencil me-2"></i>Изменить
+                    </a>
+                  </li>
+                  <li>
+                    <a class="dropdown-item text-danger" href="{% url 'projects:task_delete' task.pk %}">
+                      <i class="bi bi-trash me-2"></i>Удалить
+                    </a>
+                  </li>
+                </ul>
+              </div>
+              {% endif %}
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-2">
+              <span class="text-muted" style="font-size:.82rem">
+                {% if task.assignee %}
+                  <span class="avatar-xs avatar-initials me-1" style="font-size:.5rem;width:18px;height:18px">{{ task.assignee.get_initials }}</span>
+                  {{ task.assignee.get_display_name|truncatechars:14 }}
+                {% else %}
+                  <span class="fst-italic">не назначен</span>
+                {% endif %}
+              </span>
+              {% if task.deadline %}
+              <span style="font-size:.82rem" class="{% if task.is_overdue %}text-danger fw-semibold{% else %}text-muted{% endif %}">
+                <i class="bi bi-calendar3 me-1"></i>{{ task.deadline|date:"d.m" }}
+              </span>
+              {% endif %}
+            </div>
+
+            <div class="d-flex align-items-center mt-2" style="font-size:.82rem">
+              <a href="{% url 'projects:task_detail' task.pk %}#comments"
+                 class="text-muted text-decoration-none ms-auto"
+                 onclick="event.stopPropagation()">
+                <i class="bi bi-chat-left me-1"></i>{{ task.comments.count }}
+              </a>
+            </div>
+
+          </div>
+        </div>
+
+        {% empty %}
+        <div class="kanban-drop-hint">
+          <i class="bi bi-plus-circle mb-2 d-block fs-4"></i>
+          Нет задач
+        </div>
+        {% endfor %}
+
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const CAN_DRAG = {{ user.is_manager|yesno:"true,false" }} ||
+                   {{ user.is_executor|yesno:"true,false" }};
+  const MOVE_URL = function(taskId) {
+    return '/tasks/' + taskId + '/move/';
+  };
+</script>
+<script src="{% static 'js/kanban.js' %}"></script>
+{% endblock %}

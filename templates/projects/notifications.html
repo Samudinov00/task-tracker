@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Уведомления{% endblock %}
+{% block page_title %}Уведомления{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-header-title">Уведомления</h1>
+    <div class="page-header-sub">Всего: {{ notifications|length }}</div>
+  </div>
+  <form method="post" action="{% url 'projects:notifications_mark_all_read' %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-outline-secondary">
+      <i class="bi bi-check2-all me-2"></i>Прочитать все
+    </button>
+  </form>
+</div>
+
+<div class="card">
+  {% for notif in notifications %}
+  <div class="px-4 py-3 {% if not forloop.last %}border-bottom{% endif %}
+              {% if not notif.is_read %}notif-unread{% endif %}">
+    <div class="d-flex align-items-start gap-4">
+      <div class="notif-icon-circle flex-shrink-0
+        {% if notif.notification_type == 'task_assigned' %}bg-primary-subtle text-primary
+        {% elif notif.notification_type == 'task_status' %}bg-warning-subtle text-warning
+        {% else %}bg-success-subtle text-success{% endif %}">
+        {% if notif.notification_type == 'task_assigned' %}
+          <i class="bi bi-person-check-fill"></i>
+        {% elif notif.notification_type == 'task_status' %}
+          <i class="bi bi-arrow-repeat"></i>
+        {% else %}
+          <i class="bi bi-chat-left-fill"></i>
+        {% endif %}
+      </div>
+      <div class="flex-grow-1">
+        <div class="{% if not notif.is_read %}fw-semibold{% endif %}" style="font-size:.95rem">
+          {{ notif.message }}
+        </div>
+        <div class="d-flex gap-4 mt-1">
+          <span class="text-muted" style="font-size:.85rem">{{ notif.created_at|date:"d.m.Y H:i" }}</span>
+          {% if notif.task %}
+          <a href="{% url 'projects:task_detail' notif.task.pk %}"
+             class="text-primary text-decoration-none" style="font-size:.85rem">
+            Перейти к задаче →
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      {% if not notif.is_read %}
+      <span class="badge bg-primary">Новое</span>
+      {% endif %}
+    </div>
+  </div>
+  {% empty %}
+  <div class="card-body text-center py-5">
+    <i class="bi bi-bell-slash text-muted mb-3 d-block" style="font-size:3rem"></i>
+    <h5 class="text-muted">Уведомлений нет</h5>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

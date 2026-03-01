@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'projects:project_list' %}">Проекты</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'projects:kanban' project.pk %}">{{ project.name }}</a></li>
+      <li class="breadcrumb-item active">{{ title }}</li>
+    </ol>
+  </nav>
+</div>
+
+<div class="card">
+  <div class="card-header fw-semibold">{{ title }}</div>
+  <div class="card-body p-4">
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+
+      {% if user.is_executor %}
+        <div class="row g-4">
+          <div class="col-md-6">
+            <label class="form-label">{{ form.status.label }}</label>
+            {{ form.status }}
+          </div>
+        </div>
+
+      {% else %}
+        <div class="row g-4 mb-4">
+          <div class="col-12">
+            <label class="form-label">{{ form.title.label }}</label>
+            {{ form.title }}
+            {% if form.title.errors %}
+              <div class="invalid-feedback d-block">{{ form.title.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-12">
+            <label class="form-label">{{ form.description.label }}</label>
+            {{ form.description }}
+          </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+          <div class="col-md-6">
+            <label class="form-label">{{ form.status.label }}</label>
+            {{ form.status }}
+          </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+          <div class="col-md-6">
+            <label class="form-label">{{ form.assignee.label }}</label>
+            {{ form.assignee }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">{{ form.deadline.label }}</label>
+            {{ form.deadline }}
+          </div>
+        </div>
+
+      {% endif %}
+
+      <div class="d-flex gap-3 pt-2 border-top mt-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-save me-2"></i>Сохранить
+        </button>
+        {% if task %}
+        <a href="{% url 'projects:task_detail' task.pk %}" class="btn btn-outline-secondary">Отмена</a>
+        {% else %}
+        <a href="{% url 'projects:kanban' project.pk %}" class="btn btn-outline-secondary">Отмена</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+

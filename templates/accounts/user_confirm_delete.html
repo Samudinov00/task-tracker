@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Удалить пользователя{% endblock %}
+{% block page_title %}Удалить пользователя{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-5">
+    <div class="card shadow-sm border-danger">
+      <div class="card-body p-4 text-center">
+        <i class="bi bi-exclamation-triangle-fill text-danger fs-1 mb-3 d-block"></i>
+        <h5>Удалить пользователя?</h5>
+        <p class="text-muted mb-4">
+          Вы собираетесь удалить <strong>{{ object.get_display_name }}</strong>
+          (@{{ object.username }}). Это действие нельзя отменить.
+        </p>
+        <form method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger me-2">
+            <i class="bi bi-trash me-1"></i>Удалить
+          </button>
+          <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary">
+            Отмена
+          </a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

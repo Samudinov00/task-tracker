@@ -1,0 +1,183 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}TaskTracker{% endblock %}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+{% if user.is_authenticated %}
+<div class="d-flex" id="wrapper">
+
+  {# ── Боковая панель ─────────────────────────────────────────────────────── #}
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <i class="bi bi-kanban-fill"></i>
+      <span>TaskTracker</span>
+    </div>
+
+    <div class="sidebar-nav">
+      <div class="sidebar-section-label">Навигация</div>
+
+      {% if user.is_manager %}
+      <a href="{% url 'projects:dashboard' %}"
+         class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i><span>Дашборд</span>
+      </a>
+      {% endif %}
+
+      <a href="{% url 'projects:project_list' %}"
+         class="sidebar-link {% if 'project' in request.resolver_match.url_name or 'kanban' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-folder2-open"></i><span>Проекты</span>
+      </a>
+
+      {% if user.is_manager %}
+      <a href="{% url 'accounts:user_list' %}"
+         class="sidebar-link {% if 'user' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-people-fill"></i><span>Пользователи</span>
+      </a>
+      {% endif %}
+
+      <a href="{% url 'projects:notifications' %}"
+         class="sidebar-link {% if 'notification' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-bell-fill"></i>
+        <span>Уведомления</span>
+        {% if unread_notifications_count > 0 %}
+        <span class="badge bg-danger rounded-pill ms-auto">{{ unread_notifications_count }}</span>
+        {% endif %}
+      </a>
+
+      <hr class="sidebar-divider">
+
+      <div class="sidebar-section-label">Аккаунт</div>
+
+      <a href="{% url 'accounts:profile' %}"
+         class="sidebar-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+        <i class="bi bi-person-circle"></i><span>Профиль</span>
+      </a>
+
+      <a href="{% url 'accounts:logout' %}" class="sidebar-link text-danger-soft">
+        <i class="bi bi-box-arrow-left"></i><span>Выход</span>
+      </a>
+    </div>
+  </nav>
+
+  {# ── Основной контент ───────────────────────────────────────────────────── #}
+  <div id="page-content-wrapper">
+
+    {# Топ-бар #}
+    <header class="topbar">
+      <button class="btn btn-sm btn-ghost" id="sidebarToggle" title="Свернуть меню">
+        <i class="bi bi-list fs-5"></i>
+      </button>
+
+      <span class="topbar-title">{% block page_title %}{% endblock %}</span>
+
+      <div class="ms-auto d-flex align-items-center gap-2">
+
+        {# Колокольчик #}
+        <div class="dropdown">
+          <button class="btn btn-ghost btn-sm position-relative" id="bellBtn"
+                  data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                  aria-expanded="false">
+            <i class="bi bi-bell fs-5"></i>
+            <span class="notif-badge d-none" id="notifBadge">0</span>
+          </button>
+
+          <div class="dropdown-menu dropdown-menu-end notif-dropdown shadow-lg p-0"
+               id="notifDropdown">
+            <div class="notif-header px-3 py-2 d-flex justify-content-between align-items-center">
+              <span class="fw-semibold">Уведомления</span>
+              <button class="btn btn-link btn-sm p-0 text-muted" id="markAllReadBtn">
+                Прочитать все
+              </button>
+            </div>
+            <div id="notifList" class="notif-list">
+              <div class="text-center text-muted py-3 small">Загрузка…</div>
+            </div>
+            <div class="notif-footer text-center py-2">
+              <a href="{% url 'projects:notifications' %}" class="btn btn-link btn-sm">
+                Все уведомления
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {# Аватар / меню пользователя #}
+        <div class="dropdown">
+          <button class="btn btn-ghost btn-sm d-flex align-items-center gap-2"
+                  data-bs-toggle="dropdown">
+            <div class="avatar-xs avatar-initials">{{ user.get_initials }}</div>
+            <span class="d-none d-lg-inline">{{ user.get_display_name }}</span>
+            <i class="bi bi-chevron-down small"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end shadow">
+            <li>
+              <span class="dropdown-item-text text-muted small">
+                {{ user.get_role_display }}
+              </span>
+            </li>
+            <li><hr class="dropdown-divider my-1"></li>
+            <li>
+              <a class="dropdown-item" href="{% url 'accounts:profile' %}">
+                <i class="bi bi-person me-2"></i>Профиль
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item text-danger" href="{% url 'accounts:logout' %}">
+                <i class="bi bi-box-arrow-left me-2"></i>Выход
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </header>
+
+    {# Flash-сообщения #}
+    <div class="px-4 pt-3">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    </div>
+
+    {# Контент страницы #}
+    <main class="page-content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+{% else %}
+  {# Страницы без авторизации (логин) #}
+  {% block auth_content %}{% endblock %}
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script src="{% static 'js/notifications.js' %}"></script>
+<script>
+  // Сворачивание боковой панели
+  document.getElementById('sidebarToggle')?.addEventListener('click', () => {
+    document.getElementById('wrapper').classList.toggle('sidebar-collapsed');
+    localStorage.setItem(
+      'sidebar_collapsed',
+      document.getElementById('wrapper').classList.contains('sidebar-collapsed')
+    );
+  });
+  // Восстановить состояние из localStorage
+  if (localStorage.getItem('sidebar_collapsed') === 'true') {
+    document.getElementById('wrapper')?.classList.add('sidebar-collapsed');
+  }
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

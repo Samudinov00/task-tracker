@@ -1,0 +1,22 @@
+# Все текстовые файлы — LF в репозитории
+* text=auto eol=lf
+
+# Shell-скрипты — строго LF (иначе не запустятся на Linux)
+*.sh text eol=lf
+
+# Nginx конфиги — LF
+nginx/**  text eol=lf
+
+# Python
+*.py  text eol=lf
+
+# Бинарные файлы — без изменений
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.woff binary
+*.woff2 binary
+*.ttf  binary
+*.eot  binary

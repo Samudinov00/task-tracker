@@ -1,0 +1,55 @@
+# Git
+.git
+.gitignore
+
+# Секреты — никогда не попадают в образ
+.env
+.env.*
+!.env.example
+
+# База данных разработки
+db.sqlite3
+
+# Python-кэш
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Виртуальное окружение
+.venv/
+venv/
+env/
+
+# Собранные статические файлы (collectstatic запускается в entrypoint)
+staticfiles/
+
+# Медиафайлы
+media/
+
+# Docker-файлы (не нужны внутри образа)
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# DevOps-скрипты
+deploy.sh
+ufw-setup.sh
+nginx/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Редакторы и IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

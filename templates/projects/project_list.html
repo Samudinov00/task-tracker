@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}Проекты{% endblock %}
+{% block page_title %}Проекты{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-header-title">Проекты</h1>
+    <div class="page-header-sub">Найдено: {{ projects|length }}</div>
+  </div>
+  {% if user.is_manager %}
+  <a href="{% url 'projects:project_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-2"></i>Новый проект
+  </a>
+  {% endif %}
+</div>
+
+<div class="d-flex flex-column gap-3">
+  {% for project in projects %}
+  <div class="card project-card">
+    <div class="card-body p-4">
+      <div class="d-flex justify-content-between align-items-start">
+        <div class="flex-grow-1 me-4">
+          <div class="d-flex align-items-center gap-3 mb-2">
+            <h5 class="fw-bold mb-0">{{ project.name }}</h5>
+            {% if project.description %}
+              <span class="text-muted">·</span>
+              <span class="text-muted">{{ project.description|truncatechars:100 }}</span>
+            {% endif %}
+          </div>
+          <div class="d-flex align-items-center gap-3">
+            <div class="progress flex-grow-1" style="height:8px;border-radius:4px;max-width:400px">
+              <div class="progress-bar bg-success" role="progressbar" style="width:{{ project.get_progress }}%"></div>
+            </div>
+            <span class="fw-semibold text-success">{{ project.get_progress }}%</span>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+          <a href="{% url 'projects:kanban' project.pk %}" class="btn btn-primary">
+            <i class="bi bi-kanban me-1"></i>Канбан
+          </a>
+          <a href="{% url 'projects:project_detail' project.pk %}" class="btn btn-outline-secondary">
+            <i class="bi bi-list-task me-1"></i>Задачи
+          </a>
+          {% if user.is_manager %}
+          <div class="dropdown">
+            <button class="btn btn-outline-secondary" data-bs-toggle="dropdown">
+              <i class="bi bi-three-dots-vertical"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li>
+                <a class="dropdown-item" href="{% url 'projects:project_edit' project.pk %}">
+                  <i class="bi bi-pencil me-2"></i>Редактировать
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item text-danger" href="{% url 'projects:project_delete' project.pk %}">
+                  <i class="bi bi-trash me-2"></i>Удалить
+                </a>
+              </li>
+            </ul>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="card-footer d-flex gap-4 text-muted">
+      <span><i class="bi bi-person me-1"></i>{{ project.manager.get_display_name }}</span>
+      <span><i class="bi bi-calendar me-1"></i>{{ project.created_at|date:"d.m.Y" }}</span>
+    </div>
+  </div>
+  {% empty %}
+  <div class="card">
+    <div class="card-body text-center py-5">
+      <i class="bi bi-folder2 text-muted mb-3 d-block" style="font-size:3rem"></i>
+      <h5 class="text-muted mb-1">
+        {% if user.is_manager %}Создайте первый проект{% else %}Вы не добавлены ни в один проект{% endif %}
+      </h5>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

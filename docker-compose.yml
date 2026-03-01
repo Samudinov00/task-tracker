@@ -1,0 +1,93 @@
+services:
+
+  # ── PostgreSQL ───────────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${DB_NAME}
+      POSTGRES_USER:     ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ── Django (Gunicorn) ────────────────────────────────────────────────────────
+  web:
+    # В CI/CD образ собирается отдельно и пушится в реестр.
+    # На сервере переменная DOCKER_IMAGE задаётся в .env.
+    # Для локальной разработки образ собирается командой: docker compose build
+    image: ${DOCKER_IMAGE:-task-tracker:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_HOST: db          # переопределяем хост на имя сервиса
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - staticfiles:/app/staticfiles
+      - media:/app/media
+    networks:
+      - backend
+      - frontend
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD-SHELL",
+             "curl -f http://localhost:8000/accounts/login/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s   # время на migrate + collectstatic
+
+  # ── Nginx (Reverse Proxy) ────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - staticfiles:/app/staticfiles:ro
+      - media:/app/media:ro
+      # Certbot: webroot для верификации домена и сами сертификаты
+      - certbot_webroot:/var/www/certbot:ro
+      - certbot_certs:/etc/letsencrypt:ro
+    depends_on:
+      web:
+        condition: service_healthy
+    networks:
+      - frontend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost/health/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  postgres_data:    # данные PostgreSQL
+  staticfiles:      # Django collectstatic → Nginx
+  media:            # загружаемые пользователями файлы
+  certbot_webroot:  # ACME-challenge для Let's Encrypt
+  certbot_certs:    # TLS-сертификаты
+
+networks:
+  backend:          # db ↔ web (изолирован от nginx)
+    driver: bridge
+  frontend:         # web ↔ nginx
+    driver: bridge
