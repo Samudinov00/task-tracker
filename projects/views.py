@@ -19,6 +19,7 @@ from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
+from accounts.models import CustomUser
 from .forms import CommentForm, ProjectForm, TaskForm, TaskStatusForm
 from .models import Comment, Notification, Project, Task
 
@@ -205,6 +206,21 @@ def kanban(request, project_pk):
     qs = project.tasks.select_related('assignee').prefetch_related('comments')
     if request.user.is_executor():
         qs = qs.filter(assignee=request.user)
+
+    assignee_filter = None
+    executors = []
+    if request.user.is_manager():
+        executors = list(
+            CustomUser.objects.filter(assigned_tasks__project=project).distinct().order_by('first_name', 'username')
+        )
+        assignee_id = request.GET.get('assignee')
+        if assignee_id == 'none':
+            qs = qs.filter(assignee__isnull=True)
+            assignee_filter = 'none'
+        elif assignee_id:
+            qs = qs.filter(assignee_id=assignee_id)
+            assignee_filter = assignee_id
+
     kanban_columns = [
         {
             'key': 'not_started', 'label': 'Не начата',
@@ -235,6 +251,8 @@ def kanban(request, project_pk):
     return render(request, 'projects/kanban.html', {
         'project': project,
         'kanban_columns': kanban_columns,
+        'executors': executors,
+        'assignee_filter': assignee_filter,
     })
 
 

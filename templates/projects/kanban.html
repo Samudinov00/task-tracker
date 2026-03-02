@@ -48,6 +48,27 @@
   </div>
 </div>
 
+{% if user.is_manager and executors %}
+<div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
+  <span class="text-muted me-1" style="font-size:.9rem">Исполнитель:</span>
+  <a href="?{% if request.GET.urlencode %}{{ request.GET.urlencode|cut:'assignee='|cut:request.GET.assignee }}{% endif %}"
+     class="btn btn-sm {% if not assignee_filter %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+    Все
+  </a>
+  {% for executor in executors %}
+  <a href="?assignee={{ executor.pk }}"
+     class="btn btn-sm {% if assignee_filter == executor.pk|stringformat:'s' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+    <span class="avatar-xs avatar-initials me-1" style="font-size:.5rem;width:18px;height:18px;display:inline-flex">{{ executor.get_initials }}</span>
+    {{ executor.get_display_name }}
+  </a>
+  {% endfor %}
+  <a href="?assignee=none"
+     class="btn btn-sm {% if assignee_filter == 'none' %}btn-outline-danger{% else %}btn-outline-secondary{% endif %}">
+    Не назначен
+  </a>
+</div>
+{% endif %}
+
 <div class="kanban-board d-flex gap-3 align-items-start">
 
   {% for col in kanban_columns %}
