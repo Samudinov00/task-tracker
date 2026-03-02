@@ -5,6 +5,8 @@
   Comment      — комментарий к задаче
   Notification — уведомление для пользователя
 """
+import os
+
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
@@ -205,3 +207,14 @@ class Notification(models.Model):
 
     def __str__(self):
         return self.message
+
+
+# ── Вложения к задаче ─────────────────────────────────────────────────────────
+class TaskAttachment(models.Model):
+    task        = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='attachments')
+    file        = models.FileField(upload_to='task_attachments/')
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def filename(self):
+        return os.path.basename(self.file.name)

@@ -26,6 +26,9 @@ urlpatterns = [
     # AJAX: drag & drop
     path('tasks/<int:task_pk>/move/',               views.task_move,                   name='task_move'),
 
+    # Вложения
+    path('attachments/<int:pk>/delete/',            views.attachment_delete,            name='attachment_delete'),
+
     # Логи статусов
     path('status-logs/', views.status_logs, name='status_logs'),
 

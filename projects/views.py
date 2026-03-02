@@ -20,8 +20,8 @@ from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from accounts.models import CustomUser
-from .forms import CommentForm, ProjectForm, TaskForm, TaskStatusForm
-from .models import Comment, Notification, Project, Task, TaskStatusLog
+from .forms import AttachmentForm, CommentForm, ProjectForm, TaskForm, TaskStatusForm
+from .models import Comment, Notification, Project, Task, TaskAttachment, TaskStatusLog
 
 
 # ─────────────────────────── Хелперы ──────────────────────────────────────────
@@ -330,34 +330,50 @@ def task_detail(request, pk):
     if user.is_client() and not task.clients.filter(pk=user.pk).exists():
         raise PermissionDenied
 
-    comment_form = CommentForm()
+    comment_form    = CommentForm()
+    attachment_form = AttachmentForm()
 
-    if request.method == 'POST' and 'comment_submit' in request.POST:
-        comment_form = CommentForm(request.POST)
-        if comment_form.is_valid():
-            comment = comment_form.save(commit=False)
-            comment.task   = task
-            comment.author = user
-            comment.save()
+    if request.method == 'POST':
+        if 'comment_submit' in request.POST:
+            comment_form = CommentForm(request.POST)
+            if comment_form.is_valid():
+                comment = comment_form.save(commit=False)
+                comment.task   = task
+                comment.author = user
+                comment.save()
 
-            # Уведомления
-            recipients = set()
-            if task.assignee and task.assignee != user:
-                recipients.add(task.assignee)
-            if task.project.manager != user:
-                recipients.add(task.project.manager)
-            _notify(
-                recipients, task, Notification.TYPE_COMMENT,
-                f'{user.get_display_name()} прокомментировал задачу «{task.title}»',
-            )
+                # Уведомления
+                recipients = set()
+                if task.assignee and task.assignee != user:
+                    recipients.add(task.assignee)
+                if task.project.manager != user:
+                    recipients.add(task.project.manager)
+                _notify(
+                    recipients, task, Notification.TYPE_COMMENT,
+                    f'{user.get_display_name()} прокомментировал задачу «{task.title}»',
+                )
 
-            messages.success(request, 'Комментарий добавлен.')
-            return redirect('projects:task_detail', pk=task.pk)
+                messages.success(request, 'Комментарий добавлен.')
+                return redirect('projects:task_detail', pk=task.pk)
+
+        elif 'attachment_submit' in request.POST:
+            if not (user.is_manager() or user.is_executor()):
+                raise PermissionDenied
+            attachment_form = AttachmentForm(request.POST, request.FILES)
+            if attachment_form.is_valid():
+                TaskAttachment.objects.create(
+                    task=task,
+                    file=attachment_form.cleaned_data['file'],
+                    uploaded_by=user,
+                )
+                messages.success(request, 'Файл загружен.')
+                return redirect('projects:task_detail', pk=task.pk)
 
     can_edit = user.is_manager() or (user.is_executor() and task.assignee == user)
     return render(request, 'projects/task_detail.html', {
         'task': task,
         'comment_form': comment_form,
+        'attachment_form': attachment_form,
         'can_edit': can_edit,
     })
 
@@ -542,3 +558,27 @@ def notifications_recent_api(request):
 def notifications_mark_all_read(request):
     request.user.notifications.filter(is_read=False).update(is_read=True)
     return JsonResponse({'success': True})
+
+
+# ─────────────────────────── Вложения ─────────────────────────────────────────
+
+@login_required
+@require_POST
+def attachment_delete(request, pk):
+    attachment = get_object_or_404(TaskAttachment, pk=pk)
+    user = request.user
+    task = attachment.task
+
+    # Только менеджер проекта или загрузивший файл могут удалять
+    is_manager = user.is_manager() and task.project.manager == user
+    is_uploader = attachment.uploaded_by == user
+    if not (is_manager or is_uploader):
+        raise PermissionDenied
+
+    # Удаляем файл с диска
+    if attachment.file and attachment.file.storage.exists(attachment.file.name):
+        attachment.file.delete(save=False)
+    attachment.delete()
+
+    messages.success(request, 'Вложение удалено.')
+    return redirect('projects:task_detail', pk=task.pk)

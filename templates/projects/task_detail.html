@@ -79,6 +79,61 @@
     </div>
   </div>
 
+  {# ── Вложения ───────────────────────────────────────────────────────────── #}
+  <div class="col-lg-8">
+    <div class="card mb-4">
+      <div class="card-header fw-semibold">
+        <i class="bi bi-paperclip me-2"></i>Вложения ({{ task.attachments.count }})
+      </div>
+      <div class="card-body p-0">
+        {% for att in task.attachments.all %}
+        <div class="px-4 py-3 d-flex align-items-center gap-3 {% if not forloop.last %}border-bottom{% endif %}">
+          <i class="bi bi-file-earmark-pdf text-danger fs-5"></i>
+          <div class="flex-grow-1">
+            <a href="{{ att.file.url }}" target="_blank" class="text-decoration-none fw-semibold">{{ att.filename }}</a>
+            <div class="text-muted" style="font-size:.8rem">
+              {{ att.uploaded_by.get_display_name }} &middot; {{ att.uploaded_at|date:"d.m.Y H:i" }}
+            </div>
+          </div>
+          {% if user.is_manager or att.uploaded_by == user %}
+          <form method="post" action="{% url 'projects:attachment_delete' att.pk %}" class="mb-0">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить"
+                    onclick="return confirm('Удалить файл?')">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+          {% endif %}
+        </div>
+        {% empty %}
+        <div class="text-center text-muted py-3">Вложений нет.</div>
+        {% endfor %}
+
+        {% if user.is_manager or user.is_executor %}
+        <div class="border-top p-4">
+          <form method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+            <div class="mb-2">
+              {{ attachment_form.file.label_tag }}
+              {{ attachment_form.file }}
+              {% if attachment_form.file.errors %}
+              <div class="text-danger mt-1" style="font-size:.875rem">
+                {% for error in attachment_form.file.errors %}{{ error }}{% endfor %}
+              </div>
+              {% endif %}
+            </div>
+            <div class="text-end">
+              <button type="submit" name="attachment_submit" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-upload me-1"></i>Загрузить PDF
+              </button>
+            </div>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
   {# ── Правая колонка: метаданные ─────────────────────────────────────────── #}
   <div class="col-lg-4">
     <div class="card sticky-top" style="top:80px">

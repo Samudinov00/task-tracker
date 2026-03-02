@@ -86,6 +86,19 @@ class TaskStatusForm(forms.ModelForm):
         }
 
 
+# ── Вложение (PDF) ────────────────────────────────────────────────────────────
+class AttachmentForm(forms.Form):
+    file = forms.FileField(label='PDF файл')
+
+    def clean_file(self):
+        f = self.cleaned_data['file']
+        if not f.name.lower().endswith('.pdf'):
+            raise forms.ValidationError('Разрешены только PDF файлы.')
+        if f.size > 10 * 1024 * 1024:
+            raise forms.ValidationError('Файл не должен превышать 10 МБ.')
+        return f
+
+
 # ── Комментарий ───────────────────────────────────────────────────────────────
 class CommentForm(forms.ModelForm):
     class Meta:
