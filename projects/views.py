@@ -188,7 +188,7 @@ def project_detail(request, pk):
         'project': project,
         'tasks': tasks,
         'not_started_count': tasks.filter(status='not_started').count(),
-        'in_work_count': tasks.filter(status__in=['cell_reg', 'design', 'controls', 'tables']).count(),
+        'in_work_count': tasks.filter(status='development').count(),
         'test_count': tasks.filter(status__in=['test_nsk', 'test_district']).count(),
         'production_count': tasks.filter(status='production').count(),
     }
@@ -212,24 +212,9 @@ def kanban(request, project_pk):
             'tasks': qs.filter(status='not_started').order_by('order'),
         },
         {
-            'key': 'cell_reg', 'label': 'Регистрация ячеек',
-            'color': 'info', 'icon': 'bi-grid-3x3',
-            'tasks': qs.filter(status='cell_reg').order_by('order'),
-        },
-        {
-            'key': 'design', 'label': 'Разработка дизайна',
-            'color': 'primary', 'icon': 'bi-palette',
-            'tasks': qs.filter(status='design').order_by('order'),
-        },
-        {
-            'key': 'controls', 'label': 'Разработка контролей',
-            'color': 'primary', 'icon': 'bi-sliders',
-            'tasks': qs.filter(status='controls').order_by('order'),
-        },
-        {
-            'key': 'tables', 'label': 'Выходные таблицы',
-            'color': 'primary', 'icon': 'bi-table',
-            'tasks': qs.filter(status='tables').order_by('order'),
+            'key': 'development', 'label': 'Разработка',
+            'color': 'primary', 'icon': 'bi-code-slash',
+            'tasks': qs.filter(status='development').order_by('order'),
         },
         {
             'key': 'test_nsk', 'label': 'Тест НСК',

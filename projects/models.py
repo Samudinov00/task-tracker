@@ -59,20 +59,14 @@ class Project(models.Model):
 # ── Задача ────────────────────────────────────────────────────────────────────
 class Task(models.Model):
     STATUS_NOT_STARTED   = 'not_started'
-    STATUS_CELL_REG      = 'cell_reg'
-    STATUS_DESIGN        = 'design'
-    STATUS_CONTROLS      = 'controls'
-    STATUS_TABLES        = 'tables'
+    STATUS_DEVELOPMENT   = 'development'
     STATUS_TEST_NSK      = 'test_nsk'
     STATUS_TEST_DISTRICT = 'test_district'
     STATUS_PRODUCTION    = 'production'
 
     STATUS_CHOICES = [
         (STATUS_NOT_STARTED,   'Не начата'),
-        (STATUS_CELL_REG,      'Регистрация ячеек'),
-        (STATUS_DESIGN,        'Разработка дизайна'),
-        (STATUS_CONTROLS,      'Разработка контролей'),
-        (STATUS_TABLES,        'Разработка выходных таблиц'),
+        (STATUS_DEVELOPMENT,   'Разработка'),
         (STATUS_TEST_NSK,      'Тест НСК'),
         (STATUS_TEST_DISTRICT, 'Тест район'),
         (STATUS_PRODUCTION,    'Промышленная эксплуатация'),
@@ -80,10 +74,7 @@ class Task(models.Model):
 
     STATUS_BADGE = {
         STATUS_NOT_STARTED:   'secondary',
-        STATUS_CELL_REG:      'info',
-        STATUS_DESIGN:        'primary',
-        STATUS_CONTROLS:      'primary',
-        STATUS_TABLES:        'primary',
+        STATUS_DEVELOPMENT:   'primary',
         STATUS_TEST_NSK:      'warning',
         STATUS_TEST_DISTRICT: 'warning',
         STATUS_PRODUCTION:    'success',
