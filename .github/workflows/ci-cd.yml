@@ -157,7 +157,8 @@ jobs:
             cd ${{ secrets.DEPLOY_PATH }}
 
             echo "==> Pulling latest code..."
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
 
             echo "==> Logging in to GHCR..."
             echo "${{ secrets.GITHUB_TOKEN }}" | \
