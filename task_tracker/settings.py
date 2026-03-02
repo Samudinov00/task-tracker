@@ -107,6 +107,15 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# HTTPS — доверять заголовку от nginx
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# CSRF — разрешённые origin-ы (Django 4.0+)
+CSRF_TRUSTED_ORIGINS = [
+    'https://ddssrd.xyz',
+    'https://www.ddssrd.xyz',
+]
+
 # Аутентификация
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'

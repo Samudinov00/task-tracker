@@ -79,6 +79,14 @@ services:
       retries: 3
       start_period: 10s
 
+  # ── Certbot (Let's Encrypt) ──────────────────────────────────────────────────
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - certbot_certs:/etc/letsencrypt
+      - certbot_webroot:/var/www/certbot
+    # Запускается вручную через deploy-скрипт, не как постоянный сервис
+
 volumes:
   postgres_data:    # данные PostgreSQL
   staticfiles:      # Django collectstatic → Nginx

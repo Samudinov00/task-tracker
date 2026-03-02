@@ -170,8 +170,24 @@ jobs:
             echo "==> Starting new container (zero-downtime)..."
             docker compose up -d --no-deps --wait web
 
+            echo "==> Setting up SSL certificate..."
+            if ! docker compose exec -T nginx test -f /etc/letsencrypt/live/ddssrd.xyz/fullchain.pem 2>/dev/null; then
+              echo "==> Obtaining new SSL certificate from Let's Encrypt..."
+              docker compose run --rm certbot certonly --webroot \
+                -w /var/www/certbot \
+                -d ddssrd.xyz -d www.ddssrd.xyz \
+                --email samudinovilim.d@gmail.com \
+                --agree-tos --no-eff-email --non-interactive
+            else
+              echo "==> Renewing SSL certificate (if needed)..."
+              docker compose run --rm certbot renew --quiet
+            fi
+
+            echo "==> Activating HTTPS config (first time only)..."
+            cp -n nginx/conf.d/ssl.conf.template nginx/conf.d/ssl.conf 2>/dev/null || true
+
             echo "==> Reloading nginx config..."
-            docker compose exec nginx nginx -s reload
+            docker compose exec -T nginx nginx -s reload
 
             echo "==> Removing unused images..."
             docker image prune -f
