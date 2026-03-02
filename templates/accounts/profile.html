@@ -7,7 +7,9 @@
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-lg-6">
-    <div class="card shadow-sm">
+
+    <!-- Профиль -->
+    <div class="card shadow-sm mb-4">
       <div class="card-body p-4">
         <div class="text-center mb-4">
           <div class="avatar-lg avatar-initials mx-auto mb-2">{{ user.get_initials }}</div>
@@ -31,12 +33,37 @@
               {% endif %}
             </div>
           {% endfor %}
-          <button type="submit" class="btn btn-primary w-100">
+          <button type="submit" name="save_profile" class="btn btn-primary w-100">
             <i class="bi bi-save me-1"></i>Сохранить
           </button>
         </form>
       </div>
     </div>
+
+    <!-- Смена пароля -->
+    <div class="card shadow-sm">
+      <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-lock me-2"></i>Изменить пароль</h6>
+      </div>
+      <div class="card-body p-4">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% for field in password_form %}
+            <div class="mb-3">
+              <label class="form-label">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}
+                <div class="invalid-feedback d-block">{{ field.errors.0 }}</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+          <button type="submit" name="save_password" class="btn btn-outline-primary w-100">
+            <i class="bi bi-key me-1"></i>Изменить пароль
+          </button>
+        </form>
+      </div>
+    </div>
+
   </div>
 </div>
 {% endblock %}

@@ -3,6 +3,7 @@ from django.contrib.auth.forms import (
     AuthenticationForm,
     UserCreationForm,
     UserChangeForm,
+    PasswordChangeForm,
 )
 from .models import CustomUser
 
@@ -87,5 +88,16 @@ class ProfileForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs['class'] = 'form-control'
+
+
+# ── Смена пароля ──────────────────────────────────────────────────────────────
+class CustomPasswordChangeForm(PasswordChangeForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['old_password'].label = 'Текущий пароль'
+        self.fields['new_password1'].label = 'Новый пароль'
+        self.fields['new_password2'].label = 'Повторите новый пароль'
         for field in self.fields.values():
             field.widget.attrs['class'] = 'form-control'

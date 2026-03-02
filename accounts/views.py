@@ -6,8 +6,9 @@ from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from django.contrib import messages
 
+from django.contrib.auth import update_session_auth_hash
 from .models import CustomUser
-from .forms import CustomAuthenticationForm, UserCreateForm, UserUpdateForm, ProfileForm
+from .forms import CustomAuthenticationForm, UserCreateForm, UserUpdateForm, ProfileForm, CustomPasswordChangeForm
 
 
 # ── Миксин: доступ только менеджерам ─────────────────────────────────────────
@@ -42,16 +43,31 @@ def logout_view(request):
 # ── Профиль текущего пользователя ────────────────────────────────────────────
 @login_required
 def profile_view(request):
-    form = ProfileForm(
-        request.POST or None,
+    profile_form = ProfileForm(
+        request.POST if 'save_profile' in request.POST else None,
         request.FILES or None,
         instance=request.user,
     )
-    if request.method == 'POST' and form.is_valid():
-        form.save()
-        messages.success(request, 'Профиль успешно обновлён.')
-        return redirect('accounts:profile')
-    return render(request, 'accounts/profile.html', {'form': form})
+    password_form = CustomPasswordChangeForm(
+        request.user,
+        request.POST if 'save_password' in request.POST else None,
+    )
+
+    if request.method == 'POST':
+        if 'save_profile' in request.POST and profile_form.is_valid():
+            profile_form.save()
+            messages.success(request, 'Профиль успешно обновлён.')
+            return redirect('accounts:profile')
+        if 'save_password' in request.POST and password_form.is_valid():
+            password_form.save()
+            update_session_auth_hash(request, password_form.user)
+            messages.success(request, 'Пароль успешно изменён.')
+            return redirect('accounts:profile')
+
+    return render(request, 'accounts/profile.html', {
+        'form': profile_form,
+        'password_form': password_form,
+    })
 
 
 # ── Управление пользователями (только менеджер) ───────────────────────────────
