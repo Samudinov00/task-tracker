@@ -376,6 +376,7 @@ def task_create(request, project_pk):
             task.project    = project
             task.created_by = request.user
             task.save()
+            form.save_m2m()
 
             if task.assignee:
                 _notify(
