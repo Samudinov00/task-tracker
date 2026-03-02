@@ -26,6 +26,9 @@ urlpatterns = [
     # AJAX: drag & drop
     path('tasks/<int:task_pk>/move/',               views.task_move,                   name='task_move'),
 
+    # Логи статусов
+    path('status-logs/', views.status_logs, name='status_logs'),
+
     # Уведомления
     path('notifications/',                          views.notifications_list,           name='notifications'),
     path('notifications/count/',                    views.notifications_count_api,      name='notifications_count'),

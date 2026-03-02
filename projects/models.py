@@ -123,6 +123,26 @@ class Task(models.Model):
         return False
 
 
+# ── Лог смены статусов ────────────────────────────────────────────────────────
+class TaskStatusLog(models.Model):
+    task       = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='status_logs', verbose_name='Задача')
+    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='status_changes', verbose_name='Кто изменил')
+    old_status = models.CharField(max_length=20, verbose_name='Старый статус')
+    new_status = models.CharField(max_length=20, verbose_name='Новый статус')
+    changed_at = models.DateTimeField(auto_now_add=True, verbose_name='Время изменения')
+
+    class Meta:
+        verbose_name = 'Лог статуса'
+        verbose_name_plural = 'Логи статусов'
+        ordering = ['-changed_at']
+
+    def get_old_status_display(self):
+        return dict(Task.STATUS_CHOICES).get(self.old_status, self.old_status)
+
+    def get_new_status_display(self):
+        return dict(Task.STATUS_CHOICES).get(self.new_status, self.new_status)
+
+
 # ── Комментарий ───────────────────────────────────────────────────────────────
 class Comment(models.Model):
     task   = models.ForeignKey(

@@ -42,6 +42,10 @@
          class="sidebar-link {% if 'user' in request.resolver_match.url_name %}active{% endif %}">
         <i class="bi bi-people-fill"></i><span>Пользователи</span>
       </a>
+      <a href="{% url 'projects:status_logs' %}"
+         class="sidebar-link {% if request.resolver_match.url_name == 'status_logs' %}active{% endif %}">
+        <i class="bi bi-journal-text"></i><span>Логи статусов</span>
+      </a>
       {% endif %}
 
       <a href="{% url 'projects:notifications' %}"

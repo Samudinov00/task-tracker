@@ -21,7 +21,7 @@ from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from accounts.models import CustomUser
 from .forms import CommentForm, ProjectForm, TaskForm, TaskStatusForm
-from .models import Comment, Notification, Project, Task
+from .models import Comment, Notification, Project, Task, TaskStatusLog
 
 
 # ─────────────────────────── Хелперы ──────────────────────────────────────────
@@ -290,8 +290,9 @@ def task_move(request, task_pk):
     for idx, tid in enumerate(column_ids):
         Task.objects.filter(pk=tid, project=task.project).update(order=idx)
 
-    # Уведомления при смене статуса
+    # Уведомления и лог при смене статуса
     if old_status != new_status:
+        TaskStatusLog.objects.create(task=task, changed_by=user, old_status=old_status, new_status=new_status)
         label = dict(Task.STATUS_CHOICES).get(new_status)
         recipients = set()
         if task.assignee and task.assignee != user:
@@ -419,6 +420,7 @@ def task_edit(request, pk):
                     )
 
             if old_status != saved_task.status:
+                TaskStatusLog.objects.create(task=saved_task, changed_by=user, old_status=old_status, new_status=saved_task.status)
                 label = dict(Task.STATUS_CHOICES).get(saved_task.status)
                 recipients = set()
                 if saved_task.assignee and saved_task.assignee != user:
@@ -456,6 +458,41 @@ def task_delete(request, pk):
         return redirect('projects:kanban', project_pk=project_pk)
 
     return render(request, 'projects/task_confirm_delete.html', {'task': task})
+
+
+# ─────────────────────────── Логи статусов ────────────────────────────────────
+
+@login_required
+def status_logs(request):
+    if not request.user.is_manager():
+        raise PermissionDenied
+
+    logs = TaskStatusLog.objects.select_related(
+        'task__project', 'changed_by'
+    ).filter(task__project__manager=request.user)
+
+    # Фильтр по проекту
+    project_id = request.GET.get('project')
+    if project_id:
+        logs = logs.filter(task__project_id=project_id)
+
+    # Фильтр по исполнителю
+    executor_id = request.GET.get('executor')
+    if executor_id:
+        logs = logs.filter(changed_by_id=executor_id)
+
+    projects = Project.objects.filter(manager=request.user)
+    executors = CustomUser.objects.filter(
+        status_changes__task__project__manager=request.user
+    ).distinct()
+
+    return render(request, 'projects/status_logs.html', {
+        'logs': logs[:200],
+        'projects': projects,
+        'executors': executors,
+        'selected_project': project_id,
+        'selected_executor': executor_id,
+    })
 
 
 # ─────────────────────────── Уведомления ──────────────────────────────────────
