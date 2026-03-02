@@ -92,6 +92,26 @@ class ProfileForm(forms.ModelForm):
             field.widget.attrs['class'] = 'form-control'
 
 
+# ── Сброс пароля пользователя менеджером ─────────────────────────────────────
+class SetPasswordForm(forms.Form):
+    new_password1 = forms.CharField(
+        label='Новый пароль',
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+    )
+    new_password2 = forms.CharField(
+        label='Повторите пароль',
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        p1 = cleaned_data.get('new_password1')
+        p2 = cleaned_data.get('new_password2')
+        if p1 and p2 and p1 != p2:
+            raise forms.ValidationError('Пароли не совпадают.')
+        return cleaned_data
+
+
 # ── Смена пароля ──────────────────────────────────────────────────────────────
 class CustomPasswordChangeForm(PasswordChangeForm):
     def __init__(self, *args, **kwargs):

@@ -56,6 +56,9 @@
             <a href="{% url 'accounts:user_edit' u.pk %}" class="btn btn-sm btn-outline-secondary me-1" title="Редактировать">
               <i class="bi bi-pencil"></i>
             </a>
+            <a href="{% url 'accounts:user_set_password' u.pk %}" class="btn btn-sm btn-outline-warning me-1" title="Сбросить пароль">
+              <i class="bi bi-key"></i>
+            </a>
             <a href="{% url 'accounts:user_delete' u.pk %}" class="btn btn-sm btn-outline-danger" title="Удалить">
               <i class="bi bi-trash"></i>
             </a>

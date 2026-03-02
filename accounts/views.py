@@ -2,13 +2,13 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, View
 from django.urls import reverse_lazy
 from django.contrib import messages
 
 from django.contrib.auth import update_session_auth_hash
 from .models import CustomUser
-from .forms import CustomAuthenticationForm, UserCreateForm, UserUpdateForm, ProfileForm, CustomPasswordChangeForm
+from .forms import CustomAuthenticationForm, UserCreateForm, UserUpdateForm, ProfileForm, CustomPasswordChangeForm, SetPasswordForm
 
 
 # ── Миксин: доступ только менеджерам ─────────────────────────────────────────
@@ -114,6 +114,28 @@ class UserUpdateView(ManagerRequiredMixin, UpdateView):
     def form_valid(self, form):
         messages.success(self.request, 'Данные пользователя обновлены.')
         return super().form_valid(form)
+
+
+class UserSetPasswordView(ManagerRequiredMixin, View):
+    template_name = 'accounts/user_set_password.html'
+
+    def get_user(self, pk):
+        return get_object_or_404(CustomUser, pk=pk)
+
+    def get(self, request, pk):
+        target = self.get_user(pk)
+        form = SetPasswordForm()
+        return render(request, self.template_name, {'form': form, 'target': target})
+
+    def post(self, request, pk):
+        target = self.get_user(pk)
+        form = SetPasswordForm(request.POST)
+        if form.is_valid():
+            target.set_password(form.cleaned_data['new_password1'])
+            target.save()
+            messages.success(request, f'Пароль пользователя «{target.username}» сброшен.')
+            return redirect('accounts:user_list')
+        return render(request, self.template_name, {'form': form, 'target': target})
 
 
 class UserDeleteView(ManagerRequiredMixin, DeleteView):
