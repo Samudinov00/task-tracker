@@ -95,6 +95,11 @@ class Task(models.Model):
         on_delete=models.SET_NULL, null=True, blank=True,
         related_name='assigned_tasks', verbose_name='Исполнитель',
     )
+    clients = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name='client_tasks', verbose_name='Клиенты',
+    )
     deadline = models.DateField(null=True, blank=True, verbose_name='Дедлайн')
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

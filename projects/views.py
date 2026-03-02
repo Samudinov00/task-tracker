@@ -183,8 +183,10 @@ def project_detail(request, pk):
     _check_project_access(request.user, project)
 
     tasks = project.tasks.select_related('assignee')
-    if request.user.is_executor() or request.user.is_client():
+    if request.user.is_executor():
         tasks = tasks.filter(assignee=request.user)
+    elif request.user.is_client():
+        tasks = tasks.filter(clients=request.user)
     ctx = {
         'project': project,
         'tasks': tasks,
@@ -204,8 +206,10 @@ def kanban(request, project_pk):
     _check_project_access(request.user, project)
 
     qs = project.tasks.select_related('assignee').prefetch_related('comments')
-    if request.user.is_executor() or request.user.is_client():
+    if request.user.is_executor():
         qs = qs.filter(assignee=request.user)
+    elif request.user.is_client():
+        qs = qs.filter(clients=request.user)
 
     assignee_filter = None
     executors = []
@@ -319,8 +323,11 @@ def task_detail(request, pk):
     user = request.user
     _check_project_access(user, task.project)
 
-    # Исполнитель и клиент видят только свои задачи
-    if (user.is_executor() or user.is_client()) and task.assignee != user:
+    # Исполнитель видит только свои задачи
+    if user.is_executor() and task.assignee != user:
+        raise PermissionDenied
+    # Клиент видит только задачи где он указан в поле clients
+    if user.is_client() and not task.clients.filter(pk=user.pk).exists():
         raise PermissionDenied
 
     comment_form = CommentForm()

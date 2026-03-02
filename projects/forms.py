@@ -33,9 +33,16 @@ class ProjectForm(forms.ModelForm):
 
 # ── Задача (менеджер) ─────────────────────────────────────────────────────────
 class TaskForm(forms.ModelForm):
+    clients = forms.ModelMultipleChoiceField(
+        queryset=CustomUser.objects.none(),
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label='Клиенты',
+    )
+
     class Meta:
         model = Task
-        fields = ['title', 'description', 'status', 'assignee', 'deadline']
+        fields = ['title', 'description', 'status', 'assignee', 'clients', 'deadline']
         labels = {
             'title': 'Название',
             'description': 'Описание',
@@ -58,8 +65,10 @@ class TaskForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if project:
             self.fields['assignee'].queryset = project.executors.all()
+            self.fields['clients'].queryset = project.clients.all()
         else:
             self.fields['assignee'].queryset = CustomUser.objects.filter(role='executor')
+            self.fields['clients'].queryset = CustomUser.objects.filter(role='client')
         self.fields['assignee'].empty_label = '— Не назначен —'
 
         # Если редактируем, установим формат даты
