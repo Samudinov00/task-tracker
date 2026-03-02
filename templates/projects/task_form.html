@@ -61,6 +61,29 @@
           </div>
         </div>
 
+        {% if user.is_manager and form.clients.field.queryset.exists %}
+        <div class="row g-4 mb-4">
+          <div class="col-12">
+            <label class="form-label">Клиенты</label>
+            <div class="border rounded p-3">
+              {% for choice in form.clients %}
+                <div class="form-check">
+                  {{ choice.tag }}
+                  <label class="form-check-label" for="{{ choice.id_for_label }}">
+                    {{ choice.choice_label }}
+                  </label>
+                </div>
+              {% empty %}
+                <span class="text-muted">Нет клиентов в проекте</span>
+              {% endfor %}
+            </div>
+            {% if form.clients.errors %}
+              <div class="invalid-feedback d-block">{{ form.clients.errors.0 }}</div>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+
       {% endif %}
 
       <div class="d-flex gap-3 pt-2 border-top mt-2">
