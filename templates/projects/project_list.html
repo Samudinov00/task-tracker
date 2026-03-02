@@ -37,10 +37,10 @@
           </div>
         </div>
         <div class="d-flex align-items-center gap-2 flex-shrink-0">
-          <a href="{% url 'projects:kanban' project.pk %}" class="btn btn-primary">
+          <a href="{% url 'projects:kanban' project.uuid %}" class="btn btn-primary">
             <i class="bi bi-kanban me-1"></i>Канбан
           </a>
-          <a href="{% url 'projects:project_detail' project.pk %}" class="btn btn-outline-secondary">
+          <a href="{% url 'projects:project_detail' project.uuid %}" class="btn btn-outline-secondary">
             <i class="bi bi-list-task me-1"></i>Задачи
           </a>
           {% if user.is_manager %}
@@ -50,12 +50,12 @@
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
               <li>
-                <a class="dropdown-item" href="{% url 'projects:project_edit' project.pk %}">
+                <a class="dropdown-item" href="{% url 'projects:project_edit' project.uuid %}">
                   <i class="bi bi-pencil me-2"></i>Редактировать
                 </a>
               </li>
               <li>
-                <a class="dropdown-item text-danger" href="{% url 'projects:project_delete' project.pk %}">
+                <a class="dropdown-item text-danger" href="{% url 'projects:project_delete' project.uuid %}">
                   <i class="bi bi-trash me-2"></i>Удалить
                 </a>
               </li>

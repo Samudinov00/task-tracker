@@ -6,6 +6,7 @@
   Notification — уведомление для пользователя
 """
 import os
+import uuid as uuid_lib
 
 from django.db import models
 from django.conf import settings
@@ -14,6 +15,7 @@ from django.utils import timezone
 
 # ── Проект ────────────────────────────────────────────────────────────────────
 class Project(models.Model):
+    uuid = models.UUIDField(default=uuid_lib.uuid4, unique=True, editable=False)
     name = models.CharField(max_length=200, verbose_name='Название')
     description = models.TextField(blank=True, verbose_name='Описание')
 
@@ -82,6 +84,7 @@ class Task(models.Model):
         STATUS_PRODUCTION:    'success',
     }
 
+    uuid        = models.UUIDField(default=uuid_lib.uuid4, unique=True, editable=False)
     title       = models.CharField(max_length=200, verbose_name='Название')
     description = models.TextField(blank=True, verbose_name='Описание')
     project     = models.ForeignKey(

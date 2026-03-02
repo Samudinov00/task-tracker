@@ -129,7 +129,7 @@ class ProjectCreateView(ManagerRequiredMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse('projects:kanban', kwargs={'project_pk': self.object.pk})
+        return reverse('projects:kanban', kwargs={'project_uuid': self.object.uuid})
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -143,13 +143,13 @@ class ProjectUpdateView(ManagerRequiredMixin, UpdateView):
     template_name = 'projects/project_form.html'
 
     def get_object(self, queryset=None):
-        obj = super().get_object(queryset)
+        obj = get_object_or_404(Project, uuid=self.kwargs['uuid'])
         if obj.manager != self.request.user:
             raise PermissionDenied
         return obj
 
     def get_success_url(self):
-        return reverse('projects:project_detail', kwargs={'pk': self.object.pk})
+        return reverse('projects:project_detail', kwargs={'uuid': self.object.uuid})
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -167,7 +167,7 @@ class ProjectDeleteView(ManagerRequiredMixin, DeleteView):
     success_url = reverse_lazy('projects:project_list')
 
     def get_object(self, queryset=None):
-        obj = super().get_object(queryset)
+        obj = get_object_or_404(Project, uuid=self.kwargs['uuid'])
         if obj.manager != self.request.user:
             raise PermissionDenied
         return obj
@@ -178,8 +178,8 @@ class ProjectDeleteView(ManagerRequiredMixin, DeleteView):
 
 
 @login_required
-def project_detail(request, pk):
-    project = get_object_or_404(Project, pk=pk)
+def project_detail(request, uuid):
+    project = get_object_or_404(Project, uuid=uuid)
     _check_project_access(request.user, project)
 
     tasks = project.tasks.select_related('assignee')
@@ -201,8 +201,8 @@ def project_detail(request, pk):
 # ─────────────────────────── Канбан-доска ─────────────────────────────────────
 
 @login_required
-def kanban(request, project_pk):
-    project = get_object_or_404(Project, pk=project_pk)
+def kanban(request, project_uuid):
+    project = get_object_or_404(Project, uuid=project_uuid)
     _check_project_access(request.user, project)
 
     qs = project.tasks.select_related('assignee').prefetch_related('comments')
@@ -264,8 +264,8 @@ def kanban(request, project_pk):
 
 @login_required
 @require_POST
-def task_move(request, task_pk):
-    task = get_object_or_404(Task, pk=task_pk)
+def task_move(request, task_uuid):
+    task = get_object_or_404(Task, uuid=task_uuid)
     user = request.user
 
     # Клиент не может двигать карточки
@@ -280,7 +280,7 @@ def task_move(request, task_pk):
 
     data = json.loads(request.body)
     new_status  = data.get('status')
-    column_ids  = data.get('column_ids', [])   # упорядоченный список ID задач в колонке
+    column_ids  = data.get('column_ids', [])   # упорядоченный список UUID задач в колонке
 
     valid_statuses = [s[0] for s in Task.STATUS_CHOICES]
     if new_status not in valid_statuses:
@@ -291,8 +291,8 @@ def task_move(request, task_pk):
     task.save(update_fields=['status', 'updated_at'])
 
     # Обновить порядок всей колонки
-    for idx, tid in enumerate(column_ids):
-        Task.objects.filter(pk=tid, project=task.project).update(order=idx)
+    for idx, tuuid in enumerate(column_ids):
+        Task.objects.filter(uuid=tuuid, project=task.project).update(order=idx)
 
     # Уведомления и лог при смене статуса
     if old_status != new_status:
@@ -314,11 +314,11 @@ def task_move(request, task_pk):
 # ─────────────────────────── Задачи ───────────────────────────────────────────
 
 @login_required
-def task_detail(request, pk):
+def task_detail(request, uuid):
     task = get_object_or_404(
         Task.objects.select_related('assignee', 'project', 'created_by')
                     .prefetch_related('comments__author'),
-        pk=pk,
+        uuid=uuid,
     )
     user = request.user
     _check_project_access(user, task.project)
@@ -354,7 +354,7 @@ def task_detail(request, pk):
                 )
 
                 messages.success(request, 'Комментарий добавлен.')
-                return redirect('projects:task_detail', pk=task.pk)
+                return redirect('projects:task_detail', uuid=task.uuid)
 
         elif 'attachment_submit' in request.POST:
             if not (user.is_manager() or user.is_executor()):
@@ -367,7 +367,7 @@ def task_detail(request, pk):
                     uploaded_by=user,
                 )
                 messages.success(request, 'Файл загружен.')
-                return redirect('projects:task_detail', pk=task.pk)
+                return redirect('projects:task_detail', uuid=task.uuid)
 
     can_edit = user.is_manager() or (user.is_executor() and task.assignee == user)
     return render(request, 'projects/task_detail.html', {
@@ -379,11 +379,11 @@ def task_detail(request, pk):
 
 
 @login_required
-def task_create(request, project_pk):
+def task_create(request, project_uuid):
     if not request.user.is_manager():
         raise PermissionDenied
 
-    project = get_object_or_404(Project, pk=project_pk, manager=request.user)
+    project = get_object_or_404(Project, uuid=project_uuid, manager=request.user)
 
     if request.method == 'POST':
         form = TaskForm(project=project, data=request.POST)
@@ -401,7 +401,7 @@ def task_create(request, project_pk):
                 )
 
             messages.success(request, f'Задача «{task.title}» создана.')
-            return redirect('projects:kanban', project_pk=project.pk)
+            return redirect('projects:kanban', project_uuid=project.uuid)
     else:
         form = TaskForm(project=project)
 
@@ -413,8 +413,8 @@ def task_create(request, project_pk):
 
 
 @login_required
-def task_edit(request, pk):
-    task = get_object_or_404(Task, pk=pk)
+def task_edit(request, uuid):
+    task = get_object_or_404(Task, uuid=uuid)
     user = request.user
     project = task.project
 
@@ -457,7 +457,7 @@ def task_edit(request, pk):
                 )
 
             messages.success(request, 'Задача обновлена.')
-            return redirect('projects:task_detail', pk=saved_task.pk)
+            return redirect('projects:task_detail', uuid=saved_task.uuid)
     else:
         form = FormClass(**form_kwargs, instance=task)
 
@@ -470,16 +470,16 @@ def task_edit(request, pk):
 
 
 @login_required
-def task_delete(request, pk):
-    task = get_object_or_404(Task, pk=pk)
+def task_delete(request, uuid):
+    task = get_object_or_404(Task, uuid=uuid)
     if not request.user.is_manager() or task.project.manager != request.user:
         raise PermissionDenied
 
-    project_pk = task.project.pk
+    project_uuid = task.project.uuid
     if request.method == 'POST':
         task.delete()
         messages.success(request, 'Задача удалена.')
-        return redirect('projects:kanban', project_pk=project_pk)
+        return redirect('projects:kanban', project_uuid=project_uuid)
 
     return render(request, 'projects/task_confirm_delete.html', {'task': task})
 
@@ -547,7 +547,7 @@ def notifications_recent_api(request):
             'message': n.message,
             'created_at': n.created_at.strftime('%d.%m %H:%M'),
             'task_id': n.task.pk if n.task else None,
-            'task_url': reverse('projects:task_detail', kwargs={'pk': n.task.pk}) if n.task else None,
+            'task_url': reverse('projects:task_detail', kwargs={'uuid': n.task.uuid}) if n.task else None,
         })
     total = request.user.notifications.filter(is_read=False).count()
     return JsonResponse({'notifications': data, 'count': total})

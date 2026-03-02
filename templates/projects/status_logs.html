@@ -55,7 +55,7 @@
         <tr>
           <td style="font-size:.85rem; white-space:nowrap">{{ log.changed_at|date:"d.m.Y H:i" }}</td>
           <td>
-            <a href="{% url 'projects:task_detail' log.task.pk %}" class="text-decoration-none">
+            <a href="{% url 'projects:task_detail' log.task.uuid %}" class="text-decoration-none">
               {{ log.task.title|truncatechars:40 }}
             </a>
           </td>

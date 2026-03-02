@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(psql:*)",
+      "Bash(where:*)",
+      "Bash(__NEW_LINE_d6f9bb611bef76bd__ ls:*)",
+      "Bash(__NEW_LINE_321576316e9b90c7__ ls:*)",
+      "Bash(choco search:*)",
+      "Bash(winget search:*)",
+      "Bash(USE_SQLITE=True python:*)",
+      "Bash(USE_SQLITE=True ALLOWED_HOSTS=localhost,127.0.0.1,testserver python:*)",
+      "Bash(where git:*)",
+      "Bash(ssh-keygen:*)",
+      "Bash(cat:*)",
+      "Bash(nslookup:*)",
+      "Bash(curl:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker.exe compose:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(wsl.exe docker:*)"
+    ]
+  }
+}

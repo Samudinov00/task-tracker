@@ -85,7 +85,7 @@
       </div>
       <div class="list-group list-group-flush">
         {% for task in recent_tasks %}
-        <a href="{% url 'projects:task_detail' task.pk %}"
+        <a href="{% url 'projects:task_detail' task.uuid %}"
            class="list-group-item list-group-item-action py-3 px-4">
           <div class="d-flex justify-content-between align-items-center">
             <div>
@@ -112,7 +112,7 @@
       </div>
       <div class="list-group list-group-flush">
         {% for project in projects %}
-        <a href="{% url 'projects:kanban' project.pk %}"
+        <a href="{% url 'projects:kanban' project.uuid %}"
            class="list-group-item list-group-item-action py-3 px-4">
           <div class="fw-semibold mb-2">{{ project.name }}</div>
           <div class="d-flex align-items-center gap-3">

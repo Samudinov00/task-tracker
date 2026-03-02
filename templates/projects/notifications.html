@@ -41,7 +41,7 @@
         <div class="d-flex gap-4 mt-1">
           <span class="text-muted" style="font-size:.85rem">{{ notif.created_at|date:"d.m.Y H:i" }}</span>
           {% if notif.task %}
-          <a href="{% url 'projects:task_detail' notif.task.pk %}"
+          <a href="{% url 'projects:task_detail' notif.task.uuid %}"
              class="text-primary text-decoration-none" style="font-size:.85rem">
             Перейти к задаче →
           </a>

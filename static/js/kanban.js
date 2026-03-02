@@ -45,7 +45,7 @@
 
       onEnd: function (evt) {
         const card      = evt.item;
-        const taskId    = card.dataset.taskId;
+        const taskUuid  = card.dataset.taskUuid;
         const newCol    = evt.to;
         const newStatus = newCol.dataset.status;
 
@@ -53,13 +53,13 @@
         refreshHint(evt.from);
         refreshHint(newCol);
 
-        // Собираем упорядоченный список id задач в целевой колонке
+        // Собираем упорядоченный список uuid задач в целевой колонке
         const colIds = Array.from(
           newCol.querySelectorAll('.task-card')
-        ).map(c => parseInt(c.dataset.taskId, 10));
+        ).map(c => c.dataset.taskUuid);
 
         // AJAX-запрос на сервер
-        fetch(MOVE_URL(taskId), {
+        fetch(MOVE_URL(taskUuid), {
           method:  'POST',
           headers: {
             'Content-Type': 'application/json',

@@ -37,11 +37,11 @@
     <h1 class="page-header-title">{{ project.name }}</h1>
   </div>
   <div class="d-flex gap-2">
-    <a href="{% url 'projects:project_detail' project.pk %}" class="btn btn-outline-secondary">
+    <a href="{% url 'projects:project_detail' project.uuid %}" class="btn btn-outline-secondary">
       <i class="bi bi-list-task me-2"></i>Список задач
     </a>
     {% if user.is_manager %}
-    <a href="{% url 'projects:task_create' project.pk %}" class="btn btn-primary">
+    <a href="{% url 'projects:task_create' project.uuid %}" class="btn btn-primary">
       <i class="bi bi-plus-lg me-2"></i>Новая задача
     </a>
     {% endif %}
@@ -90,12 +90,12 @@
 
         {% for task in col.tasks %}
         <div class="card task-card mb-2 border {% if task.is_overdue %}border-danger{% endif %}"
-             data-task-id="{{ task.pk }}"
+             data-task-uuid="{{ task.uuid }}"
              draggable="true">
           <div class="card-body">
 
             <div class="d-flex justify-content-between align-items-start mb-2">
-              <a href="{% url 'projects:task_detail' task.pk %}"
+              <a href="{% url 'projects:task_detail' task.uuid %}"
                  class="text-decoration-none text-dark fw-semibold" style="font-size:.9rem;line-height:1.4">
                 {{ task.title }}
               </a>
@@ -107,12 +107,12 @@
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow">
                   <li>
-                    <a class="dropdown-item" href="{% url 'projects:task_edit' task.pk %}">
+                    <a class="dropdown-item" href="{% url 'projects:task_edit' task.uuid %}">
                       <i class="bi bi-pencil me-2"></i>Изменить
                     </a>
                   </li>
                   <li>
-                    <a class="dropdown-item text-danger" href="{% url 'projects:task_delete' task.pk %}">
+                    <a class="dropdown-item text-danger" href="{% url 'projects:task_delete' task.uuid %}">
                       <i class="bi bi-trash me-2"></i>Удалить
                     </a>
                   </li>
@@ -138,7 +138,7 @@
             </div>
 
             <div class="d-flex align-items-center mt-2" style="font-size:.82rem">
-              <a href="{% url 'projects:task_detail' task.pk %}#comments"
+              <a href="{% url 'projects:task_detail' task.uuid %}#comments"
                  class="text-muted text-decoration-none ms-auto"
                  onclick="event.stopPropagation()">
                 <i class="bi bi-chat-left me-1"></i>{{ task.comments.count }}
@@ -167,8 +167,8 @@
 <script>
   const CAN_DRAG = {{ user.is_manager|yesno:"true,false" }} ||
                    {{ user.is_executor|yesno:"true,false" }};
-  const MOVE_URL = function(taskId) {
-    return '/tasks/' + taskId + '/move/';
+  const MOVE_URL = function(taskUuid) {
+    return '/t/' + taskUuid + '/move/';
   };
 </script>
 <script src="{% static 'js/kanban.js' %}"></script>
