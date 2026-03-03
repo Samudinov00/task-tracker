@@ -14,6 +14,7 @@
 <body>
 
 {% if user.is_authenticated %}
+<div id="wrapper">
 
 {# ── Боковая панель ─────────────────────────────────────────────────────── #}
 <nav class="sidebar" id="sidebar">
@@ -164,7 +165,8 @@
     <main class="page-content">
       {% block content %}{% endblock %}
     </main>
-</div>
+  </div>{# /page-content-wrapper #}
+</div>{# /wrapper #}
 
 {% else %}
   {# Страницы без авторизации (логин) #}

@@ -30,6 +30,9 @@ body {
   line-height: 1.6;
 }
 
+/* ── Обёртка ────────────────────────────────────────────────── */
+#wrapper { min-height: 100vh; display: flex; }
+
 /* Предотвратить разрыв рамок длинными словами */
 .card, .card-body, .card-header, .list-group-item {
   overflow-wrap: break-word;
@@ -148,7 +151,10 @@ body.sidebar-collapsed #page-content-wrapper { margin-left: 56px; }
   transition: margin-left var(--transition);
   flex: 1;
   min-width: 0;
-  /* НЕ overflow:hidden здесь — убьёт position:sticky топбара */
+  /* Создаём stacking context — на мобильном backdrop (z:1040) гарантированно
+     перекрывает весь контент, а кнопки в сайдбаре (z:1050) остаются выше */
+  position: relative;
+  z-index: 1;
 }
 
 /* ── Топ-бар ────────────────────────────────────────────────── */
@@ -162,8 +168,8 @@ body.sidebar-collapsed #page-content-wrapper { margin-left: 56px; }
   gap: 1rem;
   position: sticky;
   top: 0;
-  /* z-index выше бэкдропа (1040), чтобы кнопка тогла работала при открытом сайдбаре */
-  z-index: 1045;
+  /* z-index нужен чтобы топбар при скролле оставался выше контента страницы */
+  z-index: 10;
 }
 .topbar-title {
   font-size: 1rem;
@@ -430,8 +436,9 @@ main.page-content {
 /* ── Мобильная адаптация ────────────────────────────────────── */
 
 /* Затемнение за сайдбаром (мобильный overlay).
-   z-index-иерархия: sidebar 1050 > topbar 1045 > backdrop 1040 > контент
-   Топбар выше backdrop → кнопка тогла всегда доступна */
+   z-index иерархия: sidebar 1050 > backdrop 1040 > page-content-wrapper 1
+   Весь контент (включая топбар) внутри page-content-wrapper и ниже backdrop —
+   любой тап по контенту при открытом сайдбаре закрывает его через backdrop */
 .sidebar-backdrop {
   display: none;
   position: fixed;
