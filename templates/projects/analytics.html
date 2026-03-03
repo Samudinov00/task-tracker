@@ -19,24 +19,24 @@
   <div>
     <h1 class="page-header-title">Аналитика</h1>
   </div>
-  <div class="d-flex gap-2">
+  <div class="d-flex flex-wrap gap-2">
     <a href="{% url 'projects:export_tasks_csv' %}{% if selected_project %}?project={{ selected_project.uuid }}{% endif %}"
-       class="btn btn-outline-secondary">
-      <i class="bi bi-filetype-csv me-2"></i>Экспорт CSV
+       class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-filetype-csv me-1"></i><span class="d-none d-sm-inline">Экспорт </span>CSV
     </a>
     <a href="{% url 'projects:export_tasks_excel' %}{% if selected_project %}?project={{ selected_project.uuid }}{% endif %}"
-       class="btn btn-outline-success">
-      <i class="bi bi-file-earmark-excel me-2"></i>Экспорт Excel
+       class="btn btn-outline-success btn-sm">
+      <i class="bi bi-file-earmark-excel me-1"></i><span class="d-none d-sm-inline">Экспорт </span>Excel
     </a>
   </div>
 </div>
 
 {# Фильтр по проекту #}
 <div class="card mb-4">
-  <div class="card-body py-2">
-    <form method="get" class="d-flex align-items-center gap-3">
-      <label class="fw-semibold text-muted mb-0" style="white-space:nowrap">Проект:</label>
-      <select name="project" class="form-select form-select-sm" style="max-width:300px" onchange="this.form.submit()">
+  <div class="card-body py-3">
+    <form method="get" class="d-flex flex-wrap align-items-center gap-2">
+      <label class="fw-semibold text-muted mb-0">Проект:</label>
+      <select name="project" class="form-select form-select-sm flex-grow-1" style="max-width:300px" onchange="this.form.submit()">
         <option value="">— Все проекты —</option>
         {% for project in projects %}
         <option value="{{ project.uuid }}" {% if selected_project and selected_project.uuid == project.uuid %}selected{% endif %}>
@@ -171,7 +171,7 @@ new Chart(document.getElementById('statusChart'), {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { position: 'right' },
+      legend: { position: window.innerWidth < 576 ? 'bottom' : 'right' },
     },
   },
 });

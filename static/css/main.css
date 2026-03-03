@@ -22,6 +22,12 @@
 /* ── Сброс / общее ─────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
+/* Запрет горизонтального скролла страницы */
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   font-size: 15px;
@@ -31,7 +37,14 @@ body {
 }
 
 /* ── Обёртка ────────────────────────────────────────────────── */
-#wrapper { min-height: 100vh; display: flex; }
+#wrapper { min-height: 100vh; display: flex; overflow-x: hidden; }
+
+/* Предотвратить разрыв рамок длинными словами */
+.card, .card-body, .card-header, .list-group-item {
+  overflow-wrap: break-word;
+  word-break: break-word;
+  min-width: 0;
+}
 
 /* ── Боковая панель ─────────────────────────────────────────── */
 .sidebar {
@@ -446,7 +459,12 @@ main.page-content {
 
   /* Основной контент — всегда на всю ширину */
   #page-content-wrapper,
-  .sidebar-collapsed #page-content-wrapper { margin-left: 0 !important; width: 100%; }
+  .sidebar-collapsed #page-content-wrapper {
+    margin-left: 0 !important;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
 
   /* Топ-бар — уменьшенные отступы */
   .topbar { padding: 0 .875rem; gap: .5rem; }
