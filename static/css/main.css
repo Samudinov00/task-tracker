@@ -417,3 +417,63 @@ main.page-content {
 }
 .page-header-title { font-size: 1.35rem; font-weight: 700; margin: 0; }
 .page-header-sub { font-size: .875rem; color: var(--text-muted); margin-top: .2rem; }
+
+/* ── Мобильная адаптация ────────────────────────────────────── */
+
+/* Затемнение за сайдбаром (мобильный overlay) */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .45);
+  z-index: 199;
+}
+
+@media (max-width: 991.98px) {
+  /* Сайдбар уходит за левый край экрана */
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform var(--transition);
+    z-index: 1050;
+  }
+
+  /* При открытии — выезжает как overlay поверх контента */
+  .sidebar-open .sidebar { transform: translateX(0); }
+  .sidebar-open .sidebar-backdrop { display: block; }
+
+  /* Collapsed-стиль не нужен на мобильном — сайдбар скрыт */
+  .sidebar-collapsed .sidebar { transform: translateX(-100%); width: var(--sidebar-w); }
+
+  /* Основной контент — всегда на всю ширину */
+  #page-content-wrapper,
+  .sidebar-collapsed #page-content-wrapper { margin-left: 0 !important; width: 100%; }
+
+  /* Топ-бар — уменьшенные отступы */
+  .topbar { padding: 0 1rem; }
+
+  /* Контент страницы */
+  main.page-content { padding: 1.25rem 1rem; }
+
+  /* Заголовок страницы переносится на маленьких экранах */
+  .page-header { flex-wrap: wrap; gap: .75rem; }
+
+  /* Карточки статистики */
+  .stat-card { padding: 1.125rem 1.25rem; gap: 1rem; }
+  .stat-card__value { font-size: 1.6rem; }
+
+  /* Уведомления — не вылезают за экран */
+  .notif-dropdown { width: min(360px, calc(100vw - 2rem)); }
+
+  /* Kanban — колонки чуть уже */
+  .kanban-column { min-width: 270px; }
+}
+
+/* Очень маленькие экраны (< 576px) */
+@media (max-width: 575.98px) {
+  main.page-content { padding: 1rem .75rem; }
+  .card-body { padding: 1rem; }
+  .card-header { padding: .875rem 1rem; }
+  .card-footer { padding: .75rem 1rem; }
+  .table th, .table td { padding: .65rem .75rem; }
+  .page-header-title { font-size: 1.15rem; }
+}

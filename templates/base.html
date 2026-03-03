@@ -77,6 +77,9 @@
     </div>
   </nav>
 
+  {# Затемнение при открытом сайдбаре на мобильном #}
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
   {# ── Основной контент ───────────────────────────────────────────────────── #}
   <div id="page-content-wrapper">
 
@@ -177,18 +180,41 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script src="{% static 'js/notifications.js' %}"></script>
 <script>
-  // Сворачивание боковой панели
-  document.getElementById('sidebarToggle')?.addEventListener('click', () => {
-    document.getElementById('wrapper').classList.toggle('sidebar-collapsed');
-    localStorage.setItem(
-      'sidebar_collapsed',
-      document.getElementById('wrapper').classList.contains('sidebar-collapsed')
-    );
+(function () {
+  const wrapper  = document.getElementById('wrapper');
+  const toggle   = document.getElementById('sidebarToggle');
+  const backdrop = document.getElementById('sidebarBackdrop');
+
+  if (!wrapper) return;
+
+  const isMobile = () => window.innerWidth < 992;
+
+  // Тоггл по кнопке
+  toggle?.addEventListener('click', () => {
+    if (isMobile()) {
+      wrapper.classList.toggle('sidebar-open');
+    } else {
+      wrapper.classList.toggle('sidebar-collapsed');
+      localStorage.setItem('sidebar_collapsed', wrapper.classList.contains('sidebar-collapsed'));
+    }
   });
-  // Восстановить состояние из localStorage
-  if (localStorage.getItem('sidebar_collapsed') === 'true') {
-    document.getElementById('wrapper')?.classList.add('sidebar-collapsed');
+
+  // Закрыть при клике на затемнение
+  backdrop?.addEventListener('click', () => wrapper.classList.remove('sidebar-open'));
+
+  // Закрыть при переходе по ссылке сайдбара (мобильный)
+  document.querySelectorAll('.sidebar-link').forEach(link => {
+    link.addEventListener('click', () => { if (isMobile()) wrapper.classList.remove('sidebar-open'); });
+  });
+
+  // При расширении окна до десктопа — убрать мобильный класс
+  window.addEventListener('resize', () => { if (!isMobile()) wrapper.classList.remove('sidebar-open'); });
+
+  // Восстановить коллапс только на десктопе
+  if (!isMobile() && localStorage.getItem('sidebar_collapsed') === 'true') {
+    wrapper.classList.add('sidebar-collapsed');
   }
+})();
 </script>
 {% if user.is_authenticated %}
 <script>
