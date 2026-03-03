@@ -452,6 +452,16 @@ main.page-content {
   touch-action: manipulation; /* убирает 300мс задержку на мобильном */
 }
 
+/* При открытии — правила вне media query, чтобы работало на любом viewport
+   (Android Chrome иногда сообщает viewport ≥ 992px на реальных телефонах) */
+body.sidebar-open .sidebar {
+  transform: translateX(0) !important;
+  z-index: 1050 !important;
+}
+body.sidebar-open .sidebar-backdrop { display: block; }
+/* Блокировать скролл страницы пока сайдбар открыт (работает на любом viewport) */
+body.sidebar-open { overflow: hidden; }
+
 @media (max-width: 991.98px) {
   /* Сайдбар уходит за левый край экрана */
   .sidebar {
@@ -462,12 +472,6 @@ main.page-content {
     height: 100vh;   /* fallback */
     height: 100dvh;  /* современные браузеры: dynamic viewport height */
   }
-
-  /* При открытии — выезжает как overlay поверх контента */
-  body.sidebar-open .sidebar { transform: translateX(0); }
-  body.sidebar-open .sidebar-backdrop { display: block; }
-  /* Блокировать скролл страницы пока сайдбар открыт */
-  body.sidebar-open { overflow: hidden; }
 
   /* Collapsed-стиль не нужен на мобильном — сайдбар скрыт */
   body.sidebar-collapsed .sidebar { transform: translateX(-100%); width: var(--sidebar-w); }

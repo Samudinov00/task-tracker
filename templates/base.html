@@ -184,7 +184,8 @@
 
   if (!toggle) return;  // не авторизованная страница
 
-  const isMobile = () => window.innerWidth < 992;
+  const mq = window.matchMedia('(max-width: 991.98px)');
+  const isMobile = () => mq.matches;
 
   function openSidebar()  { document.body.classList.add('sidebar-open'); }
   function closeSidebar() { document.body.classList.remove('sidebar-open'); }
@@ -202,9 +203,11 @@
   // Кнопка × внутри сайдбара
   closeBtn?.addEventListener('click', closeSidebar);
 
-  // Клик / тап по затемнению
-  backdrop?.addEventListener('click', closeSidebar);
-  backdrop?.addEventListener('touchend', (e) => { e.preventDefault(); closeSidebar(); });
+  // Клик / тач по затемнению (touchstart надёжнее click на Android)
+  if (backdrop) {
+    backdrop.addEventListener('click', closeSidebar);
+    backdrop.addEventListener('touchstart', closeSidebar, { passive: true });
+  }
 
   // Переход по ссылке сайдбара — закрыть
   document.querySelectorAll('.sidebar-link').forEach(link => {
