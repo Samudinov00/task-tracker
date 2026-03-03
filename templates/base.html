@@ -202,8 +202,9 @@
   // Кнопка × внутри сайдбара
   closeBtn?.addEventListener('click', closeSidebar);
 
-  // Клик по затемнению
+  // Клик / тап по затемнению
   backdrop?.addEventListener('click', closeSidebar);
+  backdrop?.addEventListener('touchend', (e) => { e.preventDefault(); closeSidebar(); });
 
   // Переход по ссылке сайдбара — закрыть
   document.querySelectorAll('.sidebar-link').forEach(link => {

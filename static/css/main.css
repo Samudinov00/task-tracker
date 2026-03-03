@@ -52,6 +52,9 @@ body {
   transition: width var(--transition);
   overflow: hidden;
   background: var(--sidebar-bg);
+  /* Устранение субпиксельных артефактов при transform-анимации */
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 .sidebar-brand {
@@ -455,11 +458,16 @@ main.page-content {
     transform: translateX(-100%);
     transition: transform var(--transition);
     z-index: 1050;
+    /* Явная высота с учётом адресной строки мобильных браузеров */
+    height: 100vh;   /* fallback */
+    height: 100dvh;  /* современные браузеры: dynamic viewport height */
   }
 
   /* При открытии — выезжает как overlay поверх контента */
   body.sidebar-open .sidebar { transform: translateX(0); }
   body.sidebar-open .sidebar-backdrop { display: block; }
+  /* Блокировать скролл страницы пока сайдбар открыт */
+  body.sidebar-open { overflow: hidden; }
 
   /* Collapsed-стиль не нужен на мобильном — сайдбар скрыт */
   body.sidebar-collapsed .sidebar { transform: translateX(-100%); width: var(--sidebar-w); }
