@@ -20,17 +20,17 @@ class ManagerRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
         if not self.request.user.is_authenticated:
             return redirect('accounts:login')
         messages.error(self.request, 'Доступ запрещён. Требуются права менеджера.')
-        return redirect('projects:dashboard')
+        return redirect('projects:project_list')
 
 
 # ── Вход / выход ──────────────────────────────────────────────────────────────
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect('projects:dashboard')
+        return redirect('projects:project_list')
     form = CustomAuthenticationForm(request, data=request.POST or None)
     if request.method == 'POST' and form.is_valid():
         login(request, form.get_user())
-        return redirect(request.GET.get('next', 'projects:dashboard'))
+        return redirect(request.GET.get('next', 'projects:project_list'))
     return render(request, 'accounts/login.html', {'form': form})
 
 
