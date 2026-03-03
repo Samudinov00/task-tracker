@@ -449,31 +449,50 @@ main.page-content {
   .sidebar-collapsed #page-content-wrapper { margin-left: 0 !important; width: 100%; }
 
   /* Топ-бар — уменьшенные отступы */
-  .topbar { padding: 0 1rem; }
+  .topbar { padding: 0 .875rem; gap: .5rem; }
+
+  /* Заголовок в топбаре — truncate, чтобы не вытеснял иконки */
+  .topbar-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
   /* Контент страницы */
   main.page-content { padding: 1.25rem 1rem; }
 
-  /* Заголовок страницы переносится на маленьких экранах */
+  /* Заголовок страницы: переносится */
   .page-header { flex-wrap: wrap; gap: .75rem; }
+  .page-header > div:last-child { flex-wrap: wrap; }
 
   /* Карточки статистики */
-  .stat-card { padding: 1.125rem 1.25rem; gap: 1rem; }
-  .stat-card__value { font-size: 1.6rem; }
+  .stat-card { padding: 1rem 1.125rem; gap: .875rem; }
+  .stat-card__value { font-size: 1.5rem; }
+  .stat-card__icon { width: 46px; height: 46px; font-size: 1.4rem; }
 
   /* Уведомления — не вылезают за экран */
   .notif-dropdown { width: min(360px, calc(100vw - 2rem)); }
 
   /* Kanban — колонки чуть уже */
   .kanban-column { min-width: 270px; }
+
 }
 
 /* Очень маленькие экраны (< 576px) */
 @media (max-width: 575.98px) {
+  /* Заголовок в топбаре — скрыть совсем, места нет */
+  .topbar-title { display: none; }
+
   main.page-content { padding: 1rem .75rem; }
   .card-body { padding: 1rem; }
   .card-header { padding: .875rem 1rem; }
   .card-footer { padding: .75rem 1rem; }
-  .table th, .table td { padding: .65rem .75rem; }
-  .page-header-title { font-size: 1.15rem; }
+  .table th, .table td { padding: .6rem .75rem; }
+  .page-header-title { font-size: 1.1rem; }
+  .breadcrumb { font-size: .8rem; }
+
+  /* Канбан-фильтры: мельче */
+  .kanban-board .btn-sm { font-size: .75rem; padding: .25rem .5rem; }
 }
