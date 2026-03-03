@@ -1,5 +1,5 @@
 from django import forms
-from .models import Project, Task, Comment
+from .models import Project, Task, Comment, TimeLog
 from accounts.models import CustomUser
 
 
@@ -42,11 +42,12 @@ class TaskForm(forms.ModelForm):
 
     class Meta:
         model = Task
-        fields = ['title', 'description', 'status', 'assignee', 'clients', 'deadline']
+        fields = ['title', 'description', 'status', 'priority', 'assignee', 'clients', 'deadline']
         labels = {
             'title': 'Название',
             'description': 'Описание',
             'status': 'Статус',
+            'priority': 'Приоритет',
             'assignee': 'Исполнитель',
             'deadline': 'Дедлайн',
         }
@@ -54,6 +55,7 @@ class TaskForm(forms.ModelForm):
             'title':       forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
             'status':      forms.Select(attrs={'class': 'form-select'}),
+            'priority':    forms.Select(attrs={'class': 'form-select'}),
             'assignee':    forms.Select(attrs={'class': 'form-select'}),
             'deadline':    forms.DateInput(
                 attrs={'class': 'form-control', 'type': 'date'},
@@ -112,3 +114,33 @@ class CommentForm(forms.ModelForm):
                 'placeholder': 'Введите комментарий...',
             }),
         }
+
+
+# ── Лог времени ───────────────────────────────────────────────────────────────
+class TimeLogForm(forms.ModelForm):
+    class Meta:
+        model = TimeLog
+        fields = ['minutes', 'description']
+        labels = {
+            'minutes': 'Потрачено (мин)',
+            'description': 'Описание',
+        }
+        widgets = {
+            'minutes': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 1,
+                'max': 1440,
+                'placeholder': 'Например: 60',
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': 'Что было сделано...',
+            }),
+        }
+
+    def clean_minutes(self):
+        minutes = self.cleaned_data.get('minutes')
+        if minutes is not None and minutes <= 0:
+            raise forms.ValidationError('Укажите положительное количество минут.')
+        return minutes

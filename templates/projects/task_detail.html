@@ -46,7 +46,8 @@
     </div>
     {% endif %}
 
-    <div class="card" id="comments">
+    {# ── Комментарии ── #}
+    <div class="card mb-4" id="comments">
       <div class="card-header fw-semibold">
         <i class="bi bi-chat-left-text me-2"></i>Комментарии ({{ task.comments.count }})
       </div>
@@ -77,10 +78,91 @@
         </div>
       </div>
     </div>
-  </div>
 
-  {# ── Вложения ───────────────────────────────────────────────────────────── #}
-  <div class="col-lg-8">
+    {# ── Трекер времени ── #}
+    {% if can_log_time %}
+    <div class="card mb-4" id="timelog">
+      <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history me-2"></i>Трекер времени</span>
+        {% if total_minutes %}
+        <span class="badge bg-primary">
+          Итого: {% if total_hours %}{{ total_hours }} ч {% endif %}{{ remaining_min }} мин
+        </span>
+        {% endif %}
+      </div>
+      <div class="card-body p-0">
+        {% if task.time_logs.all %}
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Кто</th>
+                <th>Минуты</th>
+                <th>Описание</th>
+                <th>Дата</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for log in task.time_logs.all %}
+              <tr>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="avatar-xs avatar-initials" style="font-size:.5rem;width:22px;height:22px">{{ log.user.get_initials }}</div>
+                    {{ log.user.get_display_name }}
+                  </div>
+                </td>
+                <td><strong>{{ log.minutes }}</strong> мин</td>
+                <td class="text-muted" style="font-size:.875rem">{{ log.description|default:"—" }}</td>
+                <td class="text-muted" style="font-size:.875rem">{{ log.logged_at|date:"d.m.Y H:i" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            {% if total_minutes %}
+            <tfoot class="table-light">
+              <tr>
+                <th colspan="2">Итого: {{ total_minutes }} мин ({% if total_hours %}{{ total_hours }} ч {% endif %}{{ remaining_min }} мин)</th>
+                <th colspan="2"></th>
+              </tr>
+            </tfoot>
+            {% endif %}
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-3" style="font-size:.9rem">Логов времени пока нет.</div>
+        {% endif %}
+
+        <div class="border-top p-4">
+          <form method="post" novalidate>
+            {% csrf_token %}
+            <div class="row g-2 align-items-end">
+              <div class="col-sm-3">
+                <label class="form-label small fw-semibold" for="{{ timelog_form.minutes.id_for_label }}">
+                  {{ timelog_form.minutes.label }}
+                </label>
+                {{ timelog_form.minutes }}
+                {% if timelog_form.minutes.errors %}
+                <div class="text-danger mt-1" style="font-size:.8rem">{{ timelog_form.minutes.errors|join:', ' }}</div>
+                {% endif %}
+              </div>
+              <div class="col-sm-6">
+                <label class="form-label small fw-semibold" for="{{ timelog_form.description.id_for_label }}">
+                  {{ timelog_form.description.label }}
+                </label>
+                {{ timelog_form.description }}
+              </div>
+              <div class="col-sm-3">
+                <button type="submit" name="timelog_submit" class="btn btn-outline-primary w-100">
+                  <i class="bi bi-plus-circle me-1"></i>Добавить
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {# ── Вложения ── #}
     <div class="card mb-4">
       <div class="card-header fw-semibold">
         <i class="bi bi-paperclip me-2"></i>Вложения ({{ task.attachments.count }})
@@ -132,6 +214,37 @@
         {% endif %}
       </div>
     </div>
+
+    {# ── История изменений ── #}
+    {% if history %}
+    <div class="card mb-4" id="history">
+      <div class="card-header fw-semibold">
+        <i class="bi bi-clock-history me-2"></i>История изменений ({{ history|length }})
+      </div>
+      <div class="card-body p-0">
+        {% for entry in history %}
+        <div class="px-4 py-3 {% if not forloop.last %}border-bottom{% endif %}">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            {% if entry.changed_by %}
+            <div class="avatar-xs avatar-initials" style="font-size:.45rem;width:20px;height:20px">{{ entry.changed_by.get_initials }}</div>
+            <span class="fw-semibold" style="font-size:.875rem">{{ entry.changed_by.get_display_name }}</span>
+            {% else %}
+            <span class="text-muted" style="font-size:.875rem">Система</span>
+            {% endif %}
+            <span class="badge bg-secondary-subtle text-secondary-emphasis" style="font-size:.7rem">{{ entry.field_name }}</span>
+            <span class="text-muted ms-auto" style="font-size:.8rem">{{ entry.changed_at|date:"d.m.Y H:i" }}</span>
+          </div>
+          <div class="d-flex align-items-center gap-2" style="font-size:.875rem">
+            <span class="text-muted text-decoration-line-through">{{ entry.old_value|default:"—"|truncatechars:40 }}</span>
+            <i class="bi bi-arrow-right text-muted"></i>
+            <span class="fw-semibold">{{ entry.new_value|default:"—"|truncatechars:40 }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
   </div>
 
   {# ── Правая колонка: метаданные ─────────────────────────────────────────── #}
@@ -142,6 +255,13 @@
         <div class="mb-4">
           <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Статус</div>
           <span class="badge bg-{{ task.get_status_badge }} fs-6">{{ task.get_status_display }}</span>
+        </div>
+
+        <div class="mb-4">
+          <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Приоритет</div>
+          <span class="badge bg-{{ task.get_priority_badge }}">
+            <i class="bi {{ task.get_priority_icon }} me-1"></i>{{ task.get_priority_display }}
+          </span>
         </div>
 
         <div class="mb-4">
@@ -168,6 +288,15 @@
         </div>
 
         <div class="mb-4">
+          <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Потрачено времени</div>
+          {% if total_minutes %}
+          <span><i class="bi bi-clock me-1 text-primary"></i>{% if total_hours %}{{ total_hours }} ч {% endif %}{{ remaining_min }} мин</span>
+          {% else %}
+          <span class="text-muted">Не отслеживается</span>
+          {% endif %}
+        </div>
+
+        <div class="mb-4">
           <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Проект</div>
           <a href="{% url 'projects:kanban' task.project.uuid %}" class="text-decoration-none">{{ task.project.name }}</a>
         </div>
@@ -181,6 +310,13 @@
           <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Обновлено</div>
           <span class="text-muted">{{ task.updated_at|date:"d.m.Y H:i" }}</span>
         </div>
+
+        {% if history %}
+        <hr>
+        <a href="#history" class="btn btn-outline-secondary btn-sm w-100">
+          <i class="bi bi-clock-history me-1"></i>История ({{ history|length }})
+        </a>
+        {% endif %}
       </div>
     </div>
   </div>

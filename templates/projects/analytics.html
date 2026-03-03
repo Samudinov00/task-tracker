@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+
+{% block title %}Аналитика{% endblock %}
+{% block page_title %}Аналитика{% endblock %}
+
+{% block extra_css %}
+<style>
+  .metric-card { border-left: 4px solid; }
+  .metric-card.blue { border-color: #0d6efd; }
+  .metric-card.green { border-color: #198754; }
+  .metric-card.orange { border-color: #fd7e14; }
+  .metric-card.red { border-color: #dc3545; }
+  .chart-container { position: relative; height: 300px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-header-title">Аналитика</h1>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'projects:export_tasks_csv' %}{% if selected_project %}?project={{ selected_project.uuid }}{% endif %}"
+       class="btn btn-outline-secondary">
+      <i class="bi bi-filetype-csv me-2"></i>Экспорт CSV
+    </a>
+    <a href="{% url 'projects:export_tasks_excel' %}{% if selected_project %}?project={{ selected_project.uuid }}{% endif %}"
+       class="btn btn-outline-success">
+      <i class="bi bi-file-earmark-excel me-2"></i>Экспорт Excel
+    </a>
+  </div>
+</div>
+
+{# Фильтр по проекту #}
+<div class="card mb-4">
+  <div class="card-body py-2">
+    <form method="get" class="d-flex align-items-center gap-3">
+      <label class="fw-semibold text-muted mb-0" style="white-space:nowrap">Проект:</label>
+      <select name="project" class="form-select form-select-sm" style="max-width:300px" onchange="this.form.submit()">
+        <option value="">— Все проекты —</option>
+        {% for project in projects %}
+        <option value="{{ project.uuid }}" {% if selected_project and selected_project.uuid == project.uuid %}selected{% endif %}>
+          {{ project.name }}
+        </option>
+        {% endfor %}
+      </select>
+      {% if selected_project %}
+      <a href="{% url 'projects:analytics' %}" class="btn btn-sm btn-outline-secondary">Сбросить</a>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+{# Метрики #}
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="card metric-card blue h-100">
+      <div class="card-body">
+        <div class="text-muted small mb-1">Всего задач</div>
+        <div class="fs-2 fw-bold">{{ total_tasks }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card metric-card green h-100">
+      <div class="card-body">
+        <div class="text-muted small mb-1">В продакшне</div>
+        <div class="fs-2 fw-bold text-success">{{ production_count }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card metric-card orange h-100">
+      <div class="card-body">
+        <div class="text-muted small mb-1">Проектов</div>
+        <div class="fs-2 fw-bold text-warning">{{ total_projects }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card metric-card red h-100">
+      <div class="card-body">
+        <div class="text-muted small mb-1">Просрочено</div>
+        <div class="fs-2 fw-bold text-danger">{{ overdue_count }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Графики — ряд 1 #}
+<div class="row g-4 mb-4">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header fw-semibold">
+        <i class="bi bi-pie-chart-fill me-2 text-primary"></i>Задачи по статусам
+      </div>
+      <div class="card-body d-flex justify-content-center align-items-center">
+        <div class="chart-container" style="width:100%">
+          <canvas id="statusChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header fw-semibold">
+        <i class="bi bi-bar-chart-fill me-2 text-warning"></i>Задачи по приоритетам
+      </div>
+      <div class="card-body">
+        <div class="chart-container">
+          <canvas id="priorityChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Графики — ряд 2 #}
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header fw-semibold">
+        <i class="bi bi-people-fill me-2 text-success"></i>Задачи по исполнителям
+      </div>
+      <div class="card-body">
+        <div class="chart-container">
+          <canvas id="assigneeChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header fw-semibold">
+        <i class="bi bi-graph-up me-2 text-info"></i>Создано задач за 30 дней
+      </div>
+      <div class="card-body">
+        <div class="chart-container">
+          <canvas id="createdChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const STATUS_LABELS   = {{ status_labels_json|safe }};
+const STATUS_DATA     = {{ status_data_json|safe }};
+const PRIORITY_LABELS = {{ priority_labels_json|safe }};
+const PRIORITY_DATA   = {{ priority_data_json|safe }};
+const ASSIGNEE_LABELS = {{ assignee_labels_json|safe }};
+const ASSIGNEE_DATA   = {{ assignee_data_json|safe }};
+const CREATED_LABELS  = {{ created_labels_json|safe }};
+const CREATED_DATA    = {{ created_data_json|safe }};
+
+// ── Donut: задачи по статусам
+new Chart(document.getElementById('statusChart'), {
+  type: 'doughnut',
+  data: {
+    labels: STATUS_LABELS,
+    datasets: [{
+      data: STATUS_DATA,
+      backgroundColor: ['#6c757d', '#0d6efd', '#ffc107', '#fd7e14', '#198754'],
+      borderWidth: 2,
+    }],
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'right' },
+    },
+  },
+});
+
+// ── Bar: задачи по приоритетам
+new Chart(document.getElementById('priorityChart'), {
+  type: 'bar',
+  data: {
+    labels: PRIORITY_LABELS,
+    datasets: [{
+      label: 'Задач',
+      data: PRIORITY_DATA,
+      backgroundColor: ['#198754', '#ffc107', '#fd7e14', '#dc3545'],
+      borderRadius: 4,
+    }],
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+  },
+});
+
+// ── Bar: задачи по исполнителям
+new Chart(document.getElementById('assigneeChart'), {
+  type: 'bar',
+  data: {
+    labels: ASSIGNEE_LABELS.length ? ASSIGNEE_LABELS : ['Нет данных'],
+    datasets: [{
+      label: 'Задач',
+      data: ASSIGNEE_DATA.length ? ASSIGNEE_DATA : [0],
+      backgroundColor: '#0d6efd',
+      borderRadius: 4,
+    }],
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } },
+  },
+});
+
+// ── Line: созданные задачи за 30 дней
+new Chart(document.getElementById('createdChart'), {
+  type: 'line',
+  data: {
+    labels: CREATED_LABELS,
+    datasets: [{
+      label: 'Задач создано',
+      data: CREATED_DATA,
+      borderColor: '#0d6efd',
+      backgroundColor: 'rgba(13,110,253,.1)',
+      fill: true,
+      tension: 0.3,
+      pointRadius: 3,
+    }],
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, ticks: { stepSize: 1 } },
+      x: { ticks: { maxTicksLimit: 10 } },
+    },
+  },
+});
+</script>
+{% endblock %}

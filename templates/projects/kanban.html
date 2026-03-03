@@ -22,6 +22,28 @@
     color: #94a3b8;
     font-size: .9rem;
   }
+  /* Bulk checkboxes */
+  .task-checkbox { display: none; }
+  .bulk-mode .task-checkbox { display: block; }
+  .bulk-panel {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: #1e293b;
+    color: #fff;
+    padding: .75rem 1.5rem;
+    z-index: 1050;
+    display: none;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .bulk-panel.active { display: flex; }
+  /* Priority badges */
+  .priority-badge { font-size: .7rem; font-weight: 600; padding: .2rem .45rem; border-radius: 4px; }
+  .priority-low      { background: #d1fae5; color: #065f46; }
+  .priority-medium   { background: #fef9c3; color: #713f12; }
+  .priority-high     { background: #ffedd5; color: #9a3412; }
+  .priority-critical { background: #fee2e2; color: #991b1b; }
 </style>
 {% endblock %}
 
@@ -41,6 +63,9 @@
       <i class="bi bi-list-task me-2"></i>Список задач
     </a>
     {% if user.is_manager %}
+    <button id="bulkToggleBtn" class="btn btn-outline-secondary" title="Режим выбора задач">
+      <i class="bi bi-check2-square me-2"></i>Выбор
+    </button>
     <a href="{% url 'projects:task_create' project.uuid %}" class="btn btn-primary">
       <i class="bi bi-plus-lg me-2"></i>Новая задача
     </a>
@@ -48,28 +73,58 @@
   </div>
 </div>
 
-{% if user.is_manager and executors %}
-<div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
+{# ── Фильтры ────────────────────────────────────────────────────────────────── #}
+{% if user.is_manager %}
+<div class="mb-2 d-flex flex-wrap gap-2 align-items-center">
   <span class="text-muted me-1" style="font-size:.9rem">Исполнитель:</span>
-  <a href="?{% if request.GET.urlencode %}{{ request.GET.urlencode|cut:'assignee='|cut:request.GET.assignee }}{% endif %}"
+  <a href="?{% if priority_filter %}priority={{ priority_filter }}&{% endif %}{% if deadline_filter %}deadline={{ deadline_filter }}{% endif %}"
      class="btn btn-sm {% if not assignee_filter %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
     Все
   </a>
   {% for executor in executors %}
-  <a href="?assignee={{ executor.pk }}"
+  <a href="?assignee={{ executor.pk }}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if deadline_filter %}&deadline={{ deadline_filter }}{% endif %}"
      class="btn btn-sm {% if assignee_filter == executor.pk|stringformat:'s' %}btn-primary{% else %}btn-outline-primary{% endif %}">
     <span class="avatar-xs avatar-initials me-1" style="font-size:.5rem;width:18px;height:18px;display:inline-flex">{{ executor.get_initials }}</span>
     {{ executor.get_display_name }}
   </a>
   {% endfor %}
-  <a href="?assignee=none"
+  <a href="?assignee=none{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if deadline_filter %}&deadline={{ deadline_filter }}{% endif %}"
      class="btn btn-sm {% if assignee_filter == 'none' %}btn-outline-danger{% else %}btn-outline-secondary{% endif %}">
     Не назначен
   </a>
 </div>
 {% endif %}
 
-<div class="kanban-board d-flex gap-3 align-items-start">
+<div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
+  <span class="text-muted me-1" style="font-size:.9rem">Приоритет:</span>
+  <a href="?{% if assignee_filter %}assignee={{ assignee_filter }}&{% endif %}{% if deadline_filter %}deadline={{ deadline_filter }}{% endif %}"
+     class="btn btn-sm {% if not priority_filter %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+    Все
+  </a>
+  {% for pkey, plabel in priority_choices %}
+  <a href="?priority={{ pkey }}{% if assignee_filter %}&assignee={{ assignee_filter }}{% endif %}{% if deadline_filter %}&deadline={{ deadline_filter }}{% endif %}"
+     class="btn btn-sm {% if priority_filter == pkey %}btn-warning{% else %}btn-outline-warning{% endif %}">
+    {{ plabel }}
+  </a>
+  {% endfor %}
+
+  <span class="text-muted ms-3 me-1" style="font-size:.9rem">Дедлайн:</span>
+  <a href="?{% if assignee_filter %}assignee={{ assignee_filter }}&{% endif %}{% if priority_filter %}priority={{ priority_filter %}{% endif %}"
+     class="btn btn-sm {% if not deadline_filter %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+    Все
+  </a>
+  <a href="?deadline=overdue{% if assignee_filter %}&assignee={{ assignee_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}"
+     class="btn btn-sm {% if deadline_filter == 'overdue' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+    Просрочено
+  </a>
+  <a href="?deadline=soon{% if assignee_filter %}&assignee={{ assignee_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}"
+     class="btn btn-sm {% if deadline_filter == 'soon' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+    Скоро (7 дн)
+  </a>
+</div>
+
+{# ── Канбан-доска ───────────────────────────────────────────────────────────── #}
+<div class="kanban-board d-flex gap-3 align-items-start" id="kanbanBoard">
 
   {% for col in kanban_columns %}
   <div class="kanban-column">
@@ -94,9 +149,14 @@
              draggable="true">
           <div class="card-body">
 
-            <div class="d-flex justify-content-between align-items-start mb-2">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+              {# Checkbox bulk #}
+              {% if user.is_manager %}
+              <input type="checkbox" class="task-checkbox form-check-input me-2 mt-1 flex-shrink-0"
+                     value="{{ task.uuid }}" data-task-uuid="{{ task.uuid }}">
+              {% endif %}
               <a href="{% url 'projects:task_detail' task.uuid %}"
-                 class="text-decoration-none text-dark fw-semibold" style="font-size:.9rem;line-height:1.4">
+                 class="text-decoration-none text-dark fw-semibold flex-grow-1" style="font-size:.9rem;line-height:1.4">
                 {{ task.title }}
               </a>
               {% if user.is_manager %}
@@ -121,7 +181,14 @@
               {% endif %}
             </div>
 
-            <div class="d-flex justify-content-between align-items-center mt-2">
+            {# Priority badge #}
+            <div class="mb-2">
+              <span class="priority-badge priority-{{ task.priority }}">
+                <i class="bi {{ task.get_priority_icon }} me-1"></i>{{ task.get_priority_display }}
+              </span>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-1">
               <span class="text-muted" style="font-size:.82rem">
                 {% if task.assignee %}
                   <span class="avatar-xs avatar-initials me-1" style="font-size:.5rem;width:18px;height:18px">{{ task.assignee.get_initials }}</span>
@@ -161,15 +228,151 @@
   {% endfor %}
 
 </div>
+
+{# ── Bulk action panel ───────────────────────────────────────────────────────── #}
+{% if user.is_manager %}
+<div class="bulk-panel" id="bulkPanel">
+  <span id="bulkCount" class="fw-semibold">Выбрано: 0</span>
+
+  <form id="bulkForm" method="post" action="{% url 'projects:bulk_task_update' %}" class="d-flex gap-2 align-items-center flex-wrap">
+    {% csrf_token %}
+    <div id="bulkUuidContainer"></div>
+    <input type="hidden" name="action" id="bulkAction">
+    <input type="hidden" name="value"  id="bulkValue">
+
+    <select class="form-select form-select-sm" id="bulkStatusSelect" style="width:auto">
+      <option value="">Сменить статус…</option>
+      {% for key, label in status_choices %}
+      <option value="{{ key }}">{{ label }}</option>
+      {% endfor %}
+    </select>
+
+    <select class="form-select form-select-sm" id="bulkAssigneeSelect" style="width:auto">
+      <option value="">Сменить исполнителя…</option>
+      {% for executor in executors %}
+      <option value="{{ executor.pk }}">{{ executor.get_display_name }}</option>
+      {% endfor %}
+    </select>
+
+    <button type="button" class="btn btn-primary btn-sm" id="bulkApplyBtn">
+      Применить
+    </button>
+    <button type="button" class="btn btn-outline-light btn-sm" id="bulkCancelBtn">
+      Отмена
+    </button>
+  </form>
+</div>
+{% endif %}
+
+{# polling indicator #}
+<div id="pollingIndicator" style="display:none;position:fixed;bottom:12px;right:12px;z-index:999">
+  <span class="badge bg-secondary"><i class="bi bi-arrow-repeat me-1"></i>Обновлено</span>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  const CAN_DRAG = {{ user.is_manager|yesno:"true,false" }} ||
-                   {{ user.is_executor|yesno:"true,false" }};
-  const MOVE_URL = function(taskUuid) {
-    return '/t/' + taskUuid + '/move/';
-  };
+  const CAN_DRAG   = {{ user.is_manager|yesno:"true,false" }} || {{ user.is_executor|yesno:"true,false" }};
+  const IS_MANAGER = {{ user.is_manager|yesno:"true,false" }};
+  const MOVE_URL   = taskUuid => '/t/' + taskUuid + '/move/';
+  const STATE_URL  = '{% url "projects:kanban_state" project.uuid %}';
 </script>
 <script src="{% static 'js/kanban.js' %}"></script>
+
+{% if user.is_manager %}
+<script>
+// ── Bulk operations ───────────────────────────────────────────────────────────
+const bulkToggleBtn  = document.getElementById('bulkToggleBtn');
+const bulkPanel      = document.getElementById('bulkPanel');
+const bulkCount      = document.getElementById('bulkCount');
+const bulkUuidCont   = document.getElementById('bulkUuidContainer');
+const bulkStatusSel  = document.getElementById('bulkStatusSelect');
+const bulkAssigneeSel= document.getElementById('bulkAssigneeSelect');
+const bulkApplyBtn   = document.getElementById('bulkApplyBtn');
+const bulkCancelBtn  = document.getElementById('bulkCancelBtn');
+const bulkActionInp  = document.getElementById('bulkAction');
+const bulkValueInp   = document.getElementById('bulkValue');
+const bulkForm       = document.getElementById('bulkForm');
+const board          = document.getElementById('kanbanBoard');
+
+let bulkModeActive = false;
+
+function getCheckedUuids() {
+  return [...document.querySelectorAll('.task-checkbox:checked')].map(cb => cb.value);
+}
+
+function updateBulkPanel() {
+  const uuids = getCheckedUuids();
+  bulkCount.textContent = `Выбрано: ${uuids.length}`;
+  bulkPanel.classList.toggle('active', bulkModeActive && uuids.length > 0);
+}
+
+bulkToggleBtn.addEventListener('click', () => {
+  bulkModeActive = !bulkModeActive;
+  board.classList.toggle('bulk-mode', bulkModeActive);
+  bulkToggleBtn.classList.toggle('btn-outline-secondary', !bulkModeActive);
+  bulkToggleBtn.classList.toggle('btn-secondary', bulkModeActive);
+  if (!bulkModeActive) {
+    document.querySelectorAll('.task-checkbox:checked').forEach(cb => cb.checked = false);
+    bulkPanel.classList.remove('active');
+  }
+});
+
+board.addEventListener('change', e => {
+  if (e.target.classList.contains('task-checkbox')) updateBulkPanel();
+});
+
+bulkCancelBtn.addEventListener('click', () => {
+  document.querySelectorAll('.task-checkbox:checked').forEach(cb => cb.checked = false);
+  updateBulkPanel();
+});
+
+bulkApplyBtn.addEventListener('click', () => {
+  const uuids = getCheckedUuids();
+  if (!uuids.length) { alert('Выберите хотя бы одну задачу.'); return; }
+
+  let action = '', value = '';
+  if (bulkStatusSel.value) {
+    action = 'change_status';
+    value  = bulkStatusSel.value;
+  } else if (bulkAssigneeSel.value) {
+    action = 'change_assignee';
+    value  = bulkAssigneeSel.value;
+  } else {
+    alert('Выберите действие.'); return;
+  }
+
+  bulkActionInp.value = action;
+  bulkValueInp.value  = value;
+  bulkUuidCont.innerHTML = uuids.map(u => `<input type="hidden" name="task_uuids[]" value="${u}">`).join('');
+  bulkForm.submit();
+});
+
+// ── Polling (30 sec) ──────────────────────────────────────────────────────────
+const indicator = document.getElementById('pollingIndicator');
+
+function showIndicator() {
+  indicator.style.display = 'block';
+  setTimeout(() => { indicator.style.display = 'none'; }, 2000);
+}
+
+function pollKanbanState() {
+  fetch(STATE_URL, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(r => r.json())
+    .then(data => {
+      // Update card titles/assignees without full reload
+      data.tasks.forEach(t => {
+        const card = document.querySelector(`[data-task-uuid="${t.uuid}"]`);
+        if (!card) return;
+        // Update overdue border
+        card.classList.toggle('border-danger', t.is_overdue);
+      });
+      showIndicator();
+    })
+    .catch(() => {});
+}
+
+setInterval(pollKanbanState, 30000);
+</script>
+{% endif %}
 {% endblock %}
