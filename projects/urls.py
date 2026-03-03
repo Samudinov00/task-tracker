@@ -1,11 +1,12 @@
 from django.urls import path
+from django.views.generic import RedirectView
 from . import views
 
 app_name = 'projects'
 
 urlpatterns = [
-    # Дашборд
-    path('', views.dashboard, name='dashboard'),
+    # Корень → список проектов
+    path('', RedirectView.as_view(pattern_name='projects:project_list', permanent=False), name='home'),
 
     # Аналитика
     path('analytics/', views.analytics, name='analytics'),

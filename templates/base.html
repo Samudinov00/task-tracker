@@ -26,13 +26,6 @@
     <div class="sidebar-nav">
       <div class="sidebar-section-label">Навигация</div>
 
-      {% if user.is_manager %}
-      <a href="{% url 'projects:dashboard' %}"
-         class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-        <i class="bi bi-speedometer2"></i><span>Дашборд</span>
-      </a>
-      {% endif %}
-
       <a href="{% url 'projects:project_list' %}"
          class="sidebar-link {% if 'project' in request.resolver_match.url_name or 'kanban' in request.resolver_match.url_name %}active{% endif %}">
         <i class="bi bi-folder2-open"></i><span>Проекты</span>

@@ -22,10 +22,10 @@
 /* ── Сброс / общее ─────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
-/* Запрет горизонтального скролла страницы */
-html, body {
+/* Запрет горизонтального скролла страницы.
+   Только body — на html overflow:hidden ломает position:fixed на iOS Safari */
+body {
   overflow-x: hidden;
-  max-width: 100%;
 }
 
 body {
@@ -37,7 +37,7 @@ body {
 }
 
 /* ── Обёртка ────────────────────────────────────────────────── */
-#wrapper { min-height: 100vh; display: flex; overflow-x: hidden; }
+#wrapper { min-height: 100vh; display: flex; }
 
 /* Предотвратить разрыв рамок длинными словами */
 .card, .card-body, .card-header, .list-group-item {
@@ -169,7 +169,8 @@ body {
   gap: 1rem;
   position: sticky;
   top: 0;
-  z-index: 100;
+  /* z-index выше бэкдропа (1040), чтобы кнопка тогла работала при открытом сайдбаре */
+  z-index: 1045;
 }
 .topbar-title {
   font-size: 1rem;
@@ -433,13 +434,15 @@ main.page-content {
 
 /* ── Мобильная адаптация ────────────────────────────────────── */
 
-/* Затемнение за сайдбаром (мобильный overlay) */
+/* Затемнение за сайдбаром (мобильный overlay).
+   z-index: 1040 — выше топбара (1030), ниже сайдбара (1050).
+   Топбар поднят до 1030, чтобы кнопка тогла была доступна ПОВЕРХ бэкдропа. */
 .sidebar-backdrop {
   display: none;
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, .45);
-  z-index: 199;
+  z-index: 1040;
 }
 
 @media (max-width: 991.98px) {
@@ -462,8 +465,6 @@ main.page-content {
   .sidebar-collapsed #page-content-wrapper {
     margin-left: 0 !important;
     width: 100%;
-    max-width: 100vw;
-    overflow-x: hidden;
   }
 
   /* Топ-бар — уменьшенные отступы */

@@ -122,7 +122,7 @@ CSRF_TRUSTED_ORIGINS = [
 
 # Аутентификация
 LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = '/p/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 # Ограничение размера загружаемых файлов — 10 МБ

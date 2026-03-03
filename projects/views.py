@@ -41,7 +41,7 @@ class ManagerRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
         if not self.request.user.is_authenticated:
             return redirect('accounts:login')
         messages.error(self.request, 'Доступ запрещён. Требуются права менеджера.')
-        return redirect('projects:dashboard')
+        return redirect('projects:project_list')
 
 
 def _check_project_access(user, project):
@@ -71,40 +71,6 @@ def _notify(users, task, ntype, message):
                 notification_type=ntype, message=message,
             )
 
-
-# ─────────────────────────── Дашборд ──────────────────────────────────────────
-
-@login_required
-def dashboard(request):
-    user = request.user
-
-    if not user.is_manager():
-        return redirect('projects:project_list')
-
-    now = timezone.localdate()
-    projects = Project.objects.filter(manager=user).prefetch_related('tasks')
-    tasks = Task.objects.filter(project__manager=user).select_related('assignee', 'project')
-
-    statuses = [
-        {'key': key, 'label': label,
-         'count': tasks.filter(status=key).count(),
-         'badge': Task.STATUS_BADGE.get(key, 'secondary')}
-        for key, label in Task.STATUS_CHOICES
-    ]
-    overdue_count = tasks.filter(
-        deadline__lt=now
-    ).exclude(status=Task.STATUS_PRODUCTION).count()
-
-    ctx = {
-        'projects': projects,
-        'total_projects': projects.count(),
-        'total_tasks': tasks.count(),
-        'production_count': tasks.filter(status='production').count(),
-        'overdue_count': overdue_count,
-        'statuses': statuses,
-        'recent_tasks': tasks.order_by('-updated_at')[:8],
-    }
-    return render(request, 'projects/dashboard.html', ctx)
 
 
 # ─────────────────────────── Проекты ──────────────────────────────────────────
