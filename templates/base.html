@@ -21,6 +21,10 @@
     <div class="sidebar-brand">
       <i class="bi bi-kanban-fill"></i>
       <span>Менеджер задач</span>
+      <button class="btn btn-ghost btn-sm ms-auto d-lg-none" id="sidebarClose"
+              style="color:#94a3b8;padding:.25rem .375rem;margin-right:-.25rem" title="Закрыть">
+        <i class="bi bi-x-lg"></i>
+      </button>
     </div>
 
     <div class="sidebar-nav">
@@ -177,33 +181,40 @@
   const wrapper  = document.getElementById('wrapper');
   const toggle   = document.getElementById('sidebarToggle');
   const backdrop = document.getElementById('sidebarBackdrop');
+  const closeBtn = document.getElementById('sidebarClose');
 
   if (!wrapper) return;
 
   const isMobile = () => window.innerWidth < 992;
 
-  // Тоггл по кнопке
+  function openSidebar()  { wrapper.classList.add('sidebar-open'); }
+  function closeSidebar() { wrapper.classList.remove('sidebar-open'); }
+
+  // Кнопка-гамбургер в топбаре
   toggle?.addEventListener('click', () => {
     if (isMobile()) {
-      wrapper.classList.toggle('sidebar-open');
+      wrapper.classList.contains('sidebar-open') ? closeSidebar() : openSidebar();
     } else {
       wrapper.classList.toggle('sidebar-collapsed');
       localStorage.setItem('sidebar_collapsed', wrapper.classList.contains('sidebar-collapsed'));
     }
   });
 
-  // Закрыть при клике на затемнение
-  backdrop?.addEventListener('click', () => wrapper.classList.remove('sidebar-open'));
+  // Кнопка × внутри сайдбара
+  closeBtn?.addEventListener('click', closeSidebar);
 
-  // Закрыть при переходе по ссылке сайдбара (мобильный)
+  // Клик по затемнению
+  backdrop?.addEventListener('click', closeSidebar);
+
+  // Переход по ссылке сайдбара — закрыть
   document.querySelectorAll('.sidebar-link').forEach(link => {
-    link.addEventListener('click', () => { if (isMobile()) wrapper.classList.remove('sidebar-open'); });
+    link.addEventListener('click', () => { if (isMobile()) closeSidebar(); });
   });
 
-  // При расширении окна до десктопа — убрать мобильный класс
-  window.addEventListener('resize', () => { if (!isMobile()) wrapper.classList.remove('sidebar-open'); });
+  // Resize: убрать мобильный класс при переходе на десктоп
+  window.addEventListener('resize', () => { if (!isMobile()) closeSidebar(); });
 
-  // Восстановить коллапс только на десктопе
+  // Восстановить коллапс на десктопе из localStorage
   if (!isMobile() && localStorage.getItem('sidebar_collapsed') === 'true') {
     wrapper.classList.add('sidebar-collapsed');
   }

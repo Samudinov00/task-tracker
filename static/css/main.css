@@ -22,12 +22,6 @@
 /* ── Сброс / общее ─────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
-/* Запрет горизонтального скролла страницы.
-   Только body — на html overflow:hidden ломает position:fixed на iOS Safari */
-body {
-  overflow-x: hidden;
-}
-
 body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   font-size: 15px;
@@ -156,6 +150,9 @@ body {
   flex-direction: column;
   transition: margin-left var(--transition);
   flex: 1;
+  /* Горизонтальный скролл только здесь — не трогает position:fixed элементы */
+  overflow-x: hidden;
+  min-width: 0;
 }
 
 /* ── Топ-бар ────────────────────────────────────────────────── */
