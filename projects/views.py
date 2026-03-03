@@ -423,7 +423,7 @@ def task_detail(request, uuid):
                 return redirect('projects:task_detail', uuid=task.uuid)
 
         elif 'attachment_submit' in request.POST:
-            if not (user.is_manager() or user.is_executor()):
+            if not user.is_manager():
                 raise PermissionDenied
             attachment_form = AttachmentForm(request.POST, request.FILES)
             if attachment_form.is_valid():

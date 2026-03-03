@@ -191,7 +191,7 @@
         <div class="text-center text-muted py-3">Вложений нет.</div>
         {% endfor %}
 
-        {% if user.is_manager or user.is_executor %}
+        {% if user.is_manager %}
         <div class="border-top p-4">
           <form method="post" enctype="multipart/form-data" novalidate>
             {% csrf_token %}

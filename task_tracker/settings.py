@@ -33,9 +33,13 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'task_tracker.middleware.SessionInactivityMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# Сессия живёт 24 ч — но middleware выбросит за 30 мин бездействия
+SESSION_COOKIE_AGE = 86400
 
 ROOT_URLCONF = 'task_tracker.urls'
 
