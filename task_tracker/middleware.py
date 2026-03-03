@@ -17,6 +17,9 @@ INACTIVITY_TIMEOUT = 30 * 60  # 30 минут в секундах
 class SessionInactivityMiddleware:
     """Выбрасывает пользователя после 30 минут бездействия.
 
+    Если пользователь вошёл с опцией «Запомнить меня», тайм-аут бездействия
+    не применяется — сессия живёт до истечения куки (30 дней).
+
     Фоновые опросы уведомлений НЕ обновляют метку последней активности,
     чтобы они не сдвигали таймер незаметно для пользователя.
     """
@@ -25,7 +28,7 @@ class SessionInactivityMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        if request.user.is_authenticated:
+        if request.user.is_authenticated and not request.session.get('_remember_me'):
             now = time.time()
             last = request.session.get('last_activity')
 

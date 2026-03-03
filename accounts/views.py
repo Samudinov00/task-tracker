@@ -24,12 +24,24 @@ class ManagerRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
 
 
 # ── Вход / выход ──────────────────────────────────────────────────────────────
+REMEMBER_ME_AGE = 30 * 24 * 60 * 60  # 30 дней в секундах
+
+
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('projects:project_list')
     form = CustomAuthenticationForm(request, data=request.POST or None)
     if request.method == 'POST' and form.is_valid():
-        login(request, form.get_user())
+        user = form.get_user()
+        remember_me = form.cleaned_data.get('remember_me', False)
+        login(request, user)
+        if remember_me:
+            # Кука живёт 30 дней, тайм-аут бездействия не применяется
+            request.session.set_expiry(REMEMBER_ME_AGE)
+            request.session['_remember_me'] = True
+        else:
+            # Сессионная кука — исчезает при закрытии браузера
+            request.session.set_expiry(0)
         return redirect(request.GET.get('next', 'projects:project_list'))
     return render(request, 'accounts/login.html', {'form': form})
 
