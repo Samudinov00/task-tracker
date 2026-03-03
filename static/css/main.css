@@ -30,9 +30,6 @@ body {
   line-height: 1.6;
 }
 
-/* ── Обёртка ────────────────────────────────────────────────── */
-#wrapper { min-height: 100vh; display: flex; }
-
 /* Предотвратить разрыв рамок длинными словами */
 .card, .card-body, .card-header, .list-group-item {
   overflow-wrap: break-word;
@@ -135,12 +132,12 @@ body {
 }
 
 /* Свёрнутый сайдбар */
-.sidebar-collapsed .sidebar { width: 56px; }
-.sidebar-collapsed .sidebar .sidebar-brand span,
-.sidebar-collapsed .sidebar .sidebar-link span,
-.sidebar-collapsed .sidebar .sidebar-section-label,
-.sidebar-collapsed .sidebar .sidebar-link .badge { display: none; }
-.sidebar-collapsed #page-content-wrapper { margin-left: 56px; }
+body.sidebar-collapsed .sidebar { width: 56px; }
+body.sidebar-collapsed .sidebar .sidebar-brand span,
+body.sidebar-collapsed .sidebar .sidebar-link span,
+body.sidebar-collapsed .sidebar .sidebar-section-label,
+body.sidebar-collapsed .sidebar .sidebar-link .badge { display: none; }
+body.sidebar-collapsed #page-content-wrapper { margin-left: 56px; }
 
 /* ── Основной контент ───────────────────────────────────────── */
 #page-content-wrapper {
@@ -454,15 +451,15 @@ main.page-content {
   }
 
   /* При открытии — выезжает как overlay поверх контента */
-  .sidebar-open .sidebar { transform: translateX(0); }
-  .sidebar-open .sidebar-backdrop { display: block; }
+  body.sidebar-open .sidebar { transform: translateX(0); }
+  body.sidebar-open .sidebar-backdrop { display: block; }
 
   /* Collapsed-стиль не нужен на мобильном — сайдбар скрыт */
-  .sidebar-collapsed .sidebar { transform: translateX(-100%); width: var(--sidebar-w); }
+  body.sidebar-collapsed .sidebar { transform: translateX(-100%); width: var(--sidebar-w); }
 
   /* Основной контент — всегда на всю ширину */
   #page-content-wrapper,
-  .sidebar-collapsed #page-content-wrapper {
+  body.sidebar-collapsed #page-content-wrapper {
     margin-left: 0 !important;
     width: 100%;
   }

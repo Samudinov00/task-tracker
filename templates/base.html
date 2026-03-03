@@ -14,10 +14,9 @@
 <body>
 
 {% if user.is_authenticated %}
-<div class="d-flex" id="wrapper">
 
-  {# ── Боковая панель ─────────────────────────────────────────────────────── #}
-  <nav class="sidebar" id="sidebar">
+{# ── Боковая панель ─────────────────────────────────────────────────────── #}
+<nav class="sidebar" id="sidebar">
     <div class="sidebar-brand">
       <i class="bi bi-kanban-fill"></i>
       <span>Менеджер задач</span>
@@ -74,11 +73,11 @@
     </div>
   </nav>
 
-  {# Затемнение при открытом сайдбаре на мобильном #}
-  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+{# Затемнение при открытом сайдбаре на мобильном #}
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
-  {# ── Основной контент ───────────────────────────────────────────────────── #}
-  <div id="page-content-wrapper">
+{# ── Основной контент ───────────────────────────────────────────────────── #}
+<div id="page-content-wrapper">
 
     {# Топ-бар #}
     <header class="topbar">
@@ -165,7 +164,6 @@
     <main class="page-content">
       {% block content %}{% endblock %}
     </main>
-  </div>
 </div>
 
 {% else %}
@@ -178,25 +176,24 @@
 <script src="{% static 'js/notifications.js' %}"></script>
 <script>
 (function () {
-  const wrapper  = document.getElementById('wrapper');
   const toggle   = document.getElementById('sidebarToggle');
   const backdrop = document.getElementById('sidebarBackdrop');
   const closeBtn = document.getElementById('sidebarClose');
 
-  if (!wrapper) return;
+  if (!toggle) return;  // не авторизованная страница
 
   const isMobile = () => window.innerWidth < 992;
 
-  function openSidebar()  { wrapper.classList.add('sidebar-open'); }
-  function closeSidebar() { wrapper.classList.remove('sidebar-open'); }
+  function openSidebar()  { document.body.classList.add('sidebar-open'); }
+  function closeSidebar() { document.body.classList.remove('sidebar-open'); }
 
   // Кнопка-гамбургер в топбаре
-  toggle?.addEventListener('click', () => {
+  toggle.addEventListener('click', () => {
     if (isMobile()) {
-      wrapper.classList.contains('sidebar-open') ? closeSidebar() : openSidebar();
+      document.body.classList.contains('sidebar-open') ? closeSidebar() : openSidebar();
     } else {
-      wrapper.classList.toggle('sidebar-collapsed');
-      localStorage.setItem('sidebar_collapsed', wrapper.classList.contains('sidebar-collapsed'));
+      document.body.classList.toggle('sidebar-collapsed');
+      localStorage.setItem('sidebar_collapsed', document.body.classList.contains('sidebar-collapsed'));
     }
   });
 
@@ -216,7 +213,7 @@
 
   // Восстановить коллапс на десктопе из localStorage
   if (!isMobile() && localStorage.getItem('sidebar_collapsed') === 'true') {
-    wrapper.classList.add('sidebar-collapsed');
+    document.body.classList.add('sidebar-collapsed');
   }
 })();
 </script>
