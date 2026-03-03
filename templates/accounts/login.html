@@ -38,6 +38,13 @@
           <div class="alert alert-danger">{{ form.non_field_errors.0 }}</div>
         {% endif %}
 
+        <div class="mb-4 form-check">
+          {{ form.remember_me }}
+          <label class="form-check-label" for="{{ form.remember_me.id_for_label }}">
+            {{ form.remember_me.label }}
+          </label>
+        </div>
+
         <button type="submit" class="btn btn-primary w-100 btn-lg">
           <i class="bi bi-box-arrow-in-right me-2"></i>Войти
         </button>

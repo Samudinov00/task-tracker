@@ -25,6 +25,11 @@ class CustomAuthenticationForm(AuthenticationForm):
             'placeholder': 'Введите пароль',
         }),
     )
+    remember_me = forms.BooleanField(
+        label='Запомнить меня',
+        required=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+    )
 
 
 # ── Создание пользователя (менеджером) ───────────────────────────────────────
