@@ -43,15 +43,15 @@ body {
 /* ── Боковая панель ─────────────────────────────────────────── */
 .sidebar {
   width: var(--sidebar-w);
-  min-height: 100vh;
-  background: var(--sidebar-bg);
+  /* top+bottom вместо min-height:100vh — надёжно на всех мобильных браузерах */
   position: fixed;
-  top: 0; left: 0;
+  top: 0; left: 0; bottom: 0;
   z-index: 200;
   display: flex;
   flex-direction: column;
   transition: width var(--transition);
   overflow: hidden;
+  background: var(--sidebar-bg);
 }
 
 .sidebar-brand {
@@ -150,9 +150,8 @@ body {
   flex-direction: column;
   transition: margin-left var(--transition);
   flex: 1;
-  /* Горизонтальный скролл только здесь — не трогает position:fixed элементы */
-  overflow-x: hidden;
   min-width: 0;
+  /* НЕ overflow:hidden здесь — убьёт position:sticky топбара */
 }
 
 /* ── Топ-бар ────────────────────────────────────────────────── */
@@ -188,6 +187,8 @@ body {
 main.page-content {
   padding: 2rem 2.5rem;
   flex: 1;
+  /* Горизонтальный скролл блокируем только здесь — sticky топбар не пострадает */
+  overflow-x: hidden;
 }
 
 /* ── Аватар ─────────────────────────────────────────────────── */
@@ -432,14 +433,16 @@ main.page-content {
 /* ── Мобильная адаптация ────────────────────────────────────── */
 
 /* Затемнение за сайдбаром (мобильный overlay).
-   z-index: 1040 — выше топбара (1030), ниже сайдбара (1050).
-   Топбар поднят до 1030, чтобы кнопка тогла была доступна ПОВЕРХ бэкдропа. */
+   z-index-иерархия: sidebar 1050 > topbar 1045 > backdrop 1040 > контент
+   Топбар выше backdrop → кнопка тогла всегда доступна */
 .sidebar-backdrop {
   display: none;
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, .45);
   z-index: 1040;
+  cursor: pointer;
+  touch-action: manipulation; /* убирает 300мс задержку на мобильном */
 }
 
 @media (max-width: 991.98px) {
