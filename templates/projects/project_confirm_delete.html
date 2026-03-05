@@ -6,12 +6,34 @@
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-lg-5">
+
+    {% if object.tasks.exists %}
+    {# ── Блокирующее предупреждение ── #}
+    <div class="card shadow-sm border-0">
+      <div class="card-body p-4 text-center">
+        <div class="bg-danger bg-opacity-10 border border-danger border-opacity-25 rounded-3 p-4 mb-3">
+          <i class="bi bi-slash-circle text-danger" style="font-size: 3rem;"></i>
+          <h5 class="mt-3 mb-1 fw-semibold">Удаление невозможно</h5>
+          <p class="text-muted mb-0">
+            Проект «<strong>{{ object.name }}</strong>» содержит
+            <strong>{{ object.tasks.count }}&nbsp;задач(и)</strong>.
+            Сначала удалите или перенесите все задачи.
+          </p>
+        </div>
+        <a href="{% url 'projects:project_list' %}" class="btn btn-secondary">
+          <i class="bi bi-arrow-left me-1"></i>Назад к проектам
+        </a>
+      </div>
+    </div>
+
+    {% else %}
+    {# ── Подтверждение удаления ── #}
     <div class="card shadow-sm border-danger">
       <div class="card-body p-4 text-center">
         <i class="bi bi-exclamation-triangle-fill text-danger fs-1 mb-3 d-block"></i>
         <h5>Удалить проект «{{ object.name }}»?</h5>
         <p class="text-muted mb-4">
-          Будут удалены все задачи, файлы и комментарии проекта.
+          Будут удалены все файлы и комментарии проекта.
           Это действие нельзя отменить.
         </p>
         <form method="post">
@@ -25,6 +47,8 @@
         </form>
       </div>
     </div>
+    {% endif %}
+
   </div>
 </div>
 {% endblock %}
