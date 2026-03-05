@@ -40,8 +40,10 @@ body {
 #wrapper {
   min-height: 100vh;
   display: flex;
-  max-width: 100vw;
-  overflow-x: hidden;
+  /* НЕ добавляем overflow:hidden / max-width сюда — это делает #wrapper
+     containing block для position:fixed (sidebar, backdrop), из-за чего
+     backdrop не покрывает весь экран на мобильном. Горизонтальный скролл
+     уже заблокирован на уровне html/body выше. */
 }
 
 /* Предотвратить разрыв рамок длинными словами */
