@@ -68,7 +68,10 @@ def _notify(users, task, ntype, message):
         users = [users]
     user_ids = [u.pk for u in users if u]
     if user_ids:
-        send_notifications.delay(user_ids, task.pk, ntype, message)
+        try:
+            send_notifications.delay(user_ids, task.pk, ntype, message)
+        except Exception:
+            pass  # Celery/Redis недоступен — продолжаем без уведомлений
 
 
 
