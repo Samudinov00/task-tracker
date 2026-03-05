@@ -467,8 +467,17 @@ main.page-content {
 
 /* ── Мобильная адаптация ────────────────────────────────────── */
 
+/* ── Анимация Bottom Sheet для уведомлений ──────────────────────
+   Определяем ВНЕ @media — некоторые WebKit-движки
+   не подхватывают @keyframes внутри @media-блока. */
+@keyframes notifBottomSheetIn {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
 /* Затемнение за сайдбаром (мобильный overlay).
-   z-index иерархия: sidebar 1050 > backdrop 1040 > page-content-wrapper 1
+   z-index иерархия: sidebar 1050 > sidebar-backdrop 1040 > notif-dropdown 1000
+                     > notif-backdrop 999 > topbar 10 > page-content 1
    Весь контент (включая топбар) внутри page-content-wrapper и ниже backdrop —
    любой тап по контенту при открытом сайдбаре закрывает его через backdrop */
 .sidebar-backdrop {
@@ -483,6 +492,21 @@ main.page-content {
   cursor: pointer;
   touch-action: manipulation; /* убирает 300мс задержку на мобильном */
 }
+
+/* Затемнение под уведомлениями (bottom sheet на мобильном).
+   Ниже дропдауна (1000), выше контента и топбара. */
+.notif-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .4);
+  z-index: 999;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.notif-backdrop.show     { display: block; }
+/* Блокировать скролл пока bottom sheet открыт */
+body.notif-open          { overflow: hidden; }
 
 /* При открытии — правила вне media query, чтобы работало на любом viewport
    (Android Chrome иногда сообщает viewport ≥ 992px на реальных телефонах) */
@@ -549,7 +573,9 @@ body.sidebar-open { overflow: hidden; }
 
 /* ── Уведомления — Bottom Sheet на мобильном (< 768px) ─────── */
 @media (max-width: 767.98px) {
-  /* Превратить дропдаун в «шторку», выезжающую снизу */
+  /* Превращаем дропдаун в «шторку», выезжающую снизу.
+     data-bs-display="static" на bellBtn гарантирует, что Popper.js
+     не добавит инлайн transform/top/left, которые сломали бы позиционирование. */
   .notif-dropdown {
     position: fixed !important;
     left: 0 !important;
@@ -563,16 +589,12 @@ body.sidebar-open { overflow: hidden; }
     border-top: 1px solid var(--border);
     max-height: 70vh;
     overflow-y: auto;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, .15) !important;
-    animation: notifBottomSheetIn .22s ease;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, .18) !important;
+    /* Анимация объявлена глобально выше (вне @media) */
+    animation: notifBottomSheetIn .25s cubic-bezier(.32,1,.23,1);
   }
 
-  @keyframes notifBottomSheetIn {
-    from { transform: translateY(100%); }
-    to   { transform: translateY(0); }
-  }
-
-  /* Ручка-индикатор сверху для Bottom Sheet */
+  /* Ручка-индикатор сверху — стандартный паттерн Bottom Sheet */
   .notif-dropdown::before {
     content: '';
     display: block;
@@ -583,9 +605,9 @@ body.sidebar-open { overflow: hidden; }
     margin: .75rem auto .25rem;
   }
 
-  /* Список уведомлений — больший max-height в bottom sheet */
+  /* Список уведомлений — больший max-height внутри bottom sheet */
   .notif-dropdown .notif-list {
-    max-height: calc(70vh - 8rem);
+    max-height: calc(70vh - 9rem);
   }
 }
 
