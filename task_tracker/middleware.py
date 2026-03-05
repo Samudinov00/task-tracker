@@ -14,13 +14,23 @@ _POLLING_PATHS = frozenset([
 INACTIVITY_TIMEOUT = 30 * 60  # 30 минут в секундах
 
 
+def _is_polling_path(path):
+    """Возвращает True для фоновых polling-запросов (не считаются активностью)."""
+    if path in _POLLING_PATHS:
+        return True
+    # Канбан-polling: /p/<uuid>/kanban-state/
+    if path.startswith('/p/') and path.endswith('/kanban-state/'):
+        return True
+    return False
+
+
 class SessionInactivityMiddleware:
     """Выбрасывает пользователя после 30 минут бездействия.
 
     Если пользователь вошёл с опцией «Запомнить меня», тайм-аут бездействия
     не применяется — сессия живёт до истечения куки (30 дней).
 
-    Фоновые опросы уведомлений НЕ обновляют метку последней активности,
+    Фоновые опросы уведомлений и канбана НЕ обновляют метку последней активности,
     чтобы они не сдвигали таймер незаметно для пользователя.
     """
 
@@ -37,7 +47,7 @@ class SessionInactivityMiddleware:
                 return redirect(f'{settings.LOGIN_URL}?reason=timeout')
 
             # Обновляем метку только для «настоящих» запросов пользователя
-            if request.path not in _POLLING_PATHS:
+            if not _is_polling_path(request.path):
                 request.session['last_activity'] = now
 
         return self.get_response(request)
