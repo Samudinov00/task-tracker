@@ -109,7 +109,7 @@
   {% endfor %}
 
   <span class="text-muted ms-3 me-1" style="font-size:.9rem">Дедлайн:</span>
-  <a href="?{% if assignee_filter %}assignee={{ assignee_filter }}&{% endif %}{% if priority_filter %}priority={{ priority_filter %}{% endif %}"
+  <a href="?{% if assignee_filter %}assignee={{ assignee_filter }}&{% endif %}{% if priority_filter %}priority={{ priority_filter }}{% endif %}"
      class="btn btn-sm {% if not deadline_filter %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
     Все
   </a>

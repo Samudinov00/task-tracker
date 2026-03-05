@@ -66,7 +66,7 @@ def profile_view(request):
     )
 
     if request.method == 'POST':
-        if 'save_profile' in request.POST and request.user.is_manager() and profile_form.is_valid():
+        if 'save_profile' in request.POST and profile_form.is_valid():
             profile_form.save()
             messages.success(request, 'Профиль успешно обновлён.')
             return redirect('accounts:profile')
