@@ -253,8 +253,18 @@ main.page-content {
   line-height: 18px;
   text-align: center;
 }
-.notif-dropdown { width: 360px; }
-.notif-header   { border-bottom: 1px solid var(--border); }
+.notif-dropdown {
+  width: 360px;
+  /* Ниже сайдбара (1050) и backdrop (1040), но выше обычного контента */
+  z-index: 1000;
+}
+.notif-header {
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: .25rem;
+}
+/* Кнопка «Прочитать все» — не обрезается по краю */
+#markAllReadBtn { white-space: nowrap; flex-shrink: 0; }
 .notif-footer   { border-top: 1px solid var(--border); }
 .notif-list     { max-height: 340px; overflow-y: auto; }
 .notif-item {
@@ -450,7 +460,7 @@ main.page-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.75rem;
+  margin-bottom: 2rem;
 }
 .page-header-title { font-size: 1.35rem; font-weight: 700; margin: 0; }
 .page-header-sub { font-size: .875rem; color: var(--text-muted); margin-top: .2rem; }
@@ -466,6 +476,9 @@ main.page-content {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, .45);
+  /* Размытие контента под backdrop — предотвращает случайные клики */
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   z-index: 1040;
   cursor: pointer;
   touch-action: manipulation; /* убирает 300мс задержку на мобильном */
@@ -534,12 +547,55 @@ body.sidebar-open { overflow: hidden; }
 
 }
 
+/* ── Уведомления — Bottom Sheet на мобильном (< 768px) ─────── */
+@media (max-width: 767.98px) {
+  /* Превратить дропдаун в «шторку», выезжающую снизу */
+  .notif-dropdown {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    top: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 1rem 1rem 0 0;
+    border: none;
+    border-top: 1px solid var(--border);
+    max-height: 70vh;
+    overflow-y: auto;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, .15) !important;
+    animation: notifBottomSheetIn .22s ease;
+  }
+
+  @keyframes notifBottomSheetIn {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+
+  /* Ручка-индикатор сверху для Bottom Sheet */
+  .notif-dropdown::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: #cbd5e1;
+    border-radius: 2px;
+    margin: .75rem auto .25rem;
+  }
+
+  /* Список уведомлений — больший max-height в bottom sheet */
+  .notif-dropdown .notif-list {
+    max-height: calc(70vh - 8rem);
+  }
+}
+
 /* Очень маленькие экраны (< 576px) */
 @media (max-width: 575.98px) {
   /* Заголовок в топбаре — скрыть совсем, места нет */
   .topbar-title { display: none; }
 
-  main.page-content { padding: 1rem .75rem; }
+  /* Немного увеличиваем боковые отступы контента, чтобы карточки не прижимались к краю */
+  main.page-content { padding: 1rem 1rem; }
   .card-body { padding: 1rem; }
   .card-header { padding: .875rem 1rem; }
   .card-footer { padding: .75rem 1rem; }
