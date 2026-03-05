@@ -18,7 +18,7 @@
       {% if task.is_overdue %}<span class="badge bg-danger fs-6 ms-2">Просрочено</span>{% endif %}
     </h1>
   </div>
-  <div class="d-flex flex-wrap gap-2">
+  <div class="d-flex flex-wrap gap-2 page-header-actions">
     {% if can_edit %}
     <a href="{% url 'projects:task_edit' task.uuid %}" class="btn btn-outline-primary btn-sm">
       <i class="bi bi-pencil me-1"></i>Изменить
@@ -34,8 +34,8 @@
 
 <div class="row g-4">
 
-  {# ── Левая колонка ─────────────────────────────────────────────────────────── #}
-  <div class="col-lg-8">
+  {# ── Левая колонка (основной контент) — на мобильном идёт второй ────────── #}
+  <div class="col-lg-8 order-2 order-lg-1">
 
     {% if task.description %}
     <div class="card mb-4">
@@ -54,10 +54,10 @@
       <div class="card-body p-0">
         {% for comment in task.comments.all %}
         <div class="px-4 py-3 {% if not forloop.last %}border-bottom{% endif %}">
-          <div class="d-flex align-items-center gap-3 mb-2">
-            <div class="avatar-xs avatar-initials">{{ comment.author.get_initials }}</div>
+          <div class="d-flex align-items-center gap-3 mb-2 comment-meta">
+            <div class="avatar-xs avatar-initials flex-shrink-0">{{ comment.author.get_initials }}</div>
             <span class="fw-semibold">{{ comment.author.get_display_name }}</span>
-            <span class="text-muted ms-auto" style="font-size:.85rem">{{ comment.created_at|date:"d.m.Y H:i" }}</span>
+            <span class="text-muted ms-auto comment-date" style="font-size:.85rem">{{ comment.created_at|date:"d.m.Y H:i" }}</span>
           </div>
           <p class="mb-1" style="white-space:pre-wrap;font-size:.9rem">{{ comment.text }}</p>
         </div>
@@ -234,10 +234,10 @@
             <span class="badge bg-secondary-subtle text-secondary-emphasis" style="font-size:.7rem">{{ entry.field_name }}</span>
             <span class="text-muted ms-auto" style="font-size:.8rem">{{ entry.changed_at|date:"d.m.Y H:i" }}</span>
           </div>
-          <div class="d-flex align-items-center gap-2" style="font-size:.875rem">
+          <div class="d-flex align-items-center gap-2 history-change-row" style="font-size:.875rem">
             <span class="text-muted text-decoration-line-through">{{ entry.old_value|default:"—"|truncatechars:40 }}</span>
-            <i class="bi bi-arrow-right text-muted"></i>
-            <span class="fw-semibold">{{ entry.new_value|default:"—"|truncatechars:40 }}</span>
+            <i class="bi bi-arrow-right text-muted history-arrow"></i>
+            <span class="fw-semibold history-new">{{ entry.new_value|default:"—"|truncatechars:40 }}</span>
           </div>
         </div>
         {% endfor %}
@@ -247,68 +247,70 @@
 
   </div>
 
-  {# ── Правая колонка: метаданные ─────────────────────────────────────────── #}
-  <div class="col-lg-4">
-    <div class="card sticky-top" style="top:80px">
+  {# ── Правая колонка: метаданные — на мобильном идёт первой ─────────────── #}
+  <div class="col-lg-4 order-1 order-lg-2">
+    <div class="card task-meta-sticky sticky-top" style="top:80px">
       <div class="card-header fw-semibold">Детали задачи</div>
       <div class="card-body">
-        <div class="mb-4">
-          <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Статус</div>
-          <span class="badge bg-{{ task.get_status_badge }} fs-6">{{ task.get_status_display }}</span>
-        </div>
-
-        <div class="mb-4">
-          <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Приоритет</div>
-          <span class="badge bg-{{ task.get_priority_badge }}">
-            <i class="bi {{ task.get_priority_icon }} me-1"></i>{{ task.get_priority_display }}
-          </span>
-        </div>
-
-        <div class="mb-4">
-          <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Исполнитель</div>
-          {% if task.assignee %}
-          <div class="d-flex align-items-center gap-2">
-            <div class="avatar-xs avatar-initials">{{ task.assignee.get_initials }}</div>
-            <span>{{ task.assignee.get_display_name }}</span>
+        <div class="task-detail-meta">
+          <div class="task-meta-item mb-4">
+            <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Статус</div>
+            <span class="badge bg-{{ task.get_status_badge }} fs-6">{{ task.get_status_display }}</span>
           </div>
-          {% else %}
-          <span class="text-muted fst-italic">Не назначен</span>
-          {% endif %}
-        </div>
 
-        <div class="mb-4">
-          <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Дедлайн</div>
-          {% if task.deadline %}
-          <span class="{% if task.is_overdue %}text-danger fw-semibold{% endif %}">
-            <i class="bi bi-calendar3 me-1"></i>{{ task.deadline|date:"d.m.Y" }}
-          </span>
-          {% else %}
-          <span class="text-muted">Не указан</span>
-          {% endif %}
-        </div>
+          <div class="task-meta-item mb-4">
+            <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Приоритет</div>
+            <span class="badge bg-{{ task.get_priority_badge }}">
+              <i class="bi {{ task.get_priority_icon }} me-1"></i>{{ task.get_priority_display }}
+            </span>
+          </div>
 
-        <div class="mb-4">
-          <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Потрачено времени</div>
-          {% if total_minutes %}
-          <span><i class="bi bi-clock me-1 text-primary"></i>{% if total_hours %}{{ total_hours }} ч {% endif %}{{ remaining_min }} мин</span>
-          {% else %}
-          <span class="text-muted">Не отслеживается</span>
-          {% endif %}
-        </div>
+          <div class="task-meta-item mb-4">
+            <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Исполнитель</div>
+            {% if task.assignee %}
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar-xs avatar-initials">{{ task.assignee.get_initials }}</div>
+              <span>{{ task.assignee.get_display_name }}</span>
+            </div>
+            {% else %}
+            <span class="text-muted fst-italic">Не назначен</span>
+            {% endif %}
+          </div>
 
-        <div class="mb-4">
-          <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Проект</div>
-          <a href="{% url 'projects:kanban' task.project.uuid %}" class="text-decoration-none">{{ task.project.name }}</a>
-        </div>
+          <div class="task-meta-item mb-4">
+            <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Дедлайн</div>
+            {% if task.deadline %}
+            <span class="{% if task.is_overdue %}text-danger fw-semibold{% endif %}">
+              <i class="bi bi-calendar3 me-1"></i>{{ task.deadline|date:"d.m.Y" }}
+            </span>
+            {% else %}
+            <span class="text-muted">Не указан</span>
+            {% endif %}
+          </div>
 
-        <div class="mb-4">
-          <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Создал</div>
-          <span>{{ task.created_by.get_display_name }}</span>
-        </div>
+          <div class="task-meta-item mb-4">
+            <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Потрачено времени</div>
+            {% if total_minutes %}
+            <span><i class="bi bi-clock me-1 text-primary"></i>{% if total_hours %}{{ total_hours }} ч {% endif %}{{ remaining_min }} мин</span>
+            {% else %}
+            <span class="text-muted">Не отслеживается</span>
+            {% endif %}
+          </div>
 
-        <div>
-          <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Обновлено</div>
-          <span class="text-muted">{{ task.updated_at|date:"d.m.Y H:i" }}</span>
+          <div class="task-meta-item mb-4">
+            <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Проект</div>
+            <a href="{% url 'projects:kanban' task.project.uuid %}" class="text-decoration-none">{{ task.project.name }}</a>
+          </div>
+
+          <div class="task-meta-item mb-4">
+            <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Создал</div>
+            <span>{{ task.created_by.get_display_name }}</span>
+          </div>
+
+          <div class="task-meta-item">
+            <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Обновлено</div>
+            <span class="text-muted">{{ task.updated_at|date:"d.m.Y H:i" }}</span>
+          </div>
         </div>
 
         {% if history %}

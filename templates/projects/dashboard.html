@@ -10,8 +10,8 @@
     <h1 class="page-header-title">Дашборд</h1>
     <div class="page-header-sub">Добро пожаловать, {{ user.get_display_name }}</div>
   </div>
-  <a href="{% url 'projects:project_create' %}" class="btn btn-primary">
-    <i class="bi bi-plus-lg me-2"></i>Новый проект
+  <a href="{% url 'projects:project_create' %}" class="btn btn-primary btn-sm page-header-actions">
+    <i class="bi bi-plus-lg me-1"></i>Новый проект
   </a>
 </div>
 
