@@ -206,7 +206,21 @@
   // Клик / тач по затемнению (touchstart надёжнее click на Android)
   if (backdrop) {
     backdrop.addEventListener('click', closeSidebar);
-    backdrop.addEventListener('touchstart', closeSidebar, { passive: true });
+    // На мобильном: закрыть сайдбар И пропустить тап к элементу под backdrop
+    // (иначе кнопки submit/ссылки под backdrop требуют двойного нажатия)
+    backdrop.addEventListener('touchstart', function(e) {
+      const touch = e.touches[0];
+      // Временно делаем backdrop «прозрачным» для pointer-events, чтобы найти элемент под ним
+      this.style.pointerEvents = 'none';
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      this.style.pointerEvents = '';
+      closeSidebar();
+      // Если под backdrop — кнопка или ссылка, кликаем по ней
+      if (el && el !== this) {
+        const target = el.closest('button, a[href], input[type="submit"], [type="submit"]');
+        if (target) target.click();
+      }
+    }, { passive: true });
   }
 
   // Переход по ссылке сайдбара — закрыть
