@@ -151,6 +151,9 @@ class ProjectDeleteView(ManagerRequiredMixin, DeleteView):
         return obj
 
     def form_valid(self, form):
+        if self.object.tasks.exists():
+            messages.error(self.request, 'Нельзя удалить проект, в котором есть задачи.')
+            return redirect('projects:project_list')
         messages.success(self.request, 'Проект удалён.')
         return super().form_valid(form)
 
