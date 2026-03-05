@@ -86,7 +86,7 @@
     {# Топ-бар #}
     <header class="topbar">
       <button class="btn btn-sm btn-ghost" id="sidebarToggle" title="Свернуть меню">
-        <i class="bi bi-list fs-5"></i>
+        <i class="bi bi-list fs-5" id="sidebarToggleIcon"></i>
       </button>
 
       <span class="topbar-title">{% block page_title %}{% endblock %}</span>
@@ -182,24 +182,40 @@
 <script src="{% static 'js/notifications.js' %}"></script>
 <script>
 (function () {
-  const toggle   = document.getElementById('sidebarToggle');
-  const backdrop = document.getElementById('sidebarBackdrop');
-  const closeBtn = document.getElementById('sidebarClose');
+  const toggle     = document.getElementById('sidebarToggle');
+  const toggleIcon = document.getElementById('sidebarToggleIcon');
+  const backdrop   = document.getElementById('sidebarBackdrop');
+  const closeBtn   = document.getElementById('sidebarClose');
 
   if (!toggle) return;  // не авторизованная страница
 
   const mq = window.matchMedia('(max-width: 991.98px)');
   const isMobile = () => mq.matches;
 
+  function updateToggleIcon() {
+    if (!toggleIcon) return;
+    if (isMobile() && document.body.classList.contains('sidebar-open')) {
+      toggleIcon.className = 'bi bi-x-lg fs-5';
+      toggle.title = 'Закрыть меню';
+    } else {
+      toggleIcon.className = 'bi bi-list fs-5';
+      toggle.title = 'Свернуть меню';
+    }
+  }
+
   function openSidebar() {
     document.body.classList.add('sidebar-open');
+    updateToggleIcon();
     // Закрыть любой открытый Bootstrap-дропдаун (уведомления, меню пользователя)
     document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(function (el) {
       var dd = bootstrap.Dropdown.getInstance(el);
       if (dd) dd.hide();
     });
   }
-  function closeSidebar() { document.body.classList.remove('sidebar-open'); }
+  function closeSidebar() {
+    document.body.classList.remove('sidebar-open');
+    updateToggleIcon();
+  }
 
   // Кнопка-гамбургер в топбаре
   toggle.addEventListener('click', () => {
@@ -268,7 +284,7 @@
   }
 
   // Resize: убрать мобильный класс при переходе на десктоп
-  window.addEventListener('resize', () => { if (!isMobile()) closeSidebar(); });
+  window.addEventListener('resize', () => { if (!isMobile()) { closeSidebar(); } updateToggleIcon(); });
 
   // Восстановить коллапс на десктопе из localStorage
   if (!isMobile() && localStorage.getItem('sidebar_collapsed') === 'true') {
