@@ -67,9 +67,10 @@ class TaskForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if project:
             self.fields['assignee'].queryset = project.executors.all()
+            self.fields['clients'].queryset = project.clients.all()
         else:
             self.fields['assignee'].queryset = CustomUser.objects.filter(role='executor')
-        self.fields['clients'].queryset = CustomUser.objects.filter(role='client')
+            self.fields['clients'].queryset = CustomUser.objects.filter(role='client')
         self.fields['assignee'].empty_label = '— Не назначен —'
 
         # Если редактируем, установим формат даты
