@@ -1,5 +1,17 @@
 services:
 
+  # ── Redis ────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ── PostgreSQL ───────────────────────────────────────────────────────────────
   db:
     image: postgres:16-alpine
@@ -32,9 +44,12 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DB_HOST: db          # переопределяем хост на имя сервиса
+      DB_HOST: db
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     volumes:
       - staticfiles:/app/staticfiles
@@ -78,6 +93,27 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+
+  # ── Celery Worker ────────────────────────────────────────────────────────────
+  celery:
+    image: ${DOCKER_IMAGE:-task-tracker:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_HOST: db
+      REDIS_URL: redis://redis:6379/0
+    command: celery -A task_tracker worker --loglevel=info --concurrency=2
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
 
   # ── Certbot (Let's Encrypt) ──────────────────────────────────────────────────
   certbot:
