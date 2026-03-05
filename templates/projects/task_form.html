@@ -96,7 +96,7 @@
       {% endif %}
 
       <div class="d-flex gap-3 pt-2 border-top mt-2">
-        <button type="submit" class="btn btn-primary">
+        <button type="submit" class="btn btn-primary" id="submit-btn">
           <i class="bi bi-save me-2"></i>Сохранить
         </button>
         {% if task %}
@@ -108,5 +108,15 @@
     </form>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.querySelector('form').addEventListener('submit', function () {
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Сохранение...';
+  });
+</script>
 {% endblock %}
 
