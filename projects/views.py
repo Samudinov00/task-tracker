@@ -13,6 +13,7 @@ from datetime import timedelta
 
 from django.db.models import Count, Q, Sum
 from django.contrib import messages
+from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.exceptions import PermissionDenied
@@ -29,6 +30,7 @@ from .models import (
     Comment, Notification, Project, Task, TaskAttachment,
     TaskChangeLog, TaskStatusLog, TimeLog,
 )
+from .tasks import send_notifications
 
 
 # ─────────────────────────── Хелперы ──────────────────────────────────────────
@@ -61,15 +63,12 @@ def _check_project_access(user, project):
 
 
 def _notify(users, task, ntype, message):
-    """Создаёт уведомления для списка пользователей."""
+    """Ставит уведомления в очередь Celery."""
     if not hasattr(users, '__iter__') or isinstance(users, str):
         users = [users]
-    for u in users:
-        if u:
-            Notification.objects.create(
-                user=u, task=task,
-                notification_type=ntype, message=message,
-            )
+    user_ids = [u.pk for u in users if u]
+    if user_ids:
+        send_notifications.delay(user_ids, task.pk, ntype, message)
 
 
 
@@ -779,76 +778,72 @@ def analytics(request):
         raise PermissionDenied
 
     projects = Project.objects.filter(manager=request.user)
-    tasks_qs = Task.objects.filter(project__manager=request.user).select_related('assignee', 'project')
-
-    # Фильтр по проекту
     project_filter = request.GET.get('project')
     selected_project = None
     if project_filter:
         try:
             selected_project = projects.get(uuid=project_filter)
-            tasks_qs = tasks_qs.filter(project=selected_project)
         except Project.DoesNotExist:
             pass
 
-    # Задачи по статусам
-    status_labels = [label for _, label in Task.STATUS_CHOICES]
-    status_data   = [tasks_qs.filter(status=key).count() for key, _ in Task.STATUS_CHOICES]
+    cache_key = f'analytics:{request.user.pk}:{project_filter or "all"}'
+    ctx = cache.get(cache_key)
 
-    # Задачи по приоритетам
-    priority_labels = [label for _, label in Task.PRIORITY_CHOICES]
-    priority_data   = [tasks_qs.filter(priority=key).count() for key, _ in Task.PRIORITY_CHOICES]
+    if ctx is None:
+        tasks_qs = Task.objects.filter(project__manager=request.user).select_related('assignee', 'project')
+        if selected_project:
+            tasks_qs = tasks_qs.filter(project=selected_project)
 
-    # Задачи по исполнителям (топ-10)
-    assignee_stats = (
-        tasks_qs
-        .exclude(assignee__isnull=True)
-        .values('assignee__first_name', 'assignee__last_name', 'assignee__username')
-        .annotate(count=Count('id'))
-        .order_by('-count')[:10]
-    )
-    assignee_labels = []
-    assignee_data   = []
-    for row in assignee_stats:
-        name = f"{row['assignee__first_name']} {row['assignee__last_name']}".strip() or row['assignee__username']
-        assignee_labels.append(name)
-        assignee_data.append(row['count'])
+        status_labels = [label for _, label in Task.STATUS_CHOICES]
+        status_data   = [tasks_qs.filter(status=key).count() for key, _ in Task.STATUS_CHOICES]
 
-    # Задачи созданы за последние 30 дней
-    today = timezone.localdate()
-    dates = [today - timedelta(days=i) for i in range(29, -1, -1)]
-    created_labels = [d.strftime('%d.%m') for d in dates]
-    created_data = []
-    for d in dates:
-        created_data.append(
-            tasks_qs.filter(created_at__date=d).count()
+        priority_labels = [label for _, label in Task.PRIORITY_CHOICES]
+        priority_data   = [tasks_qs.filter(priority=key).count() for key, _ in Task.PRIORITY_CHOICES]
+
+        assignee_stats = (
+            tasks_qs
+            .exclude(assignee__isnull=True)
+            .values('assignee__first_name', 'assignee__last_name', 'assignee__username')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:10]
         )
+        assignee_labels = []
+        assignee_data   = []
+        for row in assignee_stats:
+            name = f"{row['assignee__first_name']} {row['assignee__last_name']}".strip() or row['assignee__username']
+            assignee_labels.append(name)
+            assignee_data.append(row['count'])
 
-    # Сводные метрики
-    total_tasks      = tasks_qs.count()
-    total_projects   = projects.count()
-    production_count = tasks_qs.filter(status=Task.STATUS_PRODUCTION).count()
-    overdue_count    = tasks_qs.filter(
-        deadline__lt=today
-    ).exclude(status=Task.STATUS_PRODUCTION).count()
+        today = timezone.localdate()
+        dates = [today - timedelta(days=i) for i in range(29, -1, -1)]
+        created_labels = [d.strftime('%d.%m') for d in dates]
+        created_data = [tasks_qs.filter(created_at__date=d).count() for d in dates]
 
-    ctx = {
-        'projects': projects,
-        'selected_project': selected_project,
-        'total_tasks': total_tasks,
-        'total_projects': total_projects,
-        'production_count': production_count,
-        'overdue_count': overdue_count,
-        # JSON для Chart.js
-        'status_labels_json':   json.dumps(status_labels,   ensure_ascii=False),
-        'status_data_json':     json.dumps(status_data),
-        'priority_labels_json': json.dumps(priority_labels, ensure_ascii=False),
-        'priority_data_json':   json.dumps(priority_data),
-        'assignee_labels_json': json.dumps(assignee_labels, ensure_ascii=False),
-        'assignee_data_json':   json.dumps(assignee_data),
-        'created_labels_json':  json.dumps(created_labels,  ensure_ascii=False),
-        'created_data_json':    json.dumps(created_data),
-    }
+        total_tasks      = tasks_qs.count()
+        total_projects   = projects.count()
+        production_count = tasks_qs.filter(status=Task.STATUS_PRODUCTION).count()
+        overdue_count    = tasks_qs.filter(
+            deadline__lt=today
+        ).exclude(status=Task.STATUS_PRODUCTION).count()
+
+        ctx = {
+            'total_tasks': total_tasks,
+            'total_projects': total_projects,
+            'production_count': production_count,
+            'overdue_count': overdue_count,
+            'status_labels_json':   json.dumps(status_labels,   ensure_ascii=False),
+            'status_data_json':     json.dumps(status_data),
+            'priority_labels_json': json.dumps(priority_labels, ensure_ascii=False),
+            'priority_data_json':   json.dumps(priority_data),
+            'assignee_labels_json': json.dumps(assignee_labels, ensure_ascii=False),
+            'assignee_data_json':   json.dumps(assignee_data),
+            'created_labels_json':  json.dumps(created_labels,  ensure_ascii=False),
+            'created_data_json':    json.dumps(created_data),
+        }
+        cache.set(cache_key, ctx, timeout=300)  # 5 минут
+
+    ctx['projects'] = projects
+    ctx['selected_project'] = selected_project
     return render(request, 'projects/analytics.html', ctx)
 
 

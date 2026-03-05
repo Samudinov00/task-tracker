@@ -157,6 +157,7 @@ class Task(models.Model):
             models.Index(fields=['created_at']),
             models.Index(fields=['deadline']),
             models.Index(fields=['order']),
+            models.Index(fields=['project', 'status'], name='task_project_status_idx'),
         ]
 
     def __init__(self, *args, **kwargs):
