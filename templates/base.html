@@ -77,6 +77,8 @@
 
 {# Затемнение при открытом сайдбаре на мобильном #}
 <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+{# Затемнение при открытых уведомлениях на мобильном (bottom sheet) #}
+<div class="notif-backdrop" id="notifBackdrop"></div>
 
 {# ── Основной контент ───────────────────────────────────────────────────── #}
 <div id="page-content-wrapper">
@@ -95,6 +97,7 @@
         <div class="dropdown">
           <button class="btn btn-ghost btn-sm position-relative" id="bellBtn"
                   data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                  data-bs-display="static"
                   aria-expanded="false">
             <i class="bi bi-bell fs-5"></i>
             <span class="notif-badge d-none" id="notifBadge">0</span>
@@ -242,6 +245,27 @@
       if (isMobile()) closeSidebar();
     });
   });
+
+  // Уведомления — backdrop + блокировка скролла страницы (bottom sheet UX)
+  const notifBackdrop = document.getElementById('notifBackdrop');
+  const bellBtn       = document.getElementById('bellBtn');
+  if (bellBtn && notifBackdrop) {
+    bellBtn.addEventListener('show.bs.dropdown', function () {
+      if (isMobile()) {
+        notifBackdrop.classList.add('show');
+        document.body.classList.add('notif-open');
+      }
+    });
+    bellBtn.addEventListener('hide.bs.dropdown', function () {
+      notifBackdrop.classList.remove('show');
+      document.body.classList.remove('notif-open');
+    });
+    // Тап по затемнению — закрыть уведомления
+    notifBackdrop.addEventListener('click', function () {
+      var dd = bootstrap.Dropdown.getInstance(bellBtn);
+      if (dd) dd.hide();
+    });
+  }
 
   // Resize: убрать мобильный класс при переходе на десктоп
   window.addEventListener('resize', () => { if (!isMobile()) closeSidebar(); });
