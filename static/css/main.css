@@ -166,7 +166,10 @@ body.sidebar-collapsed #page-content-wrapper { margin-left: 56px; }
   flex: 1;
   min-width: 0;
   max-width: 100%;
-  overflow-x: hidden;
+  /* НЕ используем overflow-x:hidden здесь: по CSS-спецификации это автоматически
+     меняет overflow-y с visible на auto, превращая элемент в scroll-контейнер.
+     Это ломает position:sticky у топбара (sticky начинает работать относительно
+     этого контейнера, а не вьюпорта). Горизонтальный скролл блокируется на уровне body. */
   /* Создаём stacking context — на мобильном backdrop (z:1040) гарантированно
      перекрывает весь контент, а кнопки в сайдбаре (z:1050) остаются выше */
   position: relative;
@@ -184,7 +187,6 @@ body.sidebar-collapsed #page-content-wrapper { margin-left: 56px; }
   gap: 1rem;
   position: sticky;
   top: 0;
-  overflow: hidden;
   /* z-index нужен чтобы топбар при скролле оставался выше контента страницы */
   z-index: 10;
 }
