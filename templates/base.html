@@ -50,8 +50,9 @@
       </a>
       {% endif %}
 
+      {# На мобильном колокольчик уже есть в шапке, поэтому пункт скрыт #}
       <a href="{% url 'projects:notifications' %}"
-         class="sidebar-link {% if 'notification' in request.resolver_match.url_name %}active{% endif %}">
+         class="sidebar-link d-none d-lg-flex {% if 'notification' in request.resolver_match.url_name %}active{% endif %}">
         <i class="bi bi-bell-fill"></i>
         <span>Уведомления</span>
         {% if unread_notifications_count > 0 %}
@@ -187,7 +188,14 @@
   const mq = window.matchMedia('(max-width: 991.98px)');
   const isMobile = () => mq.matches;
 
-  function openSidebar()  { document.body.classList.add('sidebar-open'); }
+  function openSidebar() {
+    document.body.classList.add('sidebar-open');
+    // Закрыть любой открытый Bootstrap-дропдаун (уведомления, меню пользователя)
+    document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(function (el) {
+      var dd = bootstrap.Dropdown.getInstance(el);
+      if (dd) dd.hide();
+    });
+  }
   function closeSidebar() { document.body.classList.remove('sidebar-open'); }
 
   // Кнопка-гамбургер в топбаре
@@ -226,6 +234,13 @@
   // Переход по ссылке сайдбара — закрыть
   document.querySelectorAll('.sidebar-link').forEach(link => {
     link.addEventListener('click', () => { if (isMobile()) closeSidebar(); });
+  });
+
+  // Взаимоисключение: открытие дропдауна закрывает сайдбар на мобильном
+  document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(function (el) {
+    el.addEventListener('show.bs.dropdown', function () {
+      if (isMobile()) closeSidebar();
+    });
   });
 
   // Resize: убрать мобильный класс при переходе на десктоп
