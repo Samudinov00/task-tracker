@@ -22,8 +22,11 @@
 /* ── Сброс / общее ─────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
-/* Глобальный запрет горизонтального скролла */
-html, body {
+/* Глобальный запрет горизонтального скролла.
+   overflow-x: hidden на html создаёт scroll container, из-за чего
+   position:fixed элементы (сайдбар) на iOS Safari не дотягиваются до
+   низа экрана. Поэтому применяем только к body. */
+body {
   overflow-x: hidden;
   max-width: 100%;
 }
@@ -513,6 +516,7 @@ body.notif-open          { overflow: hidden; }
 body.sidebar-open .sidebar {
   transform: translateX(0) !important;
   z-index: 1050 !important;
+  pointer-events: auto !important;
 }
 body.sidebar-open .sidebar-backdrop { display: block; }
 /* Блокировать скролл страницы пока сайдбар открыт (работает на любом viewport) */
@@ -524,9 +528,11 @@ body.sidebar-open { overflow: hidden; }
     transform: translateX(-100%);
     transition: transform var(--transition);
     z-index: 1050;
-    /* Явная высота с учётом адресной строки мобильных браузеров */
-    height: 100vh;   /* fallback */
-    height: 100dvh;  /* современные браузеры: dynamic viewport height */
+    /* pointer-events: none когда скрыт — не перехватывать клики/тапы
+       на контент даже при высоком z-index */
+    pointer-events: none;
+    /* Высота: top:0 + bottom:0 уже задают full-height в базовых стилях.
+       Явный height не нужен и конфликтует на некоторых iOS-браузерах. */
   }
 
   /* Collapsed-стиль не нужен на мобильном — сайдбар скрыт */
