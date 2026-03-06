@@ -58,6 +58,12 @@
           <div class="col-md-6">
             <label class="form-label">{{ form.assignee.label }}</label>
             {{ form.assignee }}
+            {% if manager_id %}
+            <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="btn-self-assign"
+                    title="Назначить себя исполнителем">
+              <i class="bi bi-person-check me-1"></i>Назначить себя
+            </button>
+            {% endif %}
           </div>
           <div class="col-md-6">
             <label class="form-label">{{ form.deadline.label }}</label>
@@ -117,6 +123,18 @@
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Сохранение...';
   });
+
+  {% if manager_id %}
+  const selfAssignBtn = document.getElementById('btn-self-assign');
+  if (selfAssignBtn) {
+    selfAssignBtn.addEventListener('click', function () {
+      const select = document.getElementById('{{ form.assignee.id_for_label }}');
+      if (select) {
+        select.value = '{{ manager_id }}';
+      }
+    });
+  }
+  {% endif %}
 </script>
 {% endblock %}
 

@@ -473,7 +473,7 @@ def task_create(request, project_uuid):
     project = get_object_or_404(Project, uuid=project_uuid, manager=request.user)
 
     if request.method == 'POST':
-        form = TaskForm(project=project, data=request.POST)
+        form = TaskForm(project=project, manager=request.user, data=request.POST)
         if form.is_valid():
             task = form.save(commit=False)
             task.project    = project
@@ -481,7 +481,7 @@ def task_create(request, project_uuid):
             task.save()
             form.save_m2m()
 
-            if task.assignee:
+            if task.assignee and task.assignee != request.user:
                 _notify(
                     task.assignee, task, Notification.TYPE_TASK_ASSIGNED,
                     f'Вам назначена задача «{task.title}» в проекте «{project.name}»',
@@ -490,12 +490,13 @@ def task_create(request, project_uuid):
             messages.success(request, f'Задача «{task.title}» создана.')
             return redirect('projects:kanban', project_uuid=project.uuid)
     else:
-        form = TaskForm(project=project)
+        form = TaskForm(project=project, manager=request.user)
 
     return render(request, 'projects/task_form.html', {
         'form': form,
         'project': project,
         'title': 'Новая задача',
+        'manager_id': request.user.pk,
     })
 
 
@@ -514,7 +515,7 @@ def task_edit(request, uuid):
 
     # Исполнитель меняет только статус/под-этап
     FormClass = TaskStatusForm if user.is_executor() else TaskForm
-    form_kwargs = {} if user.is_executor() else {'project': project}
+    form_kwargs = {} if user.is_executor() else {'project': project, 'manager': user}
 
     if request.method == 'POST':
         form = FormClass(**form_kwargs, data=request.POST, instance=task)
@@ -554,6 +555,7 @@ def task_edit(request, uuid):
         'task': task,
         'project': project,
         'title': 'Редактировать задачу',
+        'manager_id': user.pk if user.is_manager() else None,
     })
 
 
@@ -696,6 +698,36 @@ def log_time(request, task_uuid):
             for error in field_errors:
                 messages.error(request, error)
 
+    return redirect('projects:task_detail', uuid=task.uuid)
+
+
+# ─────────────── AJAX: назначить себя исполнителем ────────────────────────────
+
+@login_required
+@require_POST
+def task_self_assign(request, task_uuid):
+    """Менеджер назначает себя исполнителем задачи."""
+    if not request.user.is_manager():
+        raise PermissionDenied
+
+    task = get_object_or_404(Task, uuid=task_uuid)
+    if task.project.manager != request.user:
+        raise PermissionDenied
+
+    old_assignee = task.assignee
+    task._changed_by = request.user
+    task.assignee = request.user
+    task.save(update_fields=['assignee', 'updated_at'])
+
+    TaskChangeLog.objects.create(
+        task=task,
+        changed_by=request.user,
+        field_name='Исполнитель',
+        old_value=old_assignee.get_display_name() if old_assignee else '—',
+        new_value=request.user.get_display_name(),
+    )
+
+    messages.success(request, 'Вы назначены исполнителем задачи.')
     return redirect('projects:task_detail', uuid=task.uuid)
 
 

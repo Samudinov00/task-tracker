@@ -63,10 +63,16 @@ class TaskForm(forms.ModelForm):
             ),
         }
 
-    def __init__(self, project=None, *args, **kwargs):
+    def __init__(self, project=None, manager=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if project:
-            self.fields['assignee'].queryset = project.executors.all()
+            assignee_qs = project.executors.all()
+            if manager:
+                from django.db.models import Q
+                assignee_qs = CustomUser.objects.filter(
+                    Q(pk__in=project.executors.all()) | Q(pk=manager.pk)
+                )
+            self.fields['assignee'].queryset = assignee_qs
             self.fields['clients'].queryset = project.clients.all()
         else:
             self.fields['assignee'].queryset = CustomUser.objects.filter(role='executor')

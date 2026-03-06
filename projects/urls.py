@@ -35,6 +35,9 @@ urlpatterns = [
     # AJAX: drag & drop
     path('t/<uuid:task_uuid>/move/', views.task_move, name='task_move'),
 
+    # AJAX: менеджер назначает себя исполнителем
+    path('t/<uuid:task_uuid>/self-assign/', views.task_self_assign, name='task_self_assign'),
+
     # Трекер времени
     path('t/<uuid:task_uuid>/log-time/', views.log_time, name='log_time'),
 
