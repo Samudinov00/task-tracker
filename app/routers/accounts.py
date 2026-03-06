@@ -8,7 +8,9 @@ from typing import Optional
 
 from app.database import SessionLocal
 from app.dependencies import get_db, require_auth, require_manager
-from app.models.user import User, ROLE_CHOICES, ROLE_EXECUTOR
+from app.models.user import User, ROLE_LABELS, ROLE_EXECUTOR
+
+ROLE_CHOICES = list(ROLE_LABELS.items())
 from app.utils import flash, templates
 
 router = APIRouter()
