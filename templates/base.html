@@ -218,17 +218,26 @@
   }
 
   // Кнопка-гамбургер в топбаре
-  toggle.addEventListener('click', () => {
+  // touchend + click: touchend срабатывает раньше и надёжнее на Android Chrome
+  // (click может не сработать если GPU-слой не обновил hit-область)
+  function onToggle(e) {
+    e.preventDefault();
     if (isMobile()) {
       document.body.classList.contains('sidebar-open') ? closeSidebar() : openSidebar();
     } else {
       document.body.classList.toggle('sidebar-collapsed');
       localStorage.setItem('sidebar_collapsed', document.body.classList.contains('sidebar-collapsed'));
     }
-  });
+  }
+  toggle.addEventListener('touchend', onToggle, { passive: false });
+  toggle.addEventListener('click', onToggle);
 
   // Кнопка × внутри сайдбара
-  closeBtn?.addEventListener('click', closeSidebar);
+  if (closeBtn) {
+    function onClose(e) { e.preventDefault(); closeSidebar(); }
+    closeBtn.addEventListener('touchend', onClose, { passive: false });
+    closeBtn.addEventListener('click', onClose);
+  }
 
   // Клик / тач по затемнению (touchstart надёжнее click на Android)
   if (backdrop) {

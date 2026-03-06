@@ -59,7 +59,6 @@ body {
 /* ── Боковая панель ─────────────────────────────────────────── */
 .sidebar {
   width: var(--sidebar-w);
-  /* top+bottom вместо min-height:100vh — надёжно на всех мобильных браузерах */
   position: fixed;
   top: 0; left: 0; bottom: 0;
   z-index: 200;
@@ -68,9 +67,9 @@ body {
   transition: width var(--transition);
   overflow: hidden;
   background: var(--sidebar-bg);
-  /* Устранение субпиксельных артефактов при transform-анимации */
-  will-change: transform;
-  backface-visibility: hidden;
+  /* НЕ используем will-change:transform и backface-visibility:hidden глобально —
+     на Android Chrome они создают GPU-слой, чья hit-область не обновляется
+     после изменения transform, из-за чего кнопки внутри не реагируют на тапы. */
 }
 
 .sidebar-brand {
@@ -207,6 +206,9 @@ body.sidebar-collapsed #page-content-wrapper { margin-left: 56px; }
   padding: .375rem .5rem;
   border-radius: .5rem;
   font-size: .95rem;
+  /* Убирает 300ms задержку и предотвращает перехват жеста системой */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 .btn-ghost:hover { background: #f1f5f9; color: var(--text); }
 
@@ -528,11 +530,17 @@ body.sidebar-open { overflow: hidden; }
     transform: translateX(-100%);
     transition: transform var(--transition);
     z-index: 1050;
-    /* pointer-events: none когда скрыт — не перехватывать клики/тапы
-       на контент даже при высоком z-index */
+    /* pointer-events: none когда скрыт — кнопки за пределами сайдбара
+       не блокируются даже при высоком z-index */
     pointer-events: none;
-    /* Высота: top:0 + bottom:0 уже задают full-height в базовых стилях.
-       Явный height не нужен и конфликтует на некоторых iOS-браузерах. */
+    /* Явная высота для Chrome Android с динамической адресной строкой.
+       Убираем bottom:0 (из базовых стилей) и заменяем height:
+       top:0 + height = надёжнее, чем top+bottom при изменении visual viewport */
+    bottom: auto;
+    height: 100vh;    /* fallback для старых браузеров */
+    height: 100dvh;   /* dynamic viewport height: Chrome 108+, Firefox 101+ */
+    /* will-change только на мобильном где нужна анимация transform */
+    will-change: transform;
   }
 
   /* Collapsed-стиль не нужен на мобильном — сайдбар скрыт */
