@@ -270,10 +270,18 @@
             {% if task.assignee %}
             <div class="d-flex align-items-center gap-2">
               <div class="avatar-xs avatar-initials">{{ task.assignee.get_initials }}</div>
-              <span>{{ task.assignee.get_display_name }}</span>
+              <span id="assignee-name">{{ task.assignee.get_display_name }}</span>
             </div>
             {% else %}
-            <span class="text-muted fst-italic">Не назначен</span>
+            <span class="text-muted fst-italic" id="assignee-name">Не назначен</span>
+            {% endif %}
+            {% if user.is_manager and task.project.manager == user and task.assignee != user %}
+            <form method="post" action="{% url 'projects:task_self_assign' task.uuid %}" class="mt-2" id="self-assign-form">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-person-check me-1"></i>Назначить себя
+              </button>
+            </form>
             {% endif %}
           </div>
 
