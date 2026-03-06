@@ -52,7 +52,7 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - staticfiles:/app/staticfiles
+      - staticfiles:/app/static
       - media:/app/media
     networks:
       - backend
@@ -60,8 +60,7 @@ services:
     expose:
       - "8000"
     healthcheck:
-      test: ["CMD-SHELL",
-             "curl -f http://localhost:8000/accounts/login/ || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -77,7 +76,7 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - staticfiles:/app/staticfiles:ro
+      - staticfiles:/app/static:ro
       - media:/app/media:ro
       # Certbot: webroot для верификации домена и сами сертификаты
       - certbot_webroot:/var/www/certbot:ro
@@ -125,7 +124,7 @@ services:
 
 volumes:
   postgres_data:    # данные PostgreSQL
-  staticfiles:      # Django collectstatic → Nginx
+  staticfiles:      # FastAPI static files → Nginx
   media:            # загружаемые пользователями файлы
   certbot_webroot:  # ACME-challenge для Let's Encrypt
   certbot_certs:    # TLS-сертификаты

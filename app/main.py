@@ -2,7 +2,7 @@
 Точка входа FastAPI-приложения (замена task_tracker/wsgi.py + urls.py).
 """
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -40,6 +40,12 @@ app.include_router(accounts.router)
 app.include_router(projects.router)
 app.include_router(notifications.router)
 app.include_router(analytics.router)
+
+
+# ── Health check ──────────────────────────────────────────────────────────────
+@app.get("/health/", include_in_schema=False)
+async def health():
+    return JSONResponse({"status": "ok"})
 
 
 # ── Обработчики ошибок ────────────────────────────────────────────────────────
