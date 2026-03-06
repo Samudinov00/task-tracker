@@ -158,6 +158,10 @@ jobs:
             timeout 60 sh -c 'until docker compose ps db | grep -q healthy; do sleep 2; done' \
               || { echo "Database did not become healthy in time"; exit 1; }
 
+            echo "==> Waiting for Redis to be healthy..."
+            timeout 30 sh -c 'until docker compose ps redis | grep -q healthy; do sleep 2; done' \
+              || { echo "Redis did not become healthy in time"; exit 1; }
+
             echo "==> Starting new container (zero-downtime)..."
             docker compose up -d --no-deps --wait web
 
