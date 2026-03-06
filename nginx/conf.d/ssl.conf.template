@@ -25,7 +25,7 @@ server {
 
     # ── Статические файлы ────────────────────────────────────────────────────
     location /static/ {
-        alias   /app/staticfiles/;
+        alias   /app/static/;
         expires 1y;
         add_header Cache-Control "public, immutable";
         access_log off;
