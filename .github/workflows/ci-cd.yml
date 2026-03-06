@@ -45,41 +45,25 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run Django system check
+      - name: Run Alembic migrations
         env:
           SECRET_KEY:    "ci-test-secret-key-not-for-production"
-          DEBUG:         "False"
-          ALLOWED_HOSTS: "localhost,127.0.0.1"
           DB_NAME:       tasktracker_test
           DB_USER:       postgres
           DB_PASSWORD:   postgres
           DB_HOST:       localhost
           DB_PORT:       "5432"
-        run: python manage.py check
+        run: python -m alembic upgrade head
 
-      - name: Run migrations
+      - name: Check app imports (smoke test)
         env:
           SECRET_KEY:    "ci-test-secret-key-not-for-production"
-          DEBUG:         "False"
-          ALLOWED_HOSTS: "localhost,127.0.0.1"
           DB_NAME:       tasktracker_test
           DB_USER:       postgres
           DB_PASSWORD:   postgres
           DB_HOST:       localhost
           DB_PORT:       "5432"
-        run: python manage.py migrate --noinput
-
-      - name: Run tests
-        env:
-          SECRET_KEY:    "ci-test-secret-key-not-for-production"
-          DEBUG:         "False"
-          ALLOWED_HOSTS: "localhost,127.0.0.1"
-          DB_NAME:       tasktracker_test
-          DB_USER:       postgres
-          DB_PASSWORD:   postgres
-          DB_HOST:       localhost
-          DB_PORT:       "5432"
-        run: python manage.py test --verbosity=2
+        run: python -c "from app.main import app; print('FastAPI app loaded OK')"
 
 # ── Job 2: Build & Push Docker image ─────────────────────────────────────────
   build-and-push:

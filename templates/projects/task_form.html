@@ -7,8 +7,8 @@
 <div class="page-header">
   <nav aria-label="breadcrumb">
     <ol class="breadcrumb mb-0">
-      <li class="breadcrumb-item"><a href="{% url 'projects:project_list' %}">Проекты</a></li>
-      <li class="breadcrumb-item"><a href="{% url 'projects:kanban' project.uuid %}">{{ project.name }}</a></li>
+      <li class="breadcrumb-item"><a href="{{ url_for('project_list') }}">Проекты</a></li>
+      <li class="breadcrumb-item"><a href="{{ url_for('kanban', project_uuid=project.uuid) }}">{{ project.name }}</a></li>
       <li class="breadcrumb-item active">{{ title }}</li>
     </ol>
   </nav>
@@ -17,47 +17,66 @@
 <div class="card">
   <div class="card-header fw-semibold">{{ title }}</div>
   <div class="card-body p-4">
-    <form method="post" enctype="multipart/form-data" novalidate>
-      {% csrf_token %}
+    <form method="post" novalidate>
 
-      {% if user.is_executor %}
+      {% if user.is_executor() %}
         <div class="row g-4">
           <div class="col-md-6">
-            <label class="form-label">{{ form.status.label }}</label>
-            {{ form.status }}
+            <label class="form-label">Статус</label>
+            <select name="status" class="form-select">
+              {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if task and task.status == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
           </div>
         </div>
 
       {% else %}
         <div class="row g-4 mb-4">
           <div class="col-12">
-            <label class="form-label">{{ form.title.label }}</label>
-            {{ form.title }}
-            {% if form.title.errors %}
-              <div class="invalid-feedback d-block">{{ form.title.errors.0 }}</div>
+            <label class="form-label">Название</label>
+            <input type="text" name="title" class="form-control"
+                   value="{{ task.title if task else '' }}">
+            {% if errors.title %}
+              <div class="invalid-feedback d-block">{{ errors.title }}</div>
             {% endif %}
           </div>
           <div class="col-12">
-            <label class="form-label">{{ form.description.label }}</label>
-            {{ form.description }}
+            <label class="form-label">Описание</label>
+            <textarea name="description" class="form-control" rows="4">{{ task.description if task else '' }}</textarea>
           </div>
         </div>
 
         <div class="row g-4 mb-4">
           <div class="col-md-6">
-            <label class="form-label">{{ form.status.label }}</label>
-            {{ form.status }}
+            <label class="form-label">Статус</label>
+            <select name="status" class="form-select">
+              {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if task and task.status == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
           </div>
           <div class="col-md-6">
-            <label class="form-label">{{ form.priority.label }}</label>
-            {{ form.priority }}
+            <label class="form-label">Приоритет</label>
+            <select name="priority" class="form-select">
+              {% for value, label in priority_choices %}
+                <option value="{{ value }}" {% if task and task.priority == value %}selected{% elif not task and value == 'medium' %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
           </div>
         </div>
 
         <div class="row g-4 mb-4">
           <div class="col-md-6">
-            <label class="form-label">{{ form.assignee.label }}</label>
-            {{ form.assignee }}
+            <label class="form-label">Исполнитель</label>
+            <select name="assignee" class="form-select" id="id_assignee">
+              <option value="">— Не назначен —</option>
+              {% for a in assignees %}
+                <option value="{{ a.id }}" {% if task and task.assignee_id == a.id %}selected{% endif %}>
+                  {{ a.get_display_name() }}
+                </option>
+              {% endfor %}
+            </select>
             {% if manager_id %}
             <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="btn-self-assign"
                     title="Назначить себя исполнителем">
@@ -66,35 +85,31 @@
             {% endif %}
           </div>
           <div class="col-md-6">
-            <label class="form-label">{{ form.deadline.label }}</label>
-            {{ form.deadline }}
+            <label class="form-label">Дедлайн</label>
+            <input type="date" name="deadline" class="form-control"
+                   value="{{ task.deadline.strftime('%Y-%m-%d') if task and task.deadline else '' }}">
           </div>
         </div>
 
-        {% if user.is_manager %}
+        {% if user.is_manager() %}
         <div class="row g-4 mb-4">
           <div class="col-12">
-            <label class="form-label">{{ form.clients.label }}</label>
+            <label class="form-label">Клиенты</label>
             <div class="border rounded p-3">
-              {% for checkbox in form.clients %}
+              {% for client in task_clients %}
                 <div class="form-check">
-                  <input class="form-check-input"
-                         type="checkbox"
-                         name="{{ form.clients.html_name }}"
-                         value="{{ checkbox.data.value }}"
-                         id="{{ checkbox.id_for_label }}"
-                         {% if checkbox.data.selected %}checked{% endif %}>
-                  <label class="form-check-label" for="{{ checkbox.id_for_label }}">
-                    {{ checkbox.choice_label }}
+                  <input class="form-check-input" type="checkbox"
+                         name="clients" value="{{ client.id }}"
+                         id="client_{{ client.id }}"
+                         {% if task and client in task.clients %}checked{% endif %}>
+                  <label class="form-check-label" for="client_{{ client.id }}">
+                    {{ client.get_display_name() }}
                   </label>
                 </div>
-              {% empty %}
+              {% else %}
                 <span class="text-muted">Нет клиентов в системе</span>
               {% endfor %}
             </div>
-            {% if form.clients.errors %}
-              <div class="invalid-feedback d-block">{{ form.clients.errors.0 }}</div>
-            {% endif %}
           </div>
         </div>
         {% endif %}
@@ -106,9 +121,9 @@
           <i class="bi bi-save me-2"></i>Сохранить
         </button>
         {% if task %}
-        <a href="{% url 'projects:task_detail' task.uuid %}" class="btn btn-outline-secondary">Отмена</a>
+        <a href="{{ url_for('task_detail', uuid=task.uuid) }}" class="btn btn-outline-secondary">Отмена</a>
         {% else %}
-        <a href="{% url 'projects:kanban' project.uuid %}" class="btn btn-outline-secondary">Отмена</a>
+        <a href="{{ url_for('kanban', project_uuid=project.uuid) }}" class="btn btn-outline-secondary">Отмена</a>
         {% endif %}
       </div>
     </form>
@@ -128,7 +143,7 @@
   const selfAssignBtn = document.getElementById('btn-self-assign');
   if (selfAssignBtn) {
     selfAssignBtn.addEventListener('click', function () {
-      const select = document.getElementById('{{ form.assignee.id_for_label }}');
+      const select = document.getElementById('id_assignee');
       if (select) {
         select.value = '{{ manager_id }}';
       }
@@ -137,4 +152,3 @@
   {% endif %}
 </script>
 {% endblock %}
-

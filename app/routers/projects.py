@@ -1,0 +1,1000 @@
+"""
+Роуты проектов и задач (аналог projects/views.py).
+"""
+import csv
+import io
+import json
+import uuid as uuid_lib
+from datetime import date, timedelta
+
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile, File
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
+from sqlalchemy import func, or_
+from sqlalchemy.orm import Session, joinedload, selectinload
+from typing import List, Optional
+
+from app.database import SessionLocal
+from app.dependencies import get_db, require_auth, require_manager
+from app.models.project import (
+    Comment, Notification, Project, Task, TaskAttachment,
+    TaskChangeLog, TaskStatusLog, TimeLog,
+    STATUS_CHOICES, PRIORITY_CHOICES, STATUS_NOT_STARTED, STATUS_PRODUCTION,
+    TYPE_TASK_ASSIGNED, TYPE_TASK_STATUS, TYPE_COMMENT,
+)
+from app.models.user import User
+from app.utils import flash, templates
+
+router = APIRouter()
+
+
+# ── Хелперы ──────────────────────────────────────────────────────────────────
+
+def _check_project_access(user: User, project: Project, db: Session) -> None:
+    if user.is_manager():
+        if project.manager_id != user.id:
+            raise HTTPException(status_code=403, detail="Нет доступа к этому проекту.")
+    elif user.is_client():
+        ids = [c.id for c in project.clients]
+        if user.id not in ids:
+            raise HTTPException(status_code=403, detail="Нет доступа к этому проекту.")
+    elif user.is_executor():
+        in_team = user.id in [e.id for e in project.executors]
+        has_task = db.query(Task).filter(Task.project_id == project.id, Task.assignee_id == user.id).first() is not None
+        if not (in_team or has_task):
+            raise HTTPException(status_code=403, detail="Нет доступа к этому проекту.")
+
+
+def _notify(db: Session, user_ids: list, task_id: int, ntype: str, message: str) -> None:
+    try:
+        from app.tasks.notifications import send_notifications
+        send_notifications.delay(user_ids, task_id, ntype, message)
+    except Exception:
+        pass
+
+
+def _get_project_by_uuid(db: Session, uuid_str) -> Project:
+    project = db.query(Project).filter(Project.uuid == uuid_str).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Проект не найден.")
+    return project
+
+
+def _get_task_by_uuid(db: Session, uuid_str) -> Task:
+    task = db.query(Task).filter(Task.uuid == uuid_str).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Задача не найдена.")
+    return task
+
+
+# ── Проекты ──────────────────────────────────────────────────────────────────
+
+@router.get("/", response_class=HTMLResponse, name="home")
+async def home(request: Request):
+    return RedirectResponse(url="/p/", status_code=302)
+
+
+@router.get("/p/", response_class=HTMLResponse, name="project_list")
+async def project_list(request: Request, db: Session = Depends(get_db)):
+    user = require_auth(request, db)
+    if user.is_manager():
+        projects = db.query(Project).filter(Project.manager_id == user.id).order_by(Project.created_at.desc()).all()
+    elif user.is_client():
+        projects = user.client_projects
+    else:  # executor
+        projects = (
+            db.query(Project)
+            .filter(
+                or_(
+                    Project.executors.any(User.id == user.id),
+                    Project.tasks.any(Task.assignee_id == user.id),
+                )
+            )
+            .distinct()
+            .order_by(Project.created_at.desc())
+            .all()
+        )
+    unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
+    return templates.TemplateResponse(
+        "projects/project_list.html",
+        {"request": request, "user": user, "projects": projects, "unread_notifications_count": unread_count},
+    )
+
+
+@router.get("/p/create/", response_class=HTMLResponse, name="project_create")
+async def project_create_get(request: Request, db: Session = Depends(get_db)):
+    user = require_manager(request, db)
+    executors = db.query(User).filter(User.role == "executor").all()
+    clients = db.query(User).filter(User.role == "client").all()
+    return templates.TemplateResponse(
+        "projects/project_form.html",
+        {
+            "request": request, "user": user, "title": "Новый проект",
+            "project": None, "all_executors": executors, "all_clients": clients,
+            "selected_executor_ids": [], "selected_client_ids": [], "errors": {},
+        },
+    )
+
+
+@router.post("/p/create/", name="project_create_post")
+async def project_create_post(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    user = require_manager(request, db)
+    form = await request.form()
+    name = form.get("name", "").strip()
+    description = form.get("description", "").strip()
+    executor_ids = [int(x) for x in form.getlist("executors") if x.isdigit()]
+    client_ids = [int(x) for x in form.getlist("clients") if x.isdigit()]
+
+    errors = {}
+    if not name:
+        errors["name"] = "Название обязательно."
+
+    if errors:
+        executors = db.query(User).filter(User.role == "executor").all()
+        clients = db.query(User).filter(User.role == "client").all()
+        return templates.TemplateResponse(
+            "projects/project_form.html",
+            {
+                "request": request, "user": user, "title": "Новый проект",
+                "project": None, "all_executors": executors, "all_clients": clients,
+                "selected_executor_ids": executor_ids, "selected_client_ids": client_ids,
+                "errors": errors, "form_data": {"name": name, "description": description},
+            },
+        )
+
+    project = Project(name=name, description=description, manager_id=user.id)
+    db.add(project)
+    db.flush()  # get project.id
+
+    if executor_ids:
+        execs = db.query(User).filter(User.id.in_(executor_ids)).all()
+        project.executors = execs
+    if client_ids:
+        cls = db.query(User).filter(User.id.in_(client_ids)).all()
+        project.clients = cls
+
+    db.commit()
+    flash(request, f"Проект «{name}» создан.", "success")
+    return RedirectResponse(url=f"/p/{project.uuid}/board/", status_code=302)
+
+
+@router.get("/p/{uuid}/", response_class=HTMLResponse, name="project_detail")
+async def project_detail(request: Request, uuid: uuid_lib.UUID, db: Session = Depends(get_db)):
+    user = require_auth(request, db)
+    project = _get_project_by_uuid(db, uuid)
+    _check_project_access(user, project, db)
+
+    tasks_q = db.query(Task).filter(Task.project_id == project.id).options(joinedload(Task.assignee))
+    if user.is_executor():
+        tasks_q = tasks_q.filter(Task.assignee_id == user.id)
+    elif user.is_client():
+        tasks_q = tasks_q.filter(Task.clients.any(User.id == user.id))
+
+    tasks = tasks_q.all()
+    unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
+    return templates.TemplateResponse(
+        "projects/project_detail.html",
+        {
+            "request": request, "user": user, "project": project, "tasks": tasks,
+            "not_started_count": sum(1 for t in tasks if t.status == "not_started"),
+            "in_work_count": sum(1 for t in tasks if t.status == "development"),
+            "test_count": sum(1 for t in tasks if t.status in ("test_nsk", "test_district")),
+            "production_count": sum(1 for t in tasks if t.status == "production"),
+            "unread_notifications_count": unread_count,
+        },
+    )
+
+
+@router.get("/p/{uuid}/edit/", response_class=HTMLResponse, name="project_edit")
+async def project_edit_get(request: Request, uuid: uuid_lib.UUID, db: Session = Depends(get_db)):
+    user = require_manager(request, db)
+    project = _get_project_by_uuid(db, uuid)
+    if project.manager_id != user.id:
+        raise HTTPException(status_code=403)
+    all_executors = db.query(User).filter(User.role == "executor").all()
+    all_clients = db.query(User).filter(User.role == "client").all()
+    return templates.TemplateResponse(
+        "projects/project_form.html",
+        {
+            "request": request, "user": user, "title": "Редактировать проект",
+            "project": project, "all_executors": all_executors, "all_clients": all_clients,
+            "selected_executor_ids": [e.id for e in project.executors],
+            "selected_client_ids": [c.id for c in project.clients],
+            "errors": {},
+        },
+    )
+
+
+@router.post("/p/{uuid}/edit/", name="project_edit_post")
+async def project_edit_post(request: Request, uuid: uuid_lib.UUID, db: Session = Depends(get_db)):
+    user = require_manager(request, db)
+    project = _get_project_by_uuid(db, uuid)
+    if project.manager_id != user.id:
+        raise HTTPException(status_code=403)
+
+    form = await request.form()
+    name = form.get("name", "").strip()
+    description = form.get("description", "").strip()
+    executor_ids = [int(x) for x in form.getlist("executors") if x.isdigit()]
+    client_ids = [int(x) for x in form.getlist("clients") if x.isdigit()]
+
+    errors = {}
+    if not name:
+        errors["name"] = "Название обязательно."
+
+    if errors:
+        all_executors = db.query(User).filter(User.role == "executor").all()
+        all_clients = db.query(User).filter(User.role == "client").all()
+        return templates.TemplateResponse(
+            "projects/project_form.html",
+            {
+                "request": request, "user": user, "title": "Редактировать проект",
+                "project": project, "all_executors": all_executors, "all_clients": all_clients,
+                "selected_executor_ids": executor_ids, "selected_client_ids": client_ids,
+                "errors": errors,
+            },
+        )
+
+    project.name = name
+    project.description = description
+    project.executors = db.query(User).filter(User.id.in_(executor_ids)).all() if executor_ids else []
+    project.clients = db.query(User).filter(User.id.in_(client_ids)).all() if client_ids else []
+    db.commit()
+    flash(request, "Проект обновлён.", "success")
+    return RedirectResponse(url=f"/p/{project.uuid}/", status_code=302)
+
+
+@router.get("/p/{uuid}/delete/", response_class=HTMLResponse, name="project_delete")
+async def project_delete_get(request: Request, uuid: uuid_lib.UUID, db: Session = Depends(get_db)):
+    user = require_manager(request, db)
+    project = _get_project_by_uuid(db, uuid)
+    if project.manager_id != user.id:
+        raise HTTPException(status_code=403)
+    unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
+    return templates.TemplateResponse(
+        "projects/project_confirm_delete.html",
+        {"request": request, "user": user, "project": project, "unread_notifications_count": unread_count},
+    )
+
+
+@router.post("/p/{uuid}/delete/", name="project_delete_post")
+async def project_delete_post(request: Request, uuid: uuid_lib.UUID, db: Session = Depends(get_db)):
+    user = require_manager(request, db)
+    project = _get_project_by_uuid(db, uuid)
+    if project.manager_id != user.id:
+        raise HTTPException(status_code=403)
+
+    task_count = db.query(Task).filter(Task.project_id == project.id).count()
+    if task_count > 0:
+        flash(request, "Нельзя удалить проект, в котором есть задачи.", "danger")
+        return RedirectResponse(url="/p/", status_code=302)
+
+    db.delete(project)
+    db.commit()
+    flash(request, "Проект удалён.", "success")
+    return RedirectResponse(url="/p/", status_code=302)
+
+
+# ── Канбан-доска ──────────────────────────────────────────────────────────────
+
+@router.get("/p/{project_uuid}/board/", response_class=HTMLResponse, name="kanban")
+async def kanban(request: Request, project_uuid: uuid_lib.UUID, db: Session = Depends(get_db)):
+    user = require_auth(request, db)
+    project = _get_project_by_uuid(db, project_uuid)
+    _check_project_access(user, project, db)
+
+    qs = db.query(Task).filter(Task.project_id == project.id).options(
+        joinedload(Task.assignee), joinedload(Task.comments)
+    )
+    if user.is_executor():
+        qs = qs.filter(Task.assignee_id == user.id)
+    elif user.is_client():
+        qs = qs.filter(Task.clients.any(User.id == user.id))
+
+    assignee_filter = None
+    priority_filter = None
+    deadline_filter = None
+    executors = []
+
+    if user.is_manager():
+        executors = (
+            db.query(User)
+            .join(Task, Task.assignee_id == User.id)
+            .filter(Task.project_id == project.id)
+            .distinct()
+            .order_by(User.first_name, User.username)
+            .all()
+        )
+        assignee_id = request.query_params.get("assignee")
+        if assignee_id == "none":
+            qs = qs.filter(Task.assignee_id == None)
+            assignee_filter = "none"
+        elif assignee_id and assignee_id.isdigit():
+            qs = qs.filter(Task.assignee_id == int(assignee_id))
+            assignee_filter = assignee_id
+
+    priority = request.query_params.get("priority")
+    valid_priorities = [c[0] for c in PRIORITY_CHOICES]
+    if priority in valid_priorities:
+        qs = qs.filter(Task.priority == priority)
+        priority_filter = priority
+
+    deadline = request.query_params.get("deadline")
+    today = date.today()
+    if deadline == "overdue":
+        qs = qs.filter(Task.deadline < today).filter(Task.status != STATUS_PRODUCTION)
+        deadline_filter = "overdue"
+    elif deadline == "soon":
+        qs = qs.filter(Task.deadline >= today, Task.deadline <= today + timedelta(days=7)).filter(Task.status != STATUS_PRODUCTION)
+        deadline_filter = "soon"
+
+    all_tasks = qs.all()
+
+    kanban_columns = [
+        {"key": "not_started",   "label": "Не начата",                  "color": "secondary", "icon": "bi-circle",            "tasks": sorted([t for t in all_tasks if t.status == "not_started"], key=lambda t: t.order)},
+        {"key": "development",   "label": "Разработка",                 "color": "primary",   "icon": "bi-code-slash",         "tasks": sorted([t for t in all_tasks if t.status == "development"], key=lambda t: t.order)},
+        {"key": "test_nsk",      "label": "Тест НСК",                   "color": "warning",   "icon": "bi-bug",                "tasks": sorted([t for t in all_tasks if t.status == "test_nsk"], key=lambda t: t.order)},
+        {"key": "test_district", "label": "Тест район",                 "color": "warning",   "icon": "bi-geo-alt-fill",       "tasks": sorted([t for t in all_tasks if t.status == "test_district"], key=lambda t: t.order)},
+        {"key": "production",    "label": "Промышленная эксплуатация",  "color": "success",   "icon": "bi-check-circle-fill",  "tasks": sorted([t for t in all_tasks if t.status == "production"], key=lambda t: t.order)},
+    ]
+
+    unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
+    return templates.TemplateResponse(
+        "projects/kanban.html",
+        {
+            "request": request, "user": user, "project": project,
+            "kanban_columns": kanban_columns, "executors": executors,
+            "assignee_filter": assignee_filter, "priority_filter": priority_filter,
+            "deadline_filter": deadline_filter,
+            "priority_choices": PRIORITY_CHOICES, "status_choices": STATUS_CHOICES,
+            "unread_notifications_count": unread_count,
+        },
+    )
+
+
+@router.post("/t/{task_uuid}/move/", name="task_move")
+async def task_move(request: Request, task_uuid: uuid_lib.UUID, db: Session = Depends(get_db)):
+    user = require_auth(request, db)
+    task = _get_task_by_uuid(db, task_uuid)
+
+    if user.is_client():
+        return JSONResponse({"error": "Нет доступа"}, status_code=403)
+    if user.is_executor() and task.assignee_id != user.id:
+        return JSONResponse({"error": "Нет доступа"}, status_code=403)
+    if user.is_manager() and task.project.manager_id != user.id:
+        return JSONResponse({"error": "Нет доступа"}, status_code=403)
+
+    data = await request.json()
+    new_status = data.get("status")
+    column_ids = data.get("column_ids", [])
+
+    valid_statuses = [s[0] for s in STATUS_CHOICES]
+    if new_status not in valid_statuses:
+        return JSONResponse({"error": "Неверный статус"}, status_code=400)
+
+    old_status = task.status
+    task.status = new_status
+    db.commit()
+
+    for idx, tuuid_str in enumerate(column_ids):
+        try:
+            tuuid = uuid_lib.UUID(str(tuuid_str))
+            db.query(Task).filter(Task.uuid == tuuid, Task.project_id == task.project_id).update({"order": idx})
+        except Exception:
+            pass
+    db.commit()
+
+    if old_status != new_status:
+        status_log = TaskStatusLog(task_id=task.id, changed_by_id=user.id, old_status=old_status, new_status=new_status)
+        db.add(status_log)
+        db.commit()
+        label = dict(STATUS_CHOICES).get(new_status)
+        recipients = set()
+        if task.assignee_id and task.assignee_id != user.id:
+            recipients.add(task.assignee_id)
+        if task.project.manager_id != user.id:
+            recipients.add(task.project.manager_id)
+        _notify(db, list(recipients), task.id, TYPE_TASK_STATUS, f"Статус задачи «{task.title}» изменён на «{label}»")
+
+    return JSONResponse({"success": True})
+
+
+@router.get("/p/{project_uuid}/kanban-state/", name="kanban_state")
+async def kanban_state_api(request: Request, project_uuid: uuid_lib.UUID, db: Session = Depends(get_db)):
+    user = require_auth(request, db)
+    project = _get_project_by_uuid(db, project_uuid)
+    _check_project_access(user, project, db)
+
+    qs = db.query(Task).filter(Task.project_id == project.id).options(joinedload(Task.assignee))
+    if user.is_executor():
+        qs = qs.filter(Task.assignee_id == user.id)
+    elif user.is_client():
+        qs = qs.filter(Task.clients.any(User.id == user.id))
+
+    tasks_data = []
+    for task in qs.all():
+        tasks_data.append({
+            "uuid": str(task.uuid),
+            "title": task.title,
+            "status": task.status,
+            "priority": task.priority,
+            "assignee_name": task.assignee.get_display_name() if task.assignee else "",
+            "deadline": task.deadline.isoformat() if task.deadline else None,
+            "is_overdue": task.is_overdue(),
+            "comment_count": len(task.comments),
+        })
+
+    from datetime import datetime
+    return JSONResponse({"tasks": tasks_data, "updated_at": datetime.utcnow().isoformat()})
+
+
+# ── Задачи ────────────────────────────────────────────────────────────────────
+
+@router.get("/t/{uuid}/", response_class=HTMLResponse, name="task_detail")
+async def task_detail(request: Request, uuid: uuid_lib.UUID, db: Session = Depends(get_db)):
+    user = require_auth(request, db)
+    task = (
+        db.query(Task)
+        .filter(Task.uuid == uuid)
+        .options(
+            joinedload(Task.assignee),
+            joinedload(Task.project),
+            joinedload(Task.created_by),
+            selectinload(Task.comments).joinedload(Comment.author),
+            selectinload(Task.time_logs).joinedload(TimeLog.user),
+            selectinload(Task.change_logs).joinedload(TaskChangeLog.changed_by),
+            selectinload(Task.status_logs).joinedload(TaskStatusLog.changed_by),
+        )
+        .first()
+    )
+    if not task:
+        raise HTTPException(status_code=404)
+    _check_project_access(user, task.project, db)
+
+    if user.is_executor() and task.assignee_id != user.id:
+        raise HTTPException(status_code=403)
+    if user.is_client():
+        client_ids = [c.id for c in task.clients]
+        if user.id not in client_ids:
+            raise HTTPException(status_code=403)
+
+    can_edit = user.is_manager() or (user.is_executor() and task.assignee_id == user.id)
+    can_log_time = can_edit
+
+    # История изменений
+    history = []
+    for log in task.status_logs:
+        history.append({
+            "type": "status",
+            "changed_by": log.changed_by,
+            "field_name": "Статус",
+            "old_value": dict(STATUS_CHOICES).get(log.old_status, log.old_status),
+            "new_value": dict(STATUS_CHOICES).get(log.new_status, log.new_status),
+            "changed_at": log.changed_at,
+        })
+    for log in task.change_logs:
+        history.append({
+            "type": "field",
+            "changed_by": log.changed_by,
+            "field_name": log.field_name,
+            "old_value": log.old_value,
+            "new_value": log.new_value,
+            "changed_at": log.changed_at,
+        })
+    history.sort(key=lambda x: x["changed_at"], reverse=True)
+
+    total_minutes = task.get_total_logged_minutes()
+    total_hours = total_minutes // 60
+    remaining_min = total_minutes % 60
+
+    unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
+    return templates.TemplateResponse(
+        "projects/task_detail.html",
+        {
+            "request": request, "user": user, "task": task,
+            "can_edit": can_edit, "can_log_time": can_log_time,
+            "history": history, "total_hours": total_hours,
+            "remaining_min": remaining_min, "total_minutes": total_minutes,
+            "status_choices": STATUS_CHOICES,
+            "unread_notifications_count": unread_count,
+            "comment_error": None, "timelog_error": None,
+        },
+    )
+
+
+@router.post("/t/{uuid}/comment/", name="task_comment_post")
+async def task_comment_post(
+    request: Request,
+    uuid: uuid_lib.UUID,
+    db: Session = Depends(get_db),
+    text: str = Form(...),
+):
+    user = require_auth(request, db)
+    task = _get_task_by_uuid(db, uuid)
+    _check_project_access(user, task.project, db)
+
+    if not text.strip():
+        flash(request, "Текст комментария не может быть пустым.", "danger")
+        return RedirectResponse(url=f"/t/{task.uuid}/", status_code=302)
+
+    comment = Comment(task_id=task.id, author_id=user.id, text=text.strip())
+    db.add(comment)
+    db.commit()
+
+    recipients = set()
+    if task.assignee_id and task.assignee_id != user.id:
+        recipients.add(task.assignee_id)
+    if task.project.manager_id != user.id:
+        recipients.add(task.project.manager_id)
+    _notify(db, list(recipients), task.id, TYPE_COMMENT, f"{user.get_display_name()} прокомментировал задачу «{task.title}»")
+
+    flash(request, "Комментарий добавлен.", "success")
+    return RedirectResponse(url=f"/t/{task.uuid}/", status_code=302)
+
+
+@router.post("/t/{uuid}/attachment/", name="task_attachment_post")
+async def task_attachment_post(
+    request: Request,
+    uuid: uuid_lib.UUID,
+    db: Session = Depends(get_db),
+    file: UploadFile = File(...),
+):
+    user = require_auth(request, db)
+    if not user.is_manager():
+        raise HTTPException(status_code=403)
+    task = _get_task_by_uuid(db, uuid)
+    _check_project_access(user, task.project, db)
+
+    if not file.filename.lower().endswith(".pdf"):
+        flash(request, "Разрешены только PDF файлы.", "danger")
+        return RedirectResponse(url=f"/t/{task.uuid}/", status_code=302)
+
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        flash(request, "Файл не должен превышать 10 МБ.", "danger")
+        return RedirectResponse(url=f"/t/{task.uuid}/", status_code=302)
+
+    from app.config import MEDIA_DIR
+    import os
+    upload_dir = MEDIA_DIR / "task_attachments"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    safe_name = f"{task.uuid}_{file.filename}"
+    file_path = upload_dir / safe_name
+    with open(file_path, "wb") as f:
+        f.write(content)
+
+    attachment = TaskAttachment(
+        task_id=task.id,
+        file=f"task_attachments/{safe_name}",
+        uploaded_by_id=user.id,
+    )
+    db.add(attachment)
+    db.commit()
+    flash(request, "Файл загружен.", "success")
+    return RedirectResponse(url=f"/t/{task.uuid}/", status_code=302)
+
+
+@router.post("/t/{uuid}/log-time/", name="log_time")
+async def log_time(
+    request: Request,
+    uuid: uuid_lib.UUID,
+    db: Session = Depends(get_db),
+    minutes: int = Form(...),
+    description: str = Form(""),
+):
+    user = require_auth(request, db)
+    task = _get_task_by_uuid(db, uuid)
+    can_log = user.is_manager() or (user.is_executor() and task.assignee_id == user.id)
+    if not can_log:
+        raise HTTPException(status_code=403)
+    if minutes <= 0:
+        flash(request, "Укажите положительное количество минут.", "danger")
+        return RedirectResponse(url=f"/t/{task.uuid}/", status_code=302)
+
+    tl = TimeLog(task_id=task.id, user_id=user.id, minutes=minutes, description=description)
+    db.add(tl)
+    db.commit()
+    flash(request, f"Добавлено {minutes} мин.", "success")
+    return RedirectResponse(url=f"/t/{task.uuid}/", status_code=302)
+
+
+@router.get("/p/{project_uuid}/new/", response_class=HTMLResponse, name="task_create")
+async def task_create_get(request: Request, project_uuid: uuid_lib.UUID, db: Session = Depends(get_db)):
+    user = require_manager(request, db)
+    project = _get_project_by_uuid(db, project_uuid)
+    if project.manager_id != user.id:
+        raise HTTPException(status_code=403)
+
+    assignees = list(project.executors) + [user]
+    task_clients = list(project.clients)
+    unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
+    return templates.TemplateResponse(
+        "projects/task_form.html",
+        {
+            "request": request, "user": user, "project": project,
+            "title": "Новая задача", "task": None,
+            "assignees": assignees, "task_clients": task_clients,
+            "status_choices": STATUS_CHOICES, "priority_choices": PRIORITY_CHOICES,
+            "errors": {}, "manager_id": user.id,
+            "unread_notifications_count": unread_count,
+        },
+    )
+
+
+@router.post("/p/{project_uuid}/new/", name="task_create_post")
+async def task_create_post(
+    request: Request,
+    project_uuid: uuid_lib.UUID,
+    db: Session = Depends(get_db),
+):
+    user = require_manager(request, db)
+    project = _get_project_by_uuid(db, project_uuid)
+    if project.manager_id != user.id:
+        raise HTTPException(status_code=403)
+
+    form = await request.form()
+    title = form.get("title", "").strip()
+    description = form.get("description", "").strip()
+    status_val = form.get("status", STATUS_NOT_STARTED)
+    priority = form.get("priority", "medium")
+    assignee_id_str = form.get("assignee", "")
+    client_ids = [int(x) for x in form.getlist("clients") if x.isdigit()]
+    deadline_str = form.get("deadline", "")
+
+    errors = {}
+    if not title:
+        errors["title"] = "Название обязательно."
+
+    assignee_id = None
+    if assignee_id_str and assignee_id_str.isdigit():
+        assignee_id = int(assignee_id_str)
+
+    deadline = None
+    if deadline_str:
+        try:
+            from datetime import date as date_type
+            deadline = date_type.fromisoformat(deadline_str)
+        except ValueError:
+            errors["deadline"] = "Неверный формат даты."
+
+    if errors:
+        assignees = list(project.executors) + [user]
+        task_clients = list(project.clients)
+        unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
+        return templates.TemplateResponse(
+            "projects/task_form.html",
+            {
+                "request": request, "user": user, "project": project,
+                "title": "Новая задача", "task": None,
+                "assignees": assignees, "task_clients": task_clients,
+                "status_choices": STATUS_CHOICES, "priority_choices": PRIORITY_CHOICES,
+                "errors": errors, "manager_id": user.id,
+                "unread_notifications_count": unread_count,
+            },
+        )
+
+    task = Task(
+        title=title, description=description,
+        project_id=project.id, status=status_val, priority=priority,
+        assignee_id=assignee_id, created_by_id=user.id, deadline=deadline,
+    )
+    db.add(task)
+    db.flush()
+
+    if client_ids:
+        cls = db.query(User).filter(User.id.in_(client_ids)).all()
+        task.clients = cls
+
+    db.commit()
+
+    if assignee_id and assignee_id != user.id:
+        _notify(db, [assignee_id], task.id, TYPE_TASK_ASSIGNED, f"Вам назначена задача «{task.title}» в проекте «{project.name}»")
+
+    flash(request, f"Задача «{title}» создана.", "success")
+    return RedirectResponse(url=f"/p/{project.uuid}/board/", status_code=302)
+
+
+@router.get("/t/{uuid}/edit/", response_class=HTMLResponse, name="task_edit")
+async def task_edit_get(request: Request, uuid: uuid_lib.UUID, db: Session = Depends(get_db)):
+    user = require_auth(request, db)
+    task = _get_task_by_uuid(db, uuid)
+    project = task.project
+
+    if user.is_client():
+        raise HTTPException(status_code=403)
+    if user.is_executor() and task.assignee_id != user.id:
+        raise HTTPException(status_code=403)
+    if user.is_manager() and project.manager_id != user.id:
+        raise HTTPException(status_code=403)
+
+    assignees = list(project.executors) + [project.manager]
+    task_clients_list = list(project.clients)
+    unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
+    return templates.TemplateResponse(
+        "projects/task_form.html",
+        {
+            "request": request, "user": user, "task": task, "project": project,
+            "title": "Редактировать задачу",
+            "assignees": assignees, "task_clients": task_clients_list,
+            "status_choices": STATUS_CHOICES, "priority_choices": PRIORITY_CHOICES,
+            "errors": {}, "manager_id": user.id if user.is_manager() else None,
+            "unread_notifications_count": unread_count,
+        },
+    )
+
+
+@router.post("/t/{uuid}/edit/", name="task_edit_post")
+async def task_edit_post(request: Request, uuid: uuid_lib.UUID, db: Session = Depends(get_db)):
+    user = require_auth(request, db)
+    task = _get_task_by_uuid(db, uuid)
+    project = task.project
+
+    if user.is_client():
+        raise HTTPException(status_code=403)
+    if user.is_executor() and task.assignee_id != user.id:
+        raise HTTPException(status_code=403)
+    if user.is_manager() and project.manager_id != user.id:
+        raise HTTPException(status_code=403)
+
+    form = await request.form()
+    old_status = task.status
+    old_assignee_id = task.assignee_id
+
+    if user.is_executor():
+        # Только статус
+        new_status = form.get("status", task.status)
+        if new_status in [s[0] for s in STATUS_CHOICES]:
+            task.status = new_status
+    else:
+        # Полное редактирование (менеджер)
+        title = form.get("title", "").strip()
+        if title:
+            if title != task.title:
+                db.add(TaskChangeLog(task_id=task.id, changed_by_id=user.id, field_name="Название", old_value=task.title, new_value=title))
+            task.title = title
+
+        description = form.get("description", "").strip()
+        if description != task.description:
+            db.add(TaskChangeLog(task_id=task.id, changed_by_id=user.id, field_name="Описание", old_value=task.description, new_value=description))
+        task.description = description
+
+        new_status = form.get("status", task.status)
+        if new_status in [s[0] for s in STATUS_CHOICES]:
+            task.status = new_status
+
+        priority = form.get("priority", task.priority)
+        if priority in [p[0] for p in PRIORITY_CHOICES]:
+            if priority != task.priority:
+                db.add(TaskChangeLog(task_id=task.id, changed_by_id=user.id, field_name="Приоритет", old_value=task.priority, new_value=priority))
+            task.priority = priority
+
+        assignee_id_str = form.get("assignee", "")
+        new_assignee_id = int(assignee_id_str) if assignee_id_str and assignee_id_str.isdigit() else None
+        if new_assignee_id != old_assignee_id:
+            old_name = task.assignee.get_display_name() if task.assignee else "—"
+            new_user = db.query(User).filter(User.id == new_assignee_id).first() if new_assignee_id else None
+            new_name = new_user.get_display_name() if new_user else "—"
+            db.add(TaskChangeLog(task_id=task.id, changed_by_id=user.id, field_name="Исполнитель", old_value=old_name, new_value=new_name))
+            task.assignee_id = new_assignee_id
+            if new_assignee_id and new_assignee_id != user.id:
+                _notify(db, [new_assignee_id], task.id, TYPE_TASK_ASSIGNED, f"Вам назначена задача «{task.title}»")
+
+        deadline_str = form.get("deadline", "")
+        if deadline_str:
+            try:
+                from datetime import date as date_type
+                new_deadline = date_type.fromisoformat(deadline_str)
+                if new_deadline != task.deadline:
+                    db.add(TaskChangeLog(task_id=task.id, changed_by_id=user.id, field_name="Дедлайн", old_value=str(task.deadline or ""), new_value=str(new_deadline)))
+                task.deadline = new_deadline
+            except ValueError:
+                pass
+        else:
+            if task.deadline:
+                db.add(TaskChangeLog(task_id=task.id, changed_by_id=user.id, field_name="Дедлайн", old_value=str(task.deadline), new_value=""))
+            task.deadline = None
+
+        client_ids = [int(x) for x in form.getlist("clients") if x.isdigit()]
+        task.clients = db.query(User).filter(User.id.in_(client_ids)).all() if client_ids else []
+
+    if old_status != task.status:
+        db.add(TaskStatusLog(task_id=task.id, changed_by_id=user.id, old_status=old_status, new_status=task.status))
+        label = dict(STATUS_CHOICES).get(task.status)
+        recipients = set()
+        if task.assignee_id and task.assignee_id != user.id:
+            recipients.add(task.assignee_id)
+        if project.manager_id != user.id:
+            recipients.add(project.manager_id)
+        _notify(db, list(recipients), task.id, TYPE_TASK_STATUS, f"Статус задачи «{task.title}» изменён на «{label}»")
+
+    db.commit()
+    flash(request, "Задача обновлена.", "success")
+    return RedirectResponse(url=f"/t/{task.uuid}/", status_code=302)
+
+
+@router.get("/t/{uuid}/delete/", response_class=HTMLResponse, name="task_delete")
+async def task_delete_get(request: Request, uuid: uuid_lib.UUID, db: Session = Depends(get_db)):
+    user = require_manager(request, db)
+    task = _get_task_by_uuid(db, uuid)
+    if task.project.manager_id != user.id:
+        raise HTTPException(status_code=403)
+    unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
+    return templates.TemplateResponse(
+        "projects/task_confirm_delete.html",
+        {"request": request, "user": user, "task": task, "unread_notifications_count": unread_count},
+    )
+
+
+@router.post("/t/{uuid}/delete/", name="task_delete_post")
+async def task_delete_post(request: Request, uuid: uuid_lib.UUID, db: Session = Depends(get_db)):
+    user = require_manager(request, db)
+    task = _get_task_by_uuid(db, uuid)
+    if task.project.manager_id != user.id:
+        raise HTTPException(status_code=403)
+    project_uuid = task.project.uuid
+    db.delete(task)
+    db.commit()
+    flash(request, "Задача удалена.", "success")
+    return RedirectResponse(url=f"/p/{project_uuid}/board/", status_code=302)
+
+
+@router.post("/t/{task_uuid}/self-assign/", name="task_self_assign")
+async def task_self_assign(request: Request, task_uuid: uuid_lib.UUID, db: Session = Depends(get_db)):
+    user = require_manager(request, db)
+    task = _get_task_by_uuid(db, task_uuid)
+    if task.project.manager_id != user.id:
+        raise HTTPException(status_code=403)
+
+    old_assignee = task.assignee
+    old_name = old_assignee.get_display_name() if old_assignee else "—"
+    db.add(TaskChangeLog(
+        task_id=task.id, changed_by_id=user.id,
+        field_name="Исполнитель", old_value=old_name, new_value=user.get_display_name(),
+    ))
+    task.assignee_id = user.id
+    db.commit()
+    flash(request, "Вы назначены исполнителем задачи.", "success")
+    return RedirectResponse(url=f"/t/{task.uuid}/", status_code=302)
+
+
+@router.post("/bulk-update/", name="bulk_task_update")
+async def bulk_task_update(request: Request, db: Session = Depends(get_db)):
+    user = require_manager(request, db)
+    form = await request.form()
+    task_uuids = form.getlist("task_uuids[]")
+    action = form.get("action")
+    value = form.get("value")
+    referer = request.headers.get("referer", "/p/")
+
+    if not task_uuids or not action or not value:
+        flash(request, "Некорректные данные.", "danger")
+        return RedirectResponse(url=referer, status_code=302)
+
+    tasks = (
+        db.query(Task)
+        .filter(Task.uuid.in_([uuid_lib.UUID(u) for u in task_uuids if len(u) == 36]))
+        .join(Project)
+        .filter(Project.manager_id == user.id)
+        .options(joinedload(Task.assignee), joinedload(Task.project))
+        .all()
+    )
+
+    updated = 0
+    if action == "change_status":
+        valid_statuses = [s[0] for s in STATUS_CHOICES]
+        if value not in valid_statuses:
+            flash(request, "Неверный статус.", "danger")
+            return RedirectResponse(url=referer, status_code=302)
+        label = dict(STATUS_CHOICES).get(value)
+        for task in tasks:
+            old_status = task.status
+            if old_status != value:
+                task.status = value
+                db.add(TaskStatusLog(task_id=task.id, changed_by_id=user.id, old_status=old_status, new_status=value))
+                db.add(TaskChangeLog(
+                    task_id=task.id, changed_by_id=user.id,
+                    field_name="Статус",
+                    old_value=dict(STATUS_CHOICES).get(old_status, old_status),
+                    new_value=label,
+                ))
+                updated += 1
+
+    elif action == "change_assignee":
+        new_assignee = db.query(User).filter(User.id == int(value), User.role == "executor").first()
+        if not new_assignee:
+            flash(request, "Исполнитель не найден.", "danger")
+            return RedirectResponse(url=referer, status_code=302)
+        for task in tasks:
+            old_name = task.assignee.get_display_name() if task.assignee else "—"
+            task.assignee_id = new_assignee.id
+            db.add(TaskChangeLog(
+                task_id=task.id, changed_by_id=user.id,
+                field_name="Исполнитель", old_value=old_name, new_value=new_assignee.get_display_name(),
+            ))
+            _notify(db, [new_assignee.id], task.id, TYPE_TASK_ASSIGNED, f"Вам назначена задача «{task.title}»")
+            updated += 1
+
+    db.commit()
+    if updated:
+        flash(request, f"Обновлено задач: {updated}.", "success")
+    else:
+        flash(request, "Нет изменений.", "info")
+    return RedirectResponse(url=referer, status_code=302)
+
+
+@router.delete("/a/{pk}/delete/", name="attachment_delete")
+@router.post("/a/{pk}/delete/")
+async def attachment_delete(request: Request, pk: int, db: Session = Depends(get_db)):
+    user = require_auth(request, db)
+    attachment = db.query(TaskAttachment).filter(TaskAttachment.id == pk).first()
+    if not attachment:
+        raise HTTPException(status_code=404)
+    task = attachment.task
+
+    is_manager = user.is_manager() and task.project.manager_id == user.id
+    is_uploader = attachment.uploaded_by_id == user.id
+    if not (is_manager or is_uploader):
+        raise HTTPException(status_code=403)
+
+    from app.config import MEDIA_DIR
+    import os
+    file_path = MEDIA_DIR / attachment.file
+    if file_path.exists():
+        os.remove(file_path)
+
+    db.delete(attachment)
+    db.commit()
+    flash(request, "Вложение удалено.", "success")
+    return RedirectResponse(url=f"/t/{task.uuid}/", status_code=302)
+
+
+# ── Логи статусов ─────────────────────────────────────────────────────────────
+
+@router.get("/logs/", response_class=HTMLResponse, name="status_logs")
+async def status_logs(request: Request, db: Session = Depends(get_db)):
+    user = require_manager(request, db)
+    logs_q = (
+        db.query(TaskStatusLog)
+        .join(Task, TaskStatusLog.task_id == Task.id)
+        .join(Project, Task.project_id == Project.id)
+        .filter(Project.manager_id == user.id)
+        .options(
+            joinedload(TaskStatusLog.task).joinedload(Task.project),
+            joinedload(TaskStatusLog.changed_by),
+        )
+        .order_by(TaskStatusLog.changed_at.desc())
+    )
+
+    project_id = request.query_params.get("project")
+    if project_id and project_id.isdigit():
+        logs_q = logs_q.filter(Task.project_id == int(project_id))
+
+    executor_id = request.query_params.get("executor")
+    if executor_id and executor_id.isdigit():
+        logs_q = logs_q.filter(TaskStatusLog.changed_by_id == int(executor_id))
+
+    projects = db.query(Project).filter(Project.manager_id == user.id).all()
+    executor_ids_q = (
+        db.query(TaskStatusLog.changed_by_id)
+        .join(Task, TaskStatusLog.task_id == Task.id)
+        .join(Project, Task.project_id == Project.id)
+        .filter(Project.manager_id == user.id)
+        .distinct()
+    )
+    executor_id_list = [r[0] for r in executor_ids_q.all() if r[0]]
+    executors = db.query(User).filter(User.id.in_(executor_id_list)).all()
+
+    unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
+    return templates.TemplateResponse(
+        "projects/status_logs.html",
+        {
+            "request": request, "user": user,
+            "logs": logs_q.limit(200).all(),
+            "projects": projects, "executors": executors,
+            "selected_project": project_id,
+            "selected_executor": executor_id,
+            "unread_notifications_count": unread_count,
+        },
+    )

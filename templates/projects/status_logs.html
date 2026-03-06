@@ -14,7 +14,7 @@
         <select name="project" class="form-select form-select-sm">
           <option value="">Все проекты</option>
           {% for p in projects %}
-            <option value="{{ p.pk }}" {% if selected_project == p.pk|stringformat:'s' %}selected{% endif %}>{{ p.name }}</option>
+            <option value="{{ p.id }}" {% if selected_project == p.id|string %}selected{% endif %}>{{ p.name }}</option>
           {% endfor %}
         </select>
       </div>
@@ -23,13 +23,13 @@
         <select name="executor" class="form-select form-select-sm">
           <option value="">Все</option>
           {% for e in executors %}
-            <option value="{{ e.pk }}" {% if selected_executor == e.pk|stringformat:'s' %}selected{% endif %}>{{ e.get_display_name }}</option>
+            <option value="{{ e.id }}" {% if selected_executor == e.id|string %}selected{% endif %}>{{ e.get_display_name() }}</option>
           {% endfor %}
         </select>
       </div>
       <div class="d-flex gap-2">
         <button type="submit" class="btn btn-sm btn-primary">Применить</button>
-        <a href="{% url 'projects:status_logs' %}" class="btn btn-sm btn-outline-secondary">Сбросить</a>
+        <a href="{{ url_for('status_logs') }}" class="btn btn-sm btn-outline-secondary">Сбросить</a>
       </div>
     </form>
   </div>
@@ -51,24 +51,24 @@
       <tbody>
         {% for log in logs %}
         <tr>
-          <td style="font-size:.85rem;white-space:nowrap">{{ log.changed_at|date:"d.m.Y H:i" }}</td>
+          <td style="font-size:.85rem;white-space:nowrap">{{ log.changed_at.strftime('%d.%m.%Y %H:%M') if log.changed_at else '' }}</td>
           <td>
-            <a href="{% url 'projects:task_detail' log.task.uuid %}" class="text-decoration-none">
-              {{ log.task.title|truncatechars:40 }}
+            <a href="{{ url_for('task_detail', uuid=log.task.uuid) }}" class="text-decoration-none">
+              {{ log.task.title[:40] }}{% if log.task.title|length > 40 %}…{% endif %}
             </a>
           </td>
-          <td style="font-size:.85rem">{{ log.task.project.name|truncatechars:25 }}</td>
+          <td style="font-size:.85rem">{{ log.task.project.name[:25] }}{% if log.task.project.name|length > 25 %}…{% endif %}</td>
           <td style="font-size:.85rem">
             {% if log.changed_by %}
-              <span class="avatar-xs avatar-initials me-1" style="font-size:.5rem;width:18px;height:18px;display:inline-flex">{{ log.changed_by.get_initials }}</span>
-              {{ log.changed_by.get_display_name }}
+              <span class="avatar-xs avatar-initials me-1" style="font-size:.5rem;width:18px;height:18px;display:inline-flex">{{ log.changed_by.get_initials() }}</span>
+              {{ log.changed_by.get_display_name() }}
             {% else %}<span class="text-muted">—</span>{% endif %}
           </td>
-          <td><span class="badge bg-secondary-subtle text-secondary">{{ log.get_old_status_display }}</span></td>
+          <td><span class="badge bg-secondary-subtle text-secondary">{{ log.get_old_status_display() }}</span></td>
           <td><i class="bi bi-arrow-right text-muted"></i></td>
-          <td><span class="badge bg-primary-subtle text-primary">{{ log.get_new_status_display }}</span></td>
+          <td><span class="badge bg-primary-subtle text-primary">{{ log.get_new_status_display() }}</span></td>
         </tr>
-        {% empty %}
+        {% else %}
         <tr><td colspan="7" class="text-center text-muted py-5">Логов пока нет.</td></tr>
         {% endfor %}
       </tbody>
@@ -82,25 +82,25 @@
   <div class="card mb-2">
     <div class="card-body p-3">
       <div class="d-flex justify-content-between align-items-start mb-2">
-        <a href="{% url 'projects:task_detail' log.task.uuid %}" class="text-decoration-none fw-semibold flex-grow-1 me-2">
-          {{ log.task.title|truncatechars:50 }}
+        <a href="{{ url_for('task_detail', uuid=log.task.uuid) }}" class="text-decoration-none fw-semibold flex-grow-1 me-2">
+          {{ log.task.title[:50] }}{% if log.task.title|length > 50 %}…{% endif %}
         </a>
-        <span class="text-muted flex-shrink-0" style="font-size:.78rem">{{ log.changed_at|date:"d.m H:i" }}</span>
+        <span class="text-muted flex-shrink-0" style="font-size:.78rem">{{ log.changed_at.strftime('%d.%m %H:%M') if log.changed_at else '' }}</span>
       </div>
       <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-        <span class="badge bg-secondary-subtle text-secondary">{{ log.get_old_status_display }}</span>
+        <span class="badge bg-secondary-subtle text-secondary">{{ log.get_old_status_display() }}</span>
         <i class="bi bi-arrow-right text-muted small"></i>
-        <span class="badge bg-primary-subtle text-primary">{{ log.get_new_status_display }}</span>
+        <span class="badge bg-primary-subtle text-primary">{{ log.get_new_status_display() }}</span>
       </div>
       <div class="text-muted" style="font-size:.8rem">
         <i class="bi bi-folder2 me-1"></i>{{ log.task.project.name }}
         {% if log.changed_by %}
-          &nbsp;·&nbsp;<i class="bi bi-person me-1"></i>{{ log.changed_by.get_display_name }}
+          &nbsp;·&nbsp;<i class="bi bi-person me-1"></i>{{ log.changed_by.get_display_name() }}
         {% endif %}
       </div>
     </div>
   </div>
-  {% empty %}
+  {% else %}
   <div class="card">
     <div class="card-body text-center text-muted py-5">Логов пока нет.</div>
   </div>

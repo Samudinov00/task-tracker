@@ -31,7 +31,7 @@ services:
       retries: 5
       start_period: 10s
 
-  # ── Django (Gunicorn) ────────────────────────────────────────────────────────
+  # ── FastAPI (Uvicorn) ────────────────────────────────────────────────────────
   web:
     # В CI/CD образ собирается отдельно и пушится в реестр.
     # На сервере переменная DOCKER_IMAGE задаётся в .env.
@@ -106,7 +106,7 @@ services:
     environment:
       DB_HOST: db
       REDIS_URL: redis://redis:6379/0
-    command: celery -A task_tracker worker --loglevel=info --concurrency=2
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=2
     depends_on:
       db:
         condition: service_healthy

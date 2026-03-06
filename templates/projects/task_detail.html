@@ -8,24 +8,24 @@
   <div>
     <nav aria-label="breadcrumb">
       <ol class="breadcrumb mb-1">
-        <li class="breadcrumb-item"><a href="{% url 'projects:project_list' %}">Проекты</a></li>
-        <li class="breadcrumb-item"><a href="{% url 'projects:kanban' task.project.uuid %}">{{ task.project.name }}</a></li>
-        <li class="breadcrumb-item active">{{ task.title|truncatechars:40 }}</li>
+        <li class="breadcrumb-item"><a href="{{ url_for('project_list') }}">Проекты</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('kanban', project_uuid=task.project.uuid) }}">{{ task.project.name }}</a></li>
+        <li class="breadcrumb-item active">{{ task.title[:40] }}{% if task.title|length > 40 %}…{% endif %}</li>
       </ol>
     </nav>
-    <h1 class="page-header-title {% if task.is_overdue %}text-danger{% endif %}">
+    <h1 class="page-header-title {% if task.is_overdue() %}text-danger{% endif %}">
       {{ task.title }}
-      {% if task.is_overdue %}<span class="badge bg-danger fs-6 ms-2">Просрочено</span>{% endif %}
+      {% if task.is_overdue() %}<span class="badge bg-danger fs-6 ms-2">Просрочено</span>{% endif %}
     </h1>
   </div>
   <div class="d-flex flex-wrap gap-2 page-header-actions">
     {% if can_edit %}
-    <a href="{% url 'projects:task_edit' task.uuid %}" class="btn btn-outline-primary btn-sm">
+    <a href="{{ url_for('task_edit', uuid=task.uuid) }}" class="btn btn-outline-primary btn-sm">
       <i class="bi bi-pencil me-1"></i>Изменить
     </a>
     {% endif %}
-    {% if user.is_manager %}
-    <a href="{% url 'projects:task_delete' task.uuid %}" class="btn btn-outline-danger btn-sm">
+    {% if user.is_manager() %}
+    <a href="{{ url_for('task_delete', uuid=task.uuid) }}" class="btn btn-outline-danger btn-sm">
       <i class="bi bi-trash me-1"></i>Удалить
     </a>
     {% endif %}
@@ -49,26 +49,25 @@
     {# ── Комментарии ── #}
     <div class="card mb-4" id="comments">
       <div class="card-header fw-semibold">
-        <i class="bi bi-chat-left-text me-2"></i>Комментарии ({{ task.comments.count }})
+        <i class="bi bi-chat-left-text me-2"></i>Комментарии ({{ task.comments|length }})
       </div>
       <div class="card-body p-0">
-        {% for comment in task.comments.all %}
-        <div class="px-4 py-3 {% if not forloop.last %}border-bottom{% endif %}">
+        {% for comment in task.comments %}
+        <div class="px-4 py-3 {% if not loop.last %}border-bottom{% endif %}">
           <div class="d-flex align-items-center gap-3 mb-2 comment-meta">
-            <div class="avatar-xs avatar-initials flex-shrink-0">{{ comment.author.get_initials }}</div>
-            <span class="fw-semibold">{{ comment.author.get_display_name }}</span>
-            <span class="text-muted ms-auto comment-date" style="font-size:.85rem">{{ comment.created_at|date:"d.m.Y H:i" }}</span>
+            <div class="avatar-xs avatar-initials flex-shrink-0">{{ comment.author.get_initials() }}</div>
+            <span class="fw-semibold">{{ comment.author.get_display_name() }}</span>
+            <span class="text-muted ms-auto comment-date" style="font-size:.85rem">{{ comment.created_at.strftime('%d.%m.%Y %H:%M') if comment.created_at else '' }}</span>
           </div>
           <p class="mb-1" style="white-space:pre-wrap;font-size:.9rem">{{ comment.text }}</p>
         </div>
-        {% empty %}
+        {% else %}
         <div class="text-center text-muted py-4">Комментариев пока нет.</div>
         {% endfor %}
 
         <div class="border-top p-4">
           <form method="post" novalidate>
-            {% csrf_token %}
-            {{ comment_form.text }}
+            <textarea name="text" class="form-control" rows="3" placeholder="Написать комментарий…"></textarea>
             <div class="mt-3 text-end">
               <button type="submit" name="comment_submit" class="btn btn-primary">
                 <i class="bi bi-send me-2"></i>Отправить
@@ -91,7 +90,7 @@
         {% endif %}
       </div>
       <div class="card-body p-0">
-        {% if task.time_logs.all %}
+        {% if task.time_logs %}
         <div class="table-responsive">
           <table class="table table-sm mb-0">
             <thead class="table-light">
@@ -103,17 +102,17 @@
               </tr>
             </thead>
             <tbody>
-              {% for log in task.time_logs.all %}
+              {% for log in task.time_logs %}
               <tr>
                 <td>
                   <div class="d-flex align-items-center gap-2">
-                    <div class="avatar-xs avatar-initials" style="font-size:.5rem;width:22px;height:22px">{{ log.user.get_initials }}</div>
-                    {{ log.user.get_display_name }}
+                    <div class="avatar-xs avatar-initials" style="font-size:.5rem;width:22px;height:22px">{{ log.user.get_initials() }}</div>
+                    {{ log.user.get_display_name() }}
                   </div>
                 </td>
                 <td><strong>{{ log.minutes }}</strong> мин</td>
-                <td class="text-muted" style="font-size:.875rem">{{ log.description|default:"—" }}</td>
-                <td class="text-muted" style="font-size:.875rem">{{ log.logged_at|date:"d.m.Y H:i" }}</td>
+                <td class="text-muted" style="font-size:.875rem">{{ log.description or '—' }}</td>
+                <td class="text-muted" style="font-size:.875rem">{{ log.logged_at.strftime('%d.%m.%Y %H:%M') if log.logged_at else '' }}</td>
               </tr>
               {% endfor %}
             </tbody>
@@ -133,22 +132,14 @@
 
         <div class="border-top p-4">
           <form method="post" novalidate>
-            {% csrf_token %}
             <div class="row g-2 align-items-end">
               <div class="col-sm-3">
-                <label class="form-label small fw-semibold" for="{{ timelog_form.minutes.id_for_label }}">
-                  {{ timelog_form.minutes.label }}
-                </label>
-                {{ timelog_form.minutes }}
-                {% if timelog_form.minutes.errors %}
-                <div class="text-danger mt-1" style="font-size:.8rem">{{ timelog_form.minutes.errors|join:', ' }}</div>
-                {% endif %}
+                <label class="form-label small fw-semibold" for="id_minutes">Минуты</label>
+                <input type="number" name="minutes" id="id_minutes" class="form-control form-control-sm" min="1" placeholder="60">
               </div>
               <div class="col-sm-6">
-                <label class="form-label small fw-semibold" for="{{ timelog_form.description.id_for_label }}">
-                  {{ timelog_form.description.label }}
-                </label>
-                {{ timelog_form.description }}
+                <label class="form-label small fw-semibold" for="id_timelog_description">Описание</label>
+                <input type="text" name="description" id="id_timelog_description" class="form-control form-control-sm" placeholder="Что делали?">
               </div>
               <div class="col-sm-3">
                 <button type="submit" name="timelog_submit" class="btn btn-outline-primary w-100">
@@ -165,21 +156,20 @@
     {# ── Вложения ── #}
     <div class="card mb-4">
       <div class="card-header fw-semibold">
-        <i class="bi bi-paperclip me-2"></i>Вложения ({{ task.attachments.count }})
+        <i class="bi bi-paperclip me-2"></i>Вложения ({{ task.attachments|length }})
       </div>
       <div class="card-body p-0">
-        {% for att in task.attachments.all %}
-        <div class="px-4 py-3 d-flex align-items-center gap-3 {% if not forloop.last %}border-bottom{% endif %}">
+        {% for att in task.attachments %}
+        <div class="px-4 py-3 d-flex align-items-center gap-3 {% if not loop.last %}border-bottom{% endif %}">
           <i class="bi bi-file-earmark-pdf text-danger fs-5"></i>
           <div class="flex-grow-1">
-            <a href="{{ att.file.url }}" target="_blank" class="text-decoration-none fw-semibold">{{ att.filename }}</a>
+            <a href="{{ url_for('media', path=att.file_path) }}" target="_blank" class="text-decoration-none fw-semibold">{{ att.filename }}</a>
             <div class="text-muted" style="font-size:.8rem">
-              {{ att.uploaded_by.get_display_name }} &middot; {{ att.uploaded_at|date:"d.m.Y H:i" }}
+              {{ att.uploaded_by.get_display_name() }} &middot; {{ att.uploaded_at.strftime('%d.%m.%Y %H:%M') if att.uploaded_at else '' }}
             </div>
           </div>
-          {% if user.is_manager or att.uploaded_by == user %}
-          <form method="post" action="{% url 'projects:attachment_delete' att.pk %}" class="mb-0">
-            {% csrf_token %}
+          {% if user.is_manager() or att.uploaded_by_id == user.id %}
+          <form method="post" action="{{ url_for('attachment_delete', pk=att.id) }}" class="mb-0">
             <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить"
                     onclick="return confirm('Удалить файл?')">
               <i class="bi bi-trash"></i>
@@ -187,22 +177,16 @@
           </form>
           {% endif %}
         </div>
-        {% empty %}
+        {% else %}
         <div class="text-center text-muted py-3">Вложений нет.</div>
         {% endfor %}
 
-        {% if user.is_manager %}
+        {% if user.is_manager() %}
         <div class="border-top p-4">
           <form method="post" enctype="multipart/form-data" novalidate>
-            {% csrf_token %}
             <div class="mb-2">
-              {{ attachment_form.file.label_tag }}
-              {{ attachment_form.file }}
-              {% if attachment_form.file.errors %}
-              <div class="text-danger mt-1" style="font-size:.875rem">
-                {% for error in attachment_form.file.errors %}{{ error }}{% endfor %}
-              </div>
-              {% endif %}
+              <label class="form-label small fw-semibold" for="id_attachment_file">Файл</label>
+              <input type="file" name="file" id="id_attachment_file" class="form-control form-control-sm" accept=".pdf">
             </div>
             <div class="text-end">
               <button type="submit" name="attachment_submit" class="btn btn-outline-secondary btn-sm">
@@ -223,21 +207,21 @@
       </div>
       <div class="card-body p-0">
         {% for entry in history %}
-        <div class="px-4 py-3 {% if not forloop.last %}border-bottom{% endif %}">
+        <div class="px-4 py-3 {% if not loop.last %}border-bottom{% endif %}">
           <div class="d-flex align-items-center gap-2 mb-1">
             {% if entry.changed_by %}
-            <div class="avatar-xs avatar-initials" style="font-size:.45rem;width:20px;height:20px">{{ entry.changed_by.get_initials }}</div>
-            <span class="fw-semibold" style="font-size:.875rem">{{ entry.changed_by.get_display_name }}</span>
+            <div class="avatar-xs avatar-initials" style="font-size:.45rem;width:20px;height:20px">{{ entry.changed_by.get_initials() }}</div>
+            <span class="fw-semibold" style="font-size:.875rem">{{ entry.changed_by.get_display_name() }}</span>
             {% else %}
             <span class="text-muted" style="font-size:.875rem">Система</span>
             {% endif %}
             <span class="badge bg-secondary-subtle text-secondary-emphasis" style="font-size:.7rem">{{ entry.field_name }}</span>
-            <span class="text-muted ms-auto" style="font-size:.8rem">{{ entry.changed_at|date:"d.m.Y H:i" }}</span>
+            <span class="text-muted ms-auto" style="font-size:.8rem">{{ entry.changed_at.strftime('%d.%m.%Y %H:%M') if entry.changed_at else '' }}</span>
           </div>
           <div class="d-flex align-items-center gap-2 history-change-row" style="font-size:.875rem">
-            <span class="text-muted text-decoration-line-through">{{ entry.old_value|default:"—"|truncatechars:40 }}</span>
+            <span class="text-muted text-decoration-line-through">{{ (entry.old_value or '—')[:40] }}</span>
             <i class="bi bi-arrow-right text-muted history-arrow"></i>
-            <span class="fw-semibold history-new">{{ entry.new_value|default:"—"|truncatechars:40 }}</span>
+            <span class="fw-semibold history-new">{{ (entry.new_value or '—')[:40] }}</span>
           </div>
         </div>
         {% endfor %}
@@ -255,13 +239,13 @@
         <div class="task-detail-meta">
           <div class="task-meta-item mb-4">
             <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Статус</div>
-            <span class="badge bg-{{ task.get_status_badge }} fs-6">{{ task.get_status_display }}</span>
+            <span class="badge bg-{{ task.get_status_badge() }} fs-6">{{ task.get_status_display() }}</span>
           </div>
 
           <div class="task-meta-item mb-4">
             <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Приоритет</div>
-            <span class="badge bg-{{ task.get_priority_badge }}">
-              <i class="bi {{ task.get_priority_icon }} me-1"></i>{{ task.get_priority_display }}
+            <span class="badge bg-{{ task.get_priority_badge() }}">
+              {{ task.get_priority_display() }}
             </span>
           </div>
 
@@ -269,15 +253,14 @@
             <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Исполнитель</div>
             {% if task.assignee %}
             <div class="d-flex align-items-center gap-2">
-              <div class="avatar-xs avatar-initials">{{ task.assignee.get_initials }}</div>
-              <span id="assignee-name">{{ task.assignee.get_display_name }}</span>
+              <div class="avatar-xs avatar-initials">{{ task.assignee.get_initials() }}</div>
+              <span id="assignee-name">{{ task.assignee.get_display_name() }}</span>
             </div>
             {% else %}
             <span class="text-muted fst-italic" id="assignee-name">Не назначен</span>
             {% endif %}
-            {% if user.is_manager and task.project.manager == user and task.assignee != user %}
-            <form method="post" action="{% url 'projects:task_self_assign' task.uuid %}" class="mt-2" id="self-assign-form">
-              {% csrf_token %}
+            {% if user.is_manager() and task.project.manager_id == user.id and task.assignee_id != user.id %}
+            <form method="post" action="{{ url_for('task_self_assign', uuid=task.uuid) }}" class="mt-2" id="self-assign-form">
               <button type="submit" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-person-check me-1"></i>Назначить себя
               </button>
@@ -288,8 +271,8 @@
           <div class="task-meta-item mb-4">
             <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Дедлайн</div>
             {% if task.deadline %}
-            <span class="{% if task.is_overdue %}text-danger fw-semibold{% endif %}">
-              <i class="bi bi-calendar3 me-1"></i>{{ task.deadline|date:"d.m.Y" }}
+            <span class="{% if task.is_overdue() %}text-danger fw-semibold{% endif %}">
+              <i class="bi bi-calendar3 me-1"></i>{{ task.deadline.strftime('%d.%m.%Y') }}
             </span>
             {% else %}
             <span class="text-muted">Не указан</span>
@@ -307,17 +290,17 @@
 
           <div class="task-meta-item mb-4">
             <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Проект</div>
-            <a href="{% url 'projects:kanban' task.project.uuid %}" class="text-decoration-none">{{ task.project.name }}</a>
+            <a href="{{ url_for('kanban', project_uuid=task.project.uuid) }}" class="text-decoration-none">{{ task.project.name }}</a>
           </div>
 
           <div class="task-meta-item mb-4">
             <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Создал</div>
-            <span>{{ task.created_by.get_display_name }}</span>
+            <span>{{ task.created_by.get_display_name() }}</span>
           </div>
 
           <div class="task-meta-item">
             <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Обновлено</div>
-            <span class="text-muted">{{ task.updated_at|date:"d.m.Y H:i" }}</span>
+            <span class="text-muted">{{ task.updated_at.strftime('%d.%m.%Y %H:%M') if task.updated_at else '' }}</span>
           </div>
         </div>
 
