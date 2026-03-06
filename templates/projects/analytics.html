@@ -20,11 +20,11 @@
     <h1 class="page-header-title">Аналитика</h1>
   </div>
   <div class="d-flex flex-wrap gap-2">
-    <a href="{% url 'projects:export_tasks_csv' %}{% if selected_project %}?project={{ selected_project.uuid }}{% endif %}"
+    <a href="{{ url_for('export_tasks_csv') }}{% if selected_project %}?project={{ selected_project.uuid }}{% endif %}"
        class="btn btn-outline-secondary btn-sm">
       <i class="bi bi-filetype-csv me-1"></i><span class="d-none d-sm-inline">Экспорт </span>CSV
     </a>
-    <a href="{% url 'projects:export_tasks_excel' %}{% if selected_project %}?project={{ selected_project.uuid }}{% endif %}"
+    <a href="{{ url_for('export_tasks_excel') }}{% if selected_project %}?project={{ selected_project.uuid }}{% endif %}"
        class="btn btn-outline-success btn-sm">
       <i class="bi bi-file-earmark-excel me-1"></i><span class="d-none d-sm-inline">Экспорт </span>Excel
     </a>
@@ -45,7 +45,7 @@
         {% endfor %}
       </select>
       {% if selected_project %}
-      <a href="{% url 'projects:analytics' %}" class="btn btn-sm btn-outline-secondary">Сбросить</a>
+      <a href="{{ url_for('analytics') }}" class="btn btn-sm btn-outline-secondary">Сбросить</a>
       {% endif %}
     </form>
   </div>
@@ -147,14 +147,14 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-const STATUS_LABELS   = {{ status_labels_json|safe }};
-const STATUS_DATA     = {{ status_data_json|safe }};
-const PRIORITY_LABELS = {{ priority_labels_json|safe }};
-const PRIORITY_DATA   = {{ priority_data_json|safe }};
-const ASSIGNEE_LABELS = {{ assignee_labels_json|safe }};
-const ASSIGNEE_DATA   = {{ assignee_data_json|safe }};
-const CREATED_LABELS  = {{ created_labels_json|safe }};
-const CREATED_DATA    = {{ created_data_json|safe }};
+const STATUS_LABELS   = {{ status_labels_json | safe }};
+const STATUS_DATA     = {{ status_data_json | safe }};
+const PRIORITY_LABELS = {{ priority_labels_json | safe }};
+const PRIORITY_DATA   = {{ priority_data_json | safe }};
+const ASSIGNEE_LABELS = {{ assignee_labels_json | safe }};
+const ASSIGNEE_DATA   = {{ assignee_data_json | safe }};
+const CREATED_LABELS  = {{ created_labels_json | safe }};
+const CREATED_DATA    = {{ created_data_json | safe }};
 
 // ── Donut: задачи по статусам
 new Chart(document.getElementById('statusChart'), {

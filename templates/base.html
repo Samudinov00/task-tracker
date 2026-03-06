@@ -1,19 +1,18 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Менеджер задач{% endblock %}</title>
-  <link rel="icon" type="image/svg+xml" href="{% static 'img/favicon.svg' %}">
+  <link rel="icon" type="image/svg+xml" href="{{ static('img/favicon.svg') }}">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  <link rel="stylesheet" href="{{ static('css/main.css') }}">
   {% block extra_css %}{% endblock %}
 </head>
 <body>
 
-{% if user.is_authenticated %}
+{% if user %}
 <div id="wrapper">
 
 {# ── Боковая панель ─────────────────────────────────────────────────────── #}
@@ -30,29 +29,28 @@
     <div class="sidebar-nav">
       <div class="sidebar-section-label">Навигация</div>
 
-      <a href="{% url 'projects:project_list' %}"
-         class="sidebar-link {% if 'project' in request.resolver_match.url_name or 'kanban' in request.resolver_match.url_name %}active{% endif %}">
+      <a href="{{ url_for('project_list') }}"
+         class="sidebar-link {% if '/p/' in request.url.path or '/board/' in request.url.path %}active{% endif %}">
         <i class="bi bi-folder2-open"></i><span>Проекты</span>
       </a>
 
-      {% if user.is_manager %}
-      <a href="{% url 'accounts:user_list' %}"
-         class="sidebar-link {% if 'user' in request.resolver_match.url_name %}active{% endif %}">
+      {% if user.is_manager() %}
+      <a href="{{ url_for('user_list') }}"
+         class="sidebar-link {% if '/accounts/users' in request.url.path %}active{% endif %}">
         <i class="bi bi-people-fill"></i><span>Пользователи</span>
       </a>
-      <a href="{% url 'projects:analytics' %}"
-         class="sidebar-link {% if request.resolver_match.url_name == 'analytics' %}active{% endif %}">
+      <a href="{{ url_for('analytics') }}"
+         class="sidebar-link {% if request.url.path == '/analytics/' %}active{% endif %}">
         <i class="bi bi-bar-chart-fill"></i><span>Аналитика</span>
       </a>
-      <a href="{% url 'projects:status_logs' %}"
-         class="sidebar-link {% if request.resolver_match.url_name == 'status_logs' %}active{% endif %}">
+      <a href="{{ url_for('status_logs') }}"
+         class="sidebar-link {% if request.url.path == '/logs/' %}active{% endif %}">
         <i class="bi bi-journal-text"></i><span>Логи статусов</span>
       </a>
       {% endif %}
 
-      {# На мобильном колокольчик уже есть в шапке, поэтому пункт скрыт #}
-      <a href="{% url 'projects:notifications' %}"
-         class="sidebar-link d-none d-lg-flex {% if 'notification' in request.resolver_match.url_name %}active{% endif %}">
+      <a href="{{ url_for('notifications') }}"
+         class="sidebar-link d-none d-lg-flex {% if '/notifications' in request.url.path %}active{% endif %}">
         <i class="bi bi-bell-fill"></i>
         <span>Уведомления</span>
         {% if unread_notifications_count > 0 %}
@@ -64,20 +62,18 @@
 
       <div class="sidebar-section-label">Аккаунт</div>
 
-      <a href="{% url 'accounts:profile' %}"
-         class="sidebar-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+      <a href="{{ url_for('profile') }}"
+         class="sidebar-link {% if request.url.path == '/accounts/profile/' %}active{% endif %}">
         <i class="bi bi-person-circle"></i><span>Профиль</span>
       </a>
 
-      <a href="{% url 'accounts:logout' %}" class="sidebar-link text-danger-soft">
+      <a href="{{ url_for('logout') }}" class="sidebar-link text-danger-soft">
         <i class="bi bi-box-arrow-left"></i><span>Выход</span>
       </a>
     </div>
   </nav>
 
-{# Затемнение при открытом сайдбаре на мобильном #}
 <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
-{# Затемнение при открытых уведомлениях на мобильном (bottom sheet) #}
 <div class="notif-backdrop" id="notifBackdrop"></div>
 
 {# ── Основной контент ───────────────────────────────────────────────────── #}
@@ -115,7 +111,7 @@
               <div class="text-center text-muted py-3 small">Загрузка…</div>
             </div>
             <div class="notif-footer text-center py-2">
-              <a href="{% url 'projects:notifications' %}" class="btn btn-link btn-sm">
+              <a href="{{ url_for('notifications') }}" class="btn btn-link btn-sm">
                 Все уведомления
               </a>
             </div>
@@ -126,9 +122,9 @@
         <div class="dropdown">
           <button class="btn btn-ghost btn-sm d-flex align-items-center gap-2"
                   data-bs-toggle="dropdown">
-            <div class="avatar-xs avatar-initials">{{ user.get_initials }}</div>
+            <div class="avatar-xs avatar-initials">{{ user.get_initials() }}</div>
             <div class="d-none d-lg-flex flex-column align-items-start lh-1">
-              <span style="font-size:.875rem">{{ user.get_display_name }}</span>
+              <span style="font-size:.875rem">{{ user.get_display_name() }}</span>
               <span id="sessionTimer" class="text-muted" style="font-size:.68rem">30:00</span>
             </div>
             <i class="bi bi-chevron-down small"></i>
@@ -136,17 +132,17 @@
           <ul class="dropdown-menu dropdown-menu-end shadow">
             <li>
               <span class="dropdown-item-text text-muted small">
-                {{ user.get_role_display }}
+                {{ user.get_role_display() }}
               </span>
             </li>
             <li><hr class="dropdown-divider my-1"></li>
             <li>
-              <a class="dropdown-item" href="{% url 'accounts:profile' %}">
+              <a class="dropdown-item" href="{{ url_for('profile') }}">
                 <i class="bi bi-person me-2"></i>Профиль
               </a>
             </li>
             <li>
-              <a class="dropdown-item text-danger" href="{% url 'accounts:logout' %}">
+              <a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
                 <i class="bi bi-box-arrow-left me-2"></i>Выход
               </a>
             </li>
@@ -157,9 +153,9 @@
 
     {# Flash-сообщения #}
     <div class="px-4 pt-3">
-      {% for message in messages %}
-        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
-          {{ message }}
+      {% for message in get_flashed_messages(request) %}
+        <div class="alert alert-{{ message.tags or 'info' }} alert-dismissible fade show" role="alert">
+          {{ message.message }}
           <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
       {% endfor %}
@@ -179,7 +175,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-<script src="{% static 'js/notifications.js' %}"></script>
+<script src="{{ static('js/notifications.js') }}"></script>
 <script>
 (function () {
   const toggle     = document.getElementById('sidebarToggle');
@@ -187,7 +183,7 @@
   const backdrop   = document.getElementById('sidebarBackdrop');
   const closeBtn   = document.getElementById('sidebarClose');
 
-  if (!toggle) return;  // не авторизованная страница
+  if (!toggle) return;
 
   const mq = window.matchMedia('(max-width: 991.98px)');
   const isMobile = () => mq.matches;
@@ -206,7 +202,6 @@
   function openSidebar() {
     document.body.classList.add('sidebar-open');
     updateToggleIcon();
-    // Закрыть любой открытый Bootstrap-дропдаун (уведомления, меню пользователя)
     document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(function (el) {
       var dd = bootstrap.Dropdown.getInstance(el);
       if (dd) dd.hide();
@@ -217,9 +212,6 @@
     updateToggleIcon();
   }
 
-  // Кнопка-гамбургер в топбаре
-  // touchend + click: touchend срабатывает раньше и надёжнее на Android Chrome
-  // (click может не сработать если GPU-слой не обновил hit-область)
   function onToggle(e) {
     e.preventDefault();
     if (isMobile()) {
@@ -232,26 +224,20 @@
   toggle.addEventListener('touchend', onToggle, { passive: false });
   toggle.addEventListener('click', onToggle);
 
-  // Кнопка × внутри сайдбара
   if (closeBtn) {
     function onClose(e) { e.preventDefault(); closeSidebar(); }
     closeBtn.addEventListener('touchend', onClose, { passive: false });
     closeBtn.addEventListener('click', onClose);
   }
 
-  // Клик / тач по затемнению (touchstart надёжнее click на Android)
   if (backdrop) {
     backdrop.addEventListener('click', closeSidebar);
-    // На мобильном: закрыть сайдбар И пропустить тап к элементу под backdrop
-    // (иначе кнопки submit/ссылки под backdrop требуют двойного нажатия)
     backdrop.addEventListener('touchstart', function(e) {
       const touch = e.touches[0];
-      // Временно делаем backdrop «прозрачным» для pointer-events, чтобы найти элемент под ним
       this.style.pointerEvents = 'none';
       const el = document.elementFromPoint(touch.clientX, touch.clientY);
       this.style.pointerEvents = '';
       closeSidebar();
-      // Если под backdrop — кнопка или ссылка, кликаем по ней
       if (el && el !== this) {
         const target = el.closest('button, a[href], input[type="submit"], [type="submit"]');
         if (target) target.click();
@@ -259,19 +245,16 @@
     }, { passive: true });
   }
 
-  // Переход по ссылке сайдбара — закрыть
   document.querySelectorAll('.sidebar-link').forEach(link => {
     link.addEventListener('click', () => { if (isMobile()) closeSidebar(); });
   });
 
-  // Взаимоисключение: открытие дропдауна закрывает сайдбар на мобильном
   document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(function (el) {
     el.addEventListener('show.bs.dropdown', function () {
       if (isMobile()) closeSidebar();
     });
   });
 
-  // Уведомления — backdrop + блокировка скролла страницы (bottom sheet UX)
   const notifBackdrop = document.getElementById('notifBackdrop');
   const bellBtn       = document.getElementById('bellBtn');
   if (bellBtn && notifBackdrop) {
@@ -285,33 +268,30 @@
       notifBackdrop.classList.remove('show');
       document.body.classList.remove('notif-open');
     });
-    // Тап по затемнению — закрыть уведомления
     notifBackdrop.addEventListener('click', function () {
       var dd = bootstrap.Dropdown.getInstance(bellBtn);
       if (dd) dd.hide();
     });
   }
 
-  // Resize: убрать мобильный класс при переходе на десктоп
   window.addEventListener('resize', () => { if (!isMobile()) { closeSidebar(); } updateToggleIcon(); });
 
-  // Восстановить коллапс на десктопе из localStorage
   if (!isMobile() && localStorage.getItem('sidebar_collapsed') === 'true') {
     document.body.classList.add('sidebar-collapsed');
   }
 })();
 </script>
-{% if user.is_authenticated %}
+{% if user %}
 <script>
 (function () {
   'use strict';
 
-  const TIMEOUT_SEC = 30 * 60;   // 30 минут
-  const WARN_SEC    = 5  * 60;   // предупреждать за 5 минут
-  const DEBOUNCE_MS = 10_000;    // дребезг активности — 10 с
+  const TIMEOUT_SEC = 30 * 60;
+  const WARN_SEC    = 5  * 60;
+  const DEBOUNCE_MS = 10_000;
 
   const timerEl   = document.getElementById('sessionTimer');
-  const logoutUrl = '{% url "accounts:logout" %}';
+  const logoutUrl = '{{ url_for("logout") }}';
   const pingUrl   = '/session/ping/';
 
   if (!timerEl) return;
@@ -319,16 +299,6 @@
   let remaining = TIMEOUT_SEC;
   let debounceId = null;
 
-  // Получить CSRF-токен из cookie
-  function getCsrf() {
-    for (const part of document.cookie.split(';')) {
-      const [k, v] = part.trim().split('=');
-      if (k === 'csrftoken') return decodeURIComponent(v);
-    }
-    return '';
-  }
-
-  // Обновить отображение таймера
   function renderTimer() {
     const m = String(Math.floor(remaining / 60)).padStart(2, '0');
     const s = String(remaining % 60).padStart(2, '0');
@@ -342,7 +312,6 @@
     }
   }
 
-  // Основной тик
   const ticker = setInterval(function () {
     remaining -= 1;
     renderTimer();
@@ -354,7 +323,6 @@
 
   renderTimer();
 
-  // Сбросить таймер и уведомить сервер (с дребезгом)
   function onActivity() {
     remaining = TIMEOUT_SEC;
     renderTimer();
@@ -363,7 +331,6 @@
       fetch(pingUrl, {
         method: 'POST',
         credentials: 'same-origin',
-        headers: { 'X-CSRFToken': getCsrf() },
       }).catch(function () {});
     }, DEBOUNCE_MS);
   }
