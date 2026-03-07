@@ -163,7 +163,13 @@ jobs:
               || { echo "Redis did not become healthy in time"; exit 1; }
 
             echo "==> Starting new container (zero-downtime)..."
-            docker compose up -d --no-deps --wait web
+            docker compose up -d --no-deps --wait web || {
+              echo "==> ERROR: web container failed to become healthy. Dumping logs:"
+              docker compose logs web --tail=100
+              echo "==> Container inspect:"
+              docker inspect task-tracker-web-1 --format='ExitCode={{.State.ExitCode}} Status={{.State.Status}} Error={{.State.Error}}'
+              exit 1
+            }
 
             echo "==> Setting up SSL certificate..."
             if ! docker compose exec -T nginx test -f /etc/letsencrypt/live/ddssrd.xyz/fullchain.pem 2>/dev/null; then
