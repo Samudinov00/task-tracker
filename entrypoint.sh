@@ -28,7 +28,10 @@ done
 echo "==> [entrypoint] Database is ready."
 
 echo "==> [entrypoint] Running database migrations..."
-python -m alembic upgrade head
+if ! python -m alembic upgrade head 2>&1; then
+    echo "[entrypoint] ERROR: alembic upgrade head failed (see above). Exiting." >&2
+    exit 1
+fi
 
 echo "==> [entrypoint] Starting Uvicorn..."
 exec uvicorn app.main:app \
