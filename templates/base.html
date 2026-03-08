@@ -53,7 +53,7 @@
          class="sidebar-link d-none d-lg-flex {% if '/notifications' in request.url.path %}active{% endif %}">
         <i class="bi bi-bell-fill"></i>
         <span>Уведомления</span>
-        {% if unread_notifications_count > 0 %}
+        {% if (unread_notifications_count | default(0)) > 0 %}
         <span class="badge bg-danger rounded-pill ms-auto">{{ unread_notifications_count }}</span>
         {% endif %}
       </a>
