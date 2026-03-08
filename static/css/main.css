@@ -372,132 +372,10 @@ main.page-content {
 .table tbody tr:last-child td { border-bottom: none; }
 .table-hover tbody tr:hover { background: #f8fafc; }
 
-/* ── Нижняя навигация (мобильная) ──────────────────────────── */
-.bottom-nav {
-  display: none;
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  height: 56px;
-  background: #fff;
-  border-top: 1px solid var(--border);
-  z-index: 1030;
-  box-shadow: 0 -2px 12px rgba(0,0,0,.07);
-}
-.bottom-nav-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  color: #94a3b8;
-  text-decoration: none;
-  font-size: .62rem;
-  font-weight: 500;
-  letter-spacing: .01em;
-  padding: .25rem 0;
-  position: relative;
-  transition: color .15s;
-  border: none;
-  background: none;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.bottom-nav-item i { font-size: 1.3rem; line-height: 1; }
-.bottom-nav-item.active { color: var(--primary); }
-.bottom-nav-item:active { opacity: .7; }
-.bottom-nav-badge {
-  position: absolute;
-  top: 3px; right: calc(50% - 16px);
-  background: var(--bs-danger, #dc3545);
-  color: #fff;
-  font-size: .58rem;
-  min-width: 15px;
-  height: 15px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 3px;
-  font-weight: 700;
-}
-@media (max-width: 991.98px) {
-  .bottom-nav { display: flex; }
-  /* Отступ снизу чтобы контент не прятался за bottom nav */
-  main.page-content { padding-bottom: calc(56px + 1.25rem) !important; }
-}
-@media (max-width: 575.98px) {
-  main.page-content { padding-bottom: calc(56px + 1rem) !important; }
-}
-
-/* ── Фиксированный бар действий задачи (мобильный) ─────────── */
-.task-action-bar {
-  display: none;
-  position: fixed;
-  bottom: 56px; /* над bottom nav */
-  left: 0; right: 0;
-  background: #fff;
-  border-top: 1px solid var(--border);
-  padding: .625rem 1rem;
-  z-index: 1020;
-  gap: .625rem;
-  box-shadow: 0 -2px 8px rgba(0,0,0,.06);
-}
-@media (max-width: 991.98px) {
-  .task-action-bar { display: flex; }
-  .task-action-bar .btn { flex: 1; }
-}
-@media (min-width: 992px) {
-  .task-action-bar { display: none !important; }
-}
-
-/* ── Pull-to-refresh индикатор ──────────────────────────────── */
-.ptr-indicator {
-  position: fixed;
-  top: 0; left: 50%;
-  transform: translateX(-50%) translateY(-64px);
-  background: var(--primary);
-  color: #fff;
-  border-radius: 0 0 20px 20px;
-  padding: .5rem 1.5rem .6rem;
-  font-size: .8rem;
-  z-index: 2000;
-  transition: transform .22s cubic-bezier(.32,1,.23,1);
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-  pointer-events: none;
-}
-.ptr-indicator.ptr-visible { transform: translateX(-50%) translateY(0); }
-.ptr-spin { display: inline-block; }
-.ptr-indicator.ptr-refreshing .ptr-spin {
-  animation: ptr-spin .7s linear infinite;
-}
-@keyframes ptr-spin { to { transform: rotate(360deg); } }
-
 /* ── Kanban ─────────────────────────────────────────────────── */
-.kanban-board { overflow-x: auto; padding-bottom: 1rem; scroll-behavior: smooth; }
+.kanban-board { overflow-x: auto; padding-bottom: 1rem; }
 .kanban-column { min-width: 300px; max-width: 340px; flex: 1 1 300px; }
 .kanban-col-body { min-height: 480px; }
-
-/* Индикатор текущей колонки (точки) — виден только на мобильном */
-.kanban-dots {
-  display: none;
-  justify-content: center;
-  gap: .375rem;
-  margin-bottom: .75rem;
-}
-.kanban-dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: #cbd5e1;
-  transition: background .2s, transform .2s;
-  flex-shrink: 0;
-}
-.kanban-dot.active { background: var(--primary); transform: scale(1.3); }
-@media (max-width: 575.98px) {
-  .kanban-dots { display: flex; }
-}
 
 .task-card {
   border: 1px solid var(--border) !important;
@@ -846,20 +724,4 @@ body.sidebar-open { overflow: hidden; }
     font-size: .8rem;
     padding: .3rem .65rem;
   }
-
-  /* Канбан — scroll-snap: один столбец занимает почти весь экран */
-  .kanban-board {
-    scroll-snap-type: x mandatory;
-    gap: .625rem !important;
-  }
-  .kanban-column {
-    min-width: calc(100vw - 1.75rem);
-    scroll-snap-align: start;
-    flex-shrink: 0;
-  }
-  /* Колонки не прокручиваются внутри — весь скролл на board */
-  .kanban-col-body { min-height: 200px; }
-
-  /* Карточки задач — удобнее тапать */
-  .task-card .card-body { padding: .875rem; }
 }

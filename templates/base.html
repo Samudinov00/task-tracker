@@ -166,42 +166,7 @@
       {% block content %}{% endblock %}
     </main>
   </div>{# /page-content-wrapper #}
-
-  {# ── Нижняя навигация — только на мобильном (< 992px) ──── #}
-  <nav class="bottom-nav" id="bottomNav">
-    <a href="{{ url_for('project_list') }}"
-       class="bottom-nav-item {% if '/p/' in request.url.path or request.url.path == '/' %}active{% endif %}">
-      <i class="bi bi-folder2-open"></i><span>Проекты</span>
-    </a>
-    {% if user.is_manager() %}
-    <a href="{{ url_for('analytics') }}"
-       class="bottom-nav-item {% if request.url.path == '/analytics/' %}active{% endif %}">
-      <i class="bi bi-bar-chart-fill"></i><span>Аналитика</span>
-    </a>
-    {% endif %}
-    <a href="{{ url_for('notifications') }}"
-       class="bottom-nav-item {% if '/notifications' in request.url.path %}active{% endif %}">
-      <i class="bi bi-bell-fill"></i><span>Уведомления</span>
-      {% if (unread_notifications_count | default(0)) > 0 %}
-      <span class="bottom-nav-badge" id="bottomNavBadge">{{ unread_notifications_count }}</span>
-      {% endif %}
-    </a>
-    <a href="{{ url_for('profile') }}"
-       class="bottom-nav-item {% if request.url.path == '/accounts/profile/' %}active{% endif %}">
-      <i class="bi bi-person-circle"></i><span>Профиль</span>
-    </a>
-    <button class="bottom-nav-item" id="bottomNavMenu" aria-label="Меню">
-      <i class="bi bi-list"></i><span>Меню</span>
-    </button>
-  </nav>
-
 </div>{# /wrapper #}
-
-{# ── Pull-to-refresh индикатор ────────────────────────────── #}
-<div class="ptr-indicator" id="ptrIndicator">
-  <i class="bi bi-arrow-clockwise ptr-spin"></i>
-  <span id="ptrText">Потяните для обновления</span>
-</div>
 
 {% else %}
   {# Страницы без авторизации (логин) #}
@@ -377,59 +342,6 @@
 })();
 </script>
 {% endif %}
-
-<script>
-/* ── Bottom nav: кнопка «Меню» открывает сайдбар ── */
-(function () {
-  const menuBtn = document.getElementById('bottomNavMenu');
-  if (!menuBtn) return;
-  menuBtn.addEventListener('click', function () {
-    document.body.classList.toggle('sidebar-open');
-  });
-})();
-
-/* ── Pull-to-refresh ── */
-(function () {
-  const indicator = document.getElementById('ptrIndicator');
-  const ptrText   = document.getElementById('ptrText');
-  if (!indicator) return;
-
-  const THRESHOLD = 70;   // px потянуть для срабатывания
-  let startY = 0, currentY = 0, pulling = false, triggered = false;
-
-  document.addEventListener('touchstart', function (e) {
-    if (window.scrollY > 0) return;
-    startY = e.touches[0].clientY;
-    pulling = true;
-    triggered = false;
-  }, { passive: true });
-
-  document.addEventListener('touchmove', function (e) {
-    if (!pulling) return;
-    currentY = e.touches[0].clientY;
-    const diff = currentY - startY;
-    if (diff > 20) {
-      indicator.classList.add('ptr-visible');
-      if (diff >= THRESHOLD && !triggered) {
-        triggered = true;
-        if (ptrText) ptrText.textContent = 'Отпустите для обновления';
-        indicator.classList.add('ptr-refreshing');
-      }
-    }
-  }, { passive: true });
-
-  document.addEventListener('touchend', function () {
-    if (!pulling) return;
-    pulling = false;
-    if (triggered) {
-      if (ptrText) ptrText.textContent = 'Обновление…';
-      setTimeout(function () { window.location.reload(); }, 400);
-    } else {
-      indicator.classList.remove('ptr-visible');
-    }
-  }, { passive: true });
-})();
-</script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>
