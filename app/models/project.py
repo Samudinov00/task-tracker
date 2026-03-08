@@ -180,8 +180,6 @@ class Task(Base):
     comments = relationship("Comment", back_populates="task", cascade="all, delete-orphan", order_by="Comment.created_at")
     status_logs = relationship("TaskStatusLog", back_populates="task", cascade="all, delete-orphan")
     change_logs = relationship("TaskChangeLog", back_populates="task", cascade="all, delete-orphan")
-    attachments = relationship("TaskAttachment", back_populates="task", cascade="all, delete-orphan")
-    time_logs = relationship("TimeLog", back_populates="task", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="task", cascade="all, delete-orphan")
 
     def get_status_badge(self) -> str:
@@ -203,9 +201,6 @@ class Task(Base):
         if self.deadline and self.status != STATUS_PRODUCTION:
             return self.deadline < date.today()
         return False
-
-    def get_total_logged_minutes(self) -> int:
-        return sum(tl.minutes for tl in self.time_logs)
 
     def __str__(self) -> str:
         return self.title
@@ -278,38 +273,6 @@ class Notification(Base):
 
     user = relationship("User", foreign_keys=[user_id], backref="notifications")
     task = relationship("Task", back_populates="notifications")
-
-
-# ── Вложения к задаче ─────────────────────────────────────────────────────────
-class TaskAttachment(Base):
-    __tablename__ = "task_attachments"
-
-    id = Column(Integer, primary_key=True, index=True)
-    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
-    file = Column(String(500), nullable=False)  # relative path
-    uploaded_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    uploaded_at = Column(DateTime, default=datetime.utcnow)
-
-    task = relationship("Task", back_populates="attachments")
-    uploaded_by = relationship("User", foreign_keys=[uploaded_by_id])
-
-    def filename(self) -> str:
-        return os.path.basename(self.file)
-
-
-# ── Трекер времени ────────────────────────────────────────────────────────────
-class TimeLog(Base):
-    __tablename__ = "time_logs"
-
-    id = Column(Integer, primary_key=True, index=True)
-    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    minutes = Column(Integer, nullable=False)
-    description = Column(Text, default="")
-    logged_at = Column(DateTime, default=datetime.utcnow)
-
-    task = relationship("Task", back_populates="time_logs")
-    user = relationship("User", foreign_keys=[user_id])
 
 
 # ── История изменений задачи ──────────────────────────────────────────────────

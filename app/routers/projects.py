@@ -7,7 +7,7 @@ import json
 import uuid as uuid_lib
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile, File
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, joinedload, selectinload
@@ -16,8 +16,8 @@ from typing import List, Optional
 from app.database import SessionLocal
 from app.dependencies import get_db, require_auth, require_manager
 from app.models.project import (
-    Comment, Notification, Project, Task, TaskAttachment,
-    TaskChangeLog, TaskStatusLog, TimeLog,
+    Comment, Notification, Project, Task,
+    TaskChangeLog, TaskStatusLog,
     STATUS_CHOICES, PRIORITY_CHOICES, STATUS_NOT_STARTED, STATUS_PRODUCTION,
     TYPE_TASK_ASSIGNED, TYPE_TASK_STATUS, TYPE_COMMENT,
 )
@@ -443,7 +443,6 @@ async def task_detail(request: Request, uuid: uuid_lib.UUID, db: Session = Depen
             joinedload(Task.project),
             joinedload(Task.created_by),
             selectinload(Task.comments).joinedload(Comment.author),
-            selectinload(Task.time_logs).joinedload(TimeLog.user),
             selectinload(Task.change_logs).joinedload(TaskChangeLog.changed_by),
             selectinload(Task.status_logs).joinedload(TaskStatusLog.changed_by),
         )
@@ -461,7 +460,6 @@ async def task_detail(request: Request, uuid: uuid_lib.UUID, db: Session = Depen
             raise HTTPException(status_code=403)
 
     can_edit = user.is_manager() or (user.is_executor() and task.assignee_id == user.id)
-    can_log_time = can_edit
 
     # История изменений
     history = []
@@ -485,21 +483,15 @@ async def task_detail(request: Request, uuid: uuid_lib.UUID, db: Session = Depen
         })
     history.sort(key=lambda x: x["changed_at"], reverse=True)
 
-    total_minutes = task.get_total_logged_minutes()
-    total_hours = total_minutes // 60
-    remaining_min = total_minutes % 60
-
     unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
     return templates.TemplateResponse(
         "projects/task_detail.html",
         {
             "request": request, "user": user, "task": task,
-            "can_edit": can_edit, "can_log_time": can_log_time,
-            "history": history, "total_hours": total_hours,
-            "remaining_min": remaining_min, "total_minutes": total_minutes,
+            "can_edit": can_edit,
+            "history": history,
             "status_choices": STATUS_CHOICES,
             "unread_notifications_count": unread_count,
-            "comment_error": None, "timelog_error": None,
         },
     )
 
@@ -531,72 +523,6 @@ async def task_comment_post(
     _notify(db, list(recipients), task.id, TYPE_COMMENT, f"{user.get_display_name()} прокомментировал задачу «{task.title}»")
 
     flash(request, "Комментарий добавлен.", "success")
-    return RedirectResponse(url=f"/t/{task.uuid}/", status_code=302)
-
-
-@router.post("/t/{uuid}/attachment/", name="task_attachment_post")
-async def task_attachment_post(
-    request: Request,
-    uuid: uuid_lib.UUID,
-    db: Session = Depends(get_db),
-    file: UploadFile = File(...),
-):
-    user = require_auth(request, db)
-    if not user.is_manager():
-        raise HTTPException(status_code=403)
-    task = _get_task_by_uuid(db, uuid)
-    _check_project_access(user, task.project, db)
-
-    if not file.filename.lower().endswith(".pdf"):
-        flash(request, "Разрешены только PDF файлы.", "danger")
-        return RedirectResponse(url=f"/t/{task.uuid}/", status_code=302)
-
-    content = await file.read()
-    if len(content) > 10 * 1024 * 1024:
-        flash(request, "Файл не должен превышать 10 МБ.", "danger")
-        return RedirectResponse(url=f"/t/{task.uuid}/", status_code=302)
-
-    from app.config import MEDIA_DIR
-    import os
-    upload_dir = MEDIA_DIR / "task_attachments"
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    safe_name = f"{task.uuid}_{file.filename}"
-    file_path = upload_dir / safe_name
-    with open(file_path, "wb") as f:
-        f.write(content)
-
-    attachment = TaskAttachment(
-        task_id=task.id,
-        file=f"task_attachments/{safe_name}",
-        uploaded_by_id=user.id,
-    )
-    db.add(attachment)
-    db.commit()
-    flash(request, "Файл загружен.", "success")
-    return RedirectResponse(url=f"/t/{task.uuid}/", status_code=302)
-
-
-@router.post("/t/{uuid}/log-time/", name="log_time")
-async def log_time(
-    request: Request,
-    uuid: uuid_lib.UUID,
-    db: Session = Depends(get_db),
-    minutes: int = Form(...),
-    description: str = Form(""),
-):
-    user = require_auth(request, db)
-    task = _get_task_by_uuid(db, uuid)
-    can_log = user.is_manager() or (user.is_executor() and task.assignee_id == user.id)
-    if not can_log:
-        raise HTTPException(status_code=403)
-    if minutes <= 0:
-        flash(request, "Укажите положительное количество минут.", "danger")
-        return RedirectResponse(url=f"/t/{task.uuid}/", status_code=302)
-
-    tl = TimeLog(task_id=task.id, user_id=user.id, minutes=minutes, description=description)
-    db.add(tl)
-    db.commit()
-    flash(request, f"Добавлено {minutes} мин.", "success")
     return RedirectResponse(url=f"/t/{task.uuid}/", status_code=302)
 
 
@@ -922,32 +848,6 @@ async def bulk_task_update(request: Request, db: Session = Depends(get_db)):
     else:
         flash(request, "Нет изменений.", "info")
     return RedirectResponse(url=referer, status_code=302)
-
-
-@router.delete("/a/{pk}/delete/", name="attachment_delete")
-@router.post("/a/{pk}/delete/")
-async def attachment_delete(request: Request, pk: int, db: Session = Depends(get_db)):
-    user = require_auth(request, db)
-    attachment = db.query(TaskAttachment).filter(TaskAttachment.id == pk).first()
-    if not attachment:
-        raise HTTPException(status_code=404)
-    task = attachment.task
-
-    is_manager = user.is_manager() and task.project.manager_id == user.id
-    is_uploader = attachment.uploaded_by_id == user.id
-    if not (is_manager or is_uploader):
-        raise HTTPException(status_code=403)
-
-    from app.config import MEDIA_DIR
-    import os
-    file_path = MEDIA_DIR / attachment.file
-    if file_path.exists():
-        os.remove(file_path)
-
-    db.delete(attachment)
-    db.commit()
-    flash(request, "Вложение удалено.", "success")
-    return RedirectResponse(url=f"/t/{task.uuid}/", status_code=302)
 
 
 # ── Логи статусов ─────────────────────────────────────────────────────────────
