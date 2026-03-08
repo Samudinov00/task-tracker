@@ -8,6 +8,7 @@ import os
 
 sys.path.insert(0, "/app")
 
+from sqlalchemy import text
 from app.database import SessionLocal, Base, engine
 from app.models import user as user_mod          # noqa: регистрирует модели
 from app.models import project as project_mod    # noqa: регистрирует модели
@@ -16,7 +17,12 @@ from app.models.user import User, ROLE_MANAGER
 USERNAME = "admin"
 PASSWORD = "Admin1234!"
 
-print("==> Удаляем все таблицы...")
+print("==> Удаляем все таблицы и индексы...")
+with engine.connect() as conn:
+    # Сначала сбрасываем все индексы, которые могут мешать пересозданию
+    conn.execute(text("DROP INDEX IF EXISTS task_project_status_idx"))
+    conn.commit()
+
 Base.metadata.drop_all(bind=engine)
 
 print("==> Создаём таблицы заново...")
@@ -37,8 +43,7 @@ try:
     u.set_password(PASSWORD)
     db.add(u)
     db.commit()
-    print(f"\n✓ Готово!")
-    print(f"  Логин:  {USERNAME}")
+    print(f"\n  Логин:  {USERNAME}")
     print(f"  Пароль: {PASSWORD}")
 finally:
     db.close()
