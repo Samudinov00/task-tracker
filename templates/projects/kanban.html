@@ -70,6 +70,15 @@
   </div>
 </div>
 
+{# Кнопка раскрытия фильтров — только на мобильном #}
+<div class="d-sm-none mb-2">
+  <button class="btn btn-outline-secondary btn-sm w-100" type="button"
+          data-bs-toggle="collapse" data-bs-target="#kanbanFilters" aria-expanded="false">
+    <i class="bi bi-funnel me-1"></i>Фильтры
+  </button>
+</div>
+
+<div class="collapse d-sm-block" id="kanbanFilters">
 {% if user.is_manager() %}
 <div class="filters-scroll mb-2">
   <div class="d-flex gap-2 align-items-center">
@@ -121,6 +130,14 @@
       Скоро (7 дн)
     </a>
   </div>
+</div>
+</div>{# /kanbanFilters collapse #}
+
+{# Индикатор текущей колонки — точки, только на мобильном #}
+<div class="kanban-dots" id="kanbanDots">
+  {% for col in kanban_columns %}
+  <div class="kanban-dot {% if loop.first %}active{% endif %}" data-col="{{ loop.index0 }}"></div>
+  {% endfor %}
 </div>
 
 <div class="kanban-board d-flex gap-3 align-items-start" id="kanbanBoard">
@@ -365,4 +382,23 @@ function pollKanbanState() {
 setInterval(pollKanbanState, 30000);
 </script>
 {% endif %}
+
+{# Индикатор точек — обновляется при горизонтальном скролле канбана #}
+<script>
+(function () {
+  const board = document.getElementById('kanbanBoard');
+  const dots  = document.querySelectorAll('#kanbanDots .kanban-dot');
+  if (!board || !dots.length) return;
+
+  function updateDots() {
+    const scrollLeft = board.scrollLeft;
+    const colWidth   = board.querySelector('.kanban-column')?.offsetWidth || 1;
+    const idx        = Math.round(scrollLeft / (colWidth + 10)); // 10 = gap
+    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+  }
+
+  board.addEventListener('scroll', updateDots, { passive: true });
+  updateDots();
+})();
+</script>
 {% endblock %}

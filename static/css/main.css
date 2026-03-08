@@ -373,9 +373,28 @@ main.page-content {
 .table-hover tbody tr:hover { background: #f8fafc; }
 
 /* ── Kanban ─────────────────────────────────────────────────── */
-.kanban-board { overflow-x: auto; padding-bottom: 1rem; }
+.kanban-board { overflow-x: auto; padding-bottom: 1rem; scroll-behavior: smooth; }
 .kanban-column { min-width: 300px; max-width: 340px; flex: 1 1 300px; }
 .kanban-col-body { min-height: 480px; }
+
+/* Индикатор текущей колонки (точки) — виден только на мобильном */
+.kanban-dots {
+  display: none;
+  justify-content: center;
+  gap: .375rem;
+  margin-bottom: .75rem;
+}
+.kanban-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  transition: background .2s, transform .2s;
+  flex-shrink: 0;
+}
+.kanban-dot.active { background: var(--primary); transform: scale(1.3); }
+@media (max-width: 575.98px) {
+  .kanban-dots { display: flex; }
+}
 
 .task-card {
   border: 1px solid var(--border) !important;
@@ -724,4 +743,20 @@ body.sidebar-open { overflow: hidden; }
     font-size: .8rem;
     padding: .3rem .65rem;
   }
+
+  /* Канбан — scroll-snap: один столбец занимает почти весь экран */
+  .kanban-board {
+    scroll-snap-type: x mandatory;
+    gap: .625rem !important;
+  }
+  .kanban-column {
+    min-width: calc(100vw - 1.75rem);
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
+  /* Колонки не прокручиваются внутри — весь скролл на board */
+  .kanban-col-body { min-height: 200px; }
+
+  /* Карточки задач — удобнее тапать */
+  .task-card .card-body { padding: .875rem; }
 }
