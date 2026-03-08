@@ -17,6 +17,10 @@ app = FastAPI(
 )
 
 # ── Middleware ────────────────────────────────────────────────────────────────
+# Порядок add_middleware — LIFO: последний добавленный выполняется первым.
+# SessionInactivityMiddleware должна работать ПОСЛЕ SessionMiddleware,
+# поэтому добавляем её ПЕРВОЙ.
+app.add_middleware(SessionInactivityMiddleware)
 app.add_middleware(
     SessionMiddleware,
     secret_key=SECRET_KEY,
@@ -25,7 +29,6 @@ app.add_middleware(
     same_site="lax",
     https_only=False,       # True в production за nginx
 )
-app.add_middleware(SessionInactivityMiddleware)
 
 # ── Статика и медиа ───────────────────────────────────────────────────────────
 STATIC_DIR.mkdir(exist_ok=True)
