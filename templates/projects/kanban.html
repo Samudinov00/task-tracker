@@ -133,11 +133,22 @@
 </div>
 </div>{# /kanbanFilters collapse #}
 
-{# Индикатор текущей колонки — точки, только на мобильном #}
-<div class="kanban-dots" id="kanbanDots">
-  {% for col in kanban_columns %}
-  <div class="kanban-dot {% if loop.first %}active{% endif %}" data-col="{{ loop.index0 }}"></div>
-  {% endfor %}
+{# Индикатор текущей колонки — название + точки, только на мобильном #}
+<div class="kanban-col-indicator d-none d-sm-none" id="kanbanColIndicator" style="display:none!important">
+  {# заполняется JS #}
+</div>
+<div class="d-flex flex-column align-items-center mb-2 d-sm-none" id="kanbanMobileIndicator" style="gap:.375rem">
+  <span class="fw-semibold text-primary" id="kanbanColLabel" style="font-size:.9rem">
+    {{ kanban_columns[0].label if kanban_columns }}
+  </span>
+  <div class="kanban-dots" id="kanbanDots">
+    {% for col in kanban_columns %}
+    <div class="kanban-dot {% if loop.first %}active{% endif %}"
+         data-col="{{ loop.index0 }}"
+         data-label="{{ col.label }}"
+         data-color="{{ col.color }}"></div>
+    {% endfor %}
+  </div>
 </div>
 
 <div class="kanban-board d-flex gap-3 align-items-start" id="kanbanBoard">
@@ -383,22 +394,28 @@ setInterval(pollKanbanState, 30000);
 </script>
 {% endif %}
 
-{# Индикатор точек — обновляется при горизонтальном скролле канбана #}
+{# Индикатор точек + название колонки при скролле #}
 <script>
 (function () {
-  const board = document.getElementById('kanbanBoard');
-  const dots  = document.querySelectorAll('#kanbanDots .kanban-dot');
+  const board    = document.getElementById('kanbanBoard');
+  const dots     = document.querySelectorAll('#kanbanDots .kanban-dot');
+  const colLabel = document.getElementById('kanbanColLabel');
   if (!board || !dots.length) return;
 
-  function updateDots() {
-    const scrollLeft = board.scrollLeft;
-    const colWidth   = board.querySelector('.kanban-column')?.offsetWidth || 1;
-    const idx        = Math.round(scrollLeft / (colWidth + 10)); // 10 = gap
+  function updateIndicator() {
+    const colEl    = board.querySelector('.kanban-column');
+    if (!colEl) return;
+    const colWidth = colEl.offsetWidth + 10; // 10 = gap
+    const idx      = Math.min(Math.round(board.scrollLeft / colWidth), dots.length - 1);
     dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+    if (colLabel && dots[idx]) {
+      colLabel.textContent = dots[idx].dataset.label || '';
+    }
   }
 
-  board.addEventListener('scroll', updateDots, { passive: true });
-  updateDots();
+  board.addEventListener('scroll', updateIndicator, { passive: true });
+  window.addEventListener('resize', updateIndicator);
+  updateIndicator();
 })();
 </script>
 {% endblock %}
