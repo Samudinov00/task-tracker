@@ -18,7 +18,7 @@ from app.dependencies import get_db, require_auth, require_manager
 from app.models.project import (
     Comment, Notification, Project, Task,
     TaskChangeLog, TaskStatusLog,
-    STATUS_CHOICES, PRIORITY_CHOICES, STATUS_NOT_STARTED, STATUS_PRODUCTION,
+    STATUS_CHOICES, PRIORITY_CHOICES, STATUS_DEVELOPMENT, STATUS_PRODUCTION,
     TYPE_TASK_ASSIGNED, TYPE_TASK_STATUS, TYPE_COMMENT,
 )
 from app.models.user import User
@@ -178,7 +178,6 @@ async def project_detail(request: Request, uuid: uuid_lib.UUID, db: Session = De
         "projects/project_detail.html",
         {
             "request": request, "user": user, "project": project, "tasks": tasks,
-            "not_started_count": sum(1 for t in tasks if t.status == "not_started"),
             "in_work_count": sum(1 for t in tasks if t.status == "development"),
             "test_count": sum(1 for t in tasks if t.status in ("test_nsk", "test_district")),
             "production_count": sum(1 for t in tasks if t.status == "production"),
@@ -333,7 +332,6 @@ async def kanban(request: Request, project_uuid: uuid_lib.UUID, db: Session = De
     all_tasks = qs.all()
 
     kanban_columns = [
-        {"key": "not_started",   "label": "Не начата",                  "color": "secondary", "icon": "bi-circle",            "tasks": sorted([t for t in all_tasks if t.status == "not_started"], key=lambda t: t.order)},
         {"key": "development",   "label": "Разработка",                 "color": "primary",   "icon": "bi-code-slash",         "tasks": sorted([t for t in all_tasks if t.status == "development"], key=lambda t: t.order)},
         {"key": "test_nsk",      "label": "Тест НСК",                   "color": "warning",   "icon": "bi-bug",                "tasks": sorted([t for t in all_tasks if t.status == "test_nsk"], key=lambda t: t.order)},
         {"key": "test_district", "label": "Тест район",                 "color": "warning",   "icon": "bi-geo-alt-fill",       "tasks": sorted([t for t in all_tasks if t.status == "test_district"], key=lambda t: t.order)},
@@ -563,7 +561,7 @@ async def task_create_post(
     form = await request.form()
     title = form.get("title", "").strip()
     description = form.get("description", "").strip()
-    status_val = form.get("status", STATUS_NOT_STARTED)
+    status_val = form.get("status", STATUS_DEVELOPMENT)
     priority = form.get("priority", "medium")
     assignee_id_str = form.get("assignee", "")
     client_ids = [int(x) for x in form.getlist("clients") if x.isdigit()]

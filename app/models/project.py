@@ -99,14 +99,12 @@ class Project(Base):
 
 
 # ── Статусы и приоритеты задачи ───────────────────────────────────────────────
-STATUS_NOT_STARTED   = "not_started"
 STATUS_DEVELOPMENT   = "development"
 STATUS_TEST_NSK      = "test_nsk"
 STATUS_TEST_DISTRICT = "test_district"
 STATUS_PRODUCTION    = "production"
 
 STATUS_CHOICES = [
-    (STATUS_NOT_STARTED,   "Не начата"),
     (STATUS_DEVELOPMENT,   "Разработка"),
     (STATUS_TEST_NSK,      "Тест НСК"),
     (STATUS_TEST_DISTRICT, "Тест район"),
@@ -114,7 +112,6 @@ STATUS_CHOICES = [
 ]
 
 STATUS_BADGE = {
-    STATUS_NOT_STARTED:   "secondary",
     STATUS_DEVELOPMENT:   "primary",
     STATUS_TEST_NSK:      "warning",
     STATUS_TEST_DISTRICT: "warning",
@@ -164,7 +161,7 @@ class Task(Base):
     title = Column(String(200), nullable=False)
     description = Column(Text, default="")
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
-    status = Column(String(20), default=STATUS_NOT_STARTED, nullable=False)
+    status = Column(String(20), default=STATUS_DEVELOPMENT, nullable=False)
     priority = Column(String(20), default=PRIORITY_MEDIUM, nullable=False)
     assignee_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
