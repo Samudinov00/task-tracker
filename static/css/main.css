@@ -425,8 +425,6 @@ main.page-content {
   .bottom-nav { display: flex; }
   /* Отступ снизу чтобы контент не прятался за bottom nav */
   main.page-content { padding-bottom: calc(56px + 1.25rem) !important; }
-  /* Сайдбар-тогл в топбаре скрываем — меню открывается через bottom nav */
-  #sidebarToggle { display: none; }
 }
 @media (max-width: 575.98px) {
   main.page-content { padding-bottom: calc(56px + 1rem) !important; }
@@ -448,14 +446,9 @@ main.page-content {
 @media (max-width: 991.98px) {
   .task-action-bar { display: flex; }
   .task-action-bar .btn { flex: 1; }
-  /* Скрываем оригинальные кнопки в шапке на мобильном */
-  .task-header-actions { display: none !important; }
-  /* Добавляем отступ снизу чтобы бар не перекрывал контент */
-  main.page-content { padding-bottom: calc(56px + 52px + 1rem) !important; }
 }
 @media (min-width: 992px) {
   .task-action-bar { display: none !important; }
-  .task-header-actions { display: flex !important; }
 }
 
 /* ── Pull-to-refresh индикатор ──────────────────────────────── */

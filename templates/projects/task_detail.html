@@ -3,6 +3,20 @@
 {% block title %}{{ task.title }}{% endblock %}
 {% block page_title %}{{ task.title }}{% endblock %}
 
+{% block extra_css %}
+<style>
+@media (max-width: 991.98px) {
+  /* Скрываем кнопки шапки — они дублированы в фиксированном баре снизу */
+  .task-header-actions { display: none !important; }
+  /* Дополнительный отступ под фиксированный бар действий */
+  main.page-content { padding-bottom: calc(56px + 54px + 1rem) !important; }
+}
+@media (min-width: 992px) {
+  .task-header-actions { display: flex !important; }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
   <div>
