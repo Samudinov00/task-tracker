@@ -840,10 +840,10 @@ async def task_delete_post(request: Request, uuid: uuid_lib.UUID, db: Session = 
     return RedirectResponse(url=f"/p/{project_uuid}/board/", status_code=302)
 
 
-@router.post("/t/{task_uuid}/self-assign/", name="task_self_assign")
-async def task_self_assign(request: Request, task_uuid: uuid_lib.UUID, db: Session = Depends(get_db)):
+@router.post("/t/{uuid}/self-assign/", name="task_self_assign")
+async def task_self_assign(request: Request, uuid: uuid_lib.UUID, db: Session = Depends(get_db)):
     user = require_manager(request, db)
-    task = _get_task_by_uuid(db, task_uuid)
+    task = _get_task_by_uuid(db, uuid)
     if task.project.manager_id != user.id:
         raise HTTPException(status_code=403)
 
