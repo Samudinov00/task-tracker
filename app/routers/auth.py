@@ -45,7 +45,10 @@ async def login_get(request: Request):
 @router.get("/accounts/telegram-callback/", name="telegram_callback")
 async def telegram_callback(request: Request, db: Session = Depends(get_db)):
     """Callback от Telegram Login Widget."""
+    import logging
+    logger = logging.getLogger(__name__)
     data = dict(request.query_params)
+    logger.warning("Telegram callback data: %s", {k: v for k, v in data.items() if k != "hash"})
 
     if not validate_telegram_auth(data):
         return templates.TemplateResponse(
