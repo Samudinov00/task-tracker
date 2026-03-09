@@ -20,8 +20,12 @@ PASSWORD = "Admin1234!"
 
 print("==> Удаляем все таблицы и индексы...")
 with engine.connect() as conn:
-    # Сначала сбрасываем все индексы, которые могут мешать пересозданию
+    # Дропаем осиротевшие таблицы (удалены из моделей, но остались в БД)
+    conn.execute(text("DROP TABLE IF EXISTS task_attachments CASCADE"))
+    conn.execute(text("DROP TABLE IF EXISTS time_logs CASCADE"))
+    # Дропаем сталые индексы
     conn.execute(text("DROP INDEX IF EXISTS task_project_status_idx"))
+    conn.execute(text("DROP INDEX IF EXISTS ix_tasks_status"))
     conn.commit()
 
 Base.metadata.drop_all(bind=engine)
