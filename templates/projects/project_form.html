@@ -77,6 +77,84 @@
         <a href="{{ url_for('project_list') }}" class="btn btn-outline-secondary">Отмена</a>
       </div>
     </form>
+
+    {% if project %}
+    <hr class="my-4">
+    <h5 class="fw-semibold mb-3"><i class="bi bi-kanban me-2"></i>Статусы канбана</h5>
+
+    {% if project.statuses %}
+    <div class="table-responsive mb-3">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr>
+            <th>Название</th>
+            <th>Цвет</th>
+            <th>Порядок</th>
+            <th>Финальный</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in project.statuses %}
+          <tr>
+            <td>{{ s.name }}</td>
+            <td><span class="badge bg-{{ s.color }}">{{ s.color }}</span></td>
+            <td>{{ s.order }}</td>
+            <td>
+              {% if s.is_final %}
+                <span class="badge bg-success">Да</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <form method="post" action="{{ url_for('project_status_delete', uuid=project.uuid, sid=s.id) }}"
+                    onsubmit="return confirm('Удалить статус «{{ s.name }}»?')">
+                <button type="submit" class="btn btn-sm btn-outline-danger">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-muted">Нет статусов. Добавьте первый.</p>
+    {% endif %}
+
+    <div class="card mt-3">
+      <div class="card-header fw-semibold">Добавить статус</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('project_status_add', uuid=project.uuid) }}">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+              <label class="form-label">Название</label>
+              <input type="text" name="name" class="form-control" placeholder="Название статуса" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Цвет</label>
+              <select name="color" class="form-select">
+                {% for value, label in status_color_choices %}
+                  <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-center gap-2 pt-3">
+              <input type="checkbox" name="is_final" id="is_final_check" class="form-check-input">
+              <label class="form-check-label" for="is_final_check">Финальный статус</label>
+            </div>
+            <div class="col-md-2">
+              <button type="submit" class="btn btn-success w-100">
+                <i class="bi bi-plus-lg me-1"></i>Добавить
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

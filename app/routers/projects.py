@@ -16,9 +16,9 @@ from typing import List, Optional
 from app.database import SessionLocal
 from app.dependencies import get_db, require_auth, require_manager
 from app.models.project import (
-    Comment, Notification, Project, Task,
+    Comment, Notification, Project, ProjectStatus, Task,
     TaskChangeLog, TaskStatusLog,
-    STATUS_CHOICES, PRIORITY_CHOICES, STATUS_DEVELOPMENT, STATUS_PRODUCTION,
+    DEFAULT_STATUSES, STATUS_COLOR_CHOICES, PRIORITY_CHOICES,
     TYPE_TASK_ASSIGNED, TYPE_TASK_STATUS, TYPE_COMMENT,
 )
 from app.models.user import User
@@ -66,6 +66,19 @@ def _get_task_by_uuid(db: Session, uuid_str) -> Task:
     return task
 
 
+def _create_default_statuses(db: Session, project: Project) -> None:
+    for s in DEFAULT_STATUSES:
+        status = ProjectStatus(
+            project_id=project.id,
+            name=s["name"],
+            color=s["color"],
+            order=s["order"],
+            is_final=s["is_final"],
+        )
+        db.add(status)
+    db.commit()
+
+
 # ── Проекты ──────────────────────────────────────────────────────────────────
 
 @router.get("/", response_class=HTMLResponse, name="home")
@@ -111,6 +124,7 @@ async def project_create_get(request: Request, db: Session = Depends(get_db)):
             "request": request, "user": user, "title": "Новый проект",
             "project": None, "all_executors": executors, "all_clients": clients,
             "selected_executor_ids": [], "selected_client_ids": [], "errors": {},
+            "status_color_choices": STATUS_COLOR_CHOICES,
         },
     )
 
@@ -141,6 +155,7 @@ async def project_create_post(
                 "project": None, "all_executors": executors, "all_clients": clients,
                 "selected_executor_ids": executor_ids, "selected_client_ids": client_ids,
                 "errors": errors, "form_data": {"name": name, "description": description},
+                "status_color_choices": STATUS_COLOR_CHOICES,
             },
         )
 
@@ -156,6 +171,9 @@ async def project_create_post(
         project.clients = cls
 
     db.commit()
+    db.refresh(project)
+    _create_default_statuses(db, project)
+
     flash(request, f"Проект «{name}» создан.", "success")
     return RedirectResponse(url=f"/p/{project.uuid}/board/", status_code=302)
 
@@ -166,21 +184,24 @@ async def project_detail(request: Request, uuid: uuid_lib.UUID, db: Session = De
     project = _get_project_by_uuid(db, uuid)
     _check_project_access(user, project, db)
 
-    tasks_q = db.query(Task).filter(Task.project_id == project.id).options(joinedload(Task.assignee))
+    tasks_q = db.query(Task).filter(Task.project_id == project.id).options(
+        joinedload(Task.assignee), joinedload(Task.status_obj)
+    )
     if user.is_executor():
         tasks_q = tasks_q.filter(Task.assignee_id == user.id)
     elif user.is_client():
         tasks_q = tasks_q.filter(Task.clients.any(User.id == user.id))
 
     tasks = tasks_q.all()
+    done_count = sum(1 for t in tasks if t.status_obj and t.status_obj.is_final)
+    in_work_count = len(tasks) - done_count
     unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
     return templates.TemplateResponse(
         "projects/project_detail.html",
         {
             "request": request, "user": user, "project": project, "tasks": tasks,
-            "in_work_count": sum(1 for t in tasks if t.status == "development"),
-            "test_count": sum(1 for t in tasks if t.status in ("test_nsk", "test_district")),
-            "production_count": sum(1 for t in tasks if t.status == "production"),
+            "in_work_count": in_work_count,
+            "done_count": done_count,
             "unread_notifications_count": unread_count,
         },
     )
@@ -202,6 +223,7 @@ async def project_edit_get(request: Request, uuid: uuid_lib.UUID, db: Session = 
             "selected_executor_ids": [e.id for e in project.executors],
             "selected_client_ids": [c.id for c in project.clients],
             "errors": {},
+            "status_color_choices": STATUS_COLOR_CHOICES,
         },
     )
 
@@ -233,6 +255,7 @@ async def project_edit_post(request: Request, uuid: uuid_lib.UUID, db: Session =
                 "project": project, "all_executors": all_executors, "all_clients": all_clients,
                 "selected_executor_ids": executor_ids, "selected_client_ids": client_ids,
                 "errors": errors,
+                "status_color_choices": STATUS_COLOR_CHOICES,
             },
         )
 
@@ -276,16 +299,104 @@ async def project_delete_post(request: Request, uuid: uuid_lib.UUID, db: Session
     return RedirectResponse(url="/p/", status_code=302)
 
 
+# ── Статусы проекта (управление) ─────────────────────────────────────────────
+
+@router.post("/p/{uuid}/statuses/add/", name="project_status_add")
+async def project_status_add(request: Request, uuid: uuid_lib.UUID, db: Session = Depends(get_db)):
+    user = require_manager(request, db)
+    project = _get_project_by_uuid(db, uuid)
+    if project.manager_id != user.id:
+        raise HTTPException(status_code=403)
+
+    form = await request.form()
+    name = form.get("name", "").strip()
+    color = form.get("color", "primary")
+    is_final = form.get("is_final") == "on"
+
+    if not name:
+        flash(request, "Название статуса обязательно.", "danger")
+        return RedirectResponse(url=f"/p/{project.uuid}/edit/", status_code=302)
+
+    max_order = max((s.order for s in project.statuses), default=-1) + 1
+    status = ProjectStatus(
+        project_id=project.id,
+        name=name,
+        color=color,
+        order=max_order,
+        is_final=is_final,
+    )
+    db.add(status)
+    db.commit()
+    flash(request, f"Статус «{name}» добавлен.", "success")
+    return RedirectResponse(url=f"/p/{project.uuid}/edit/", status_code=302)
+
+
+@router.post("/p/{uuid}/statuses/{sid}/delete/", name="project_status_delete")
+async def project_status_delete(
+    request: Request, uuid: uuid_lib.UUID, sid: int, db: Session = Depends(get_db)
+):
+    user = require_manager(request, db)
+    project = _get_project_by_uuid(db, uuid)
+    if project.manager_id != user.id:
+        raise HTTPException(status_code=403)
+
+    status = db.query(ProjectStatus).filter(
+        ProjectStatus.id == sid, ProjectStatus.project_id == project.id
+    ).first()
+    if not status:
+        raise HTTPException(status_code=404, detail="Статус не найден.")
+
+    task_count = db.query(Task).filter(Task.status_id == sid).count()
+    if task_count > 0:
+        flash(request, f"Нельзя удалить статус «{status.name}»: есть задачи в этом статусе.", "danger")
+        return RedirectResponse(url=f"/p/{project.uuid}/edit/", status_code=302)
+
+    db.delete(status)
+    db.commit()
+    flash(request, f"Статус «{status.name}» удалён.", "success")
+    return RedirectResponse(url=f"/p/{project.uuid}/edit/", status_code=302)
+
+
+@router.post("/p/{uuid}/statuses/reorder/", name="project_status_reorder")
+async def project_status_reorder(
+    request: Request, uuid: uuid_lib.UUID, db: Session = Depends(get_db)
+):
+    user = require_manager(request, db)
+    project = _get_project_by_uuid(db, uuid)
+    if project.manager_id != user.id:
+        raise HTTPException(status_code=403)
+
+    data = await request.json()
+    ids = data.get("ids", [])
+    for idx, sid in enumerate(ids):
+        db.query(ProjectStatus).filter(
+            ProjectStatus.id == int(sid), ProjectStatus.project_id == project.id
+        ).update({"order": idx})
+    db.commit()
+    return JSONResponse({"success": True})
+
+
 # ── Канбан-доска ──────────────────────────────────────────────────────────────
 
 @router.get("/p/{project_uuid}/board/", response_class=HTMLResponse, name="kanban")
 async def kanban(request: Request, project_uuid: uuid_lib.UUID, db: Session = Depends(get_db)):
     user = require_auth(request, db)
-    project = _get_project_by_uuid(db, project_uuid)
+    project = (
+        db.query(Project)
+        .filter(Project.uuid == project_uuid)
+        .options(selectinload(Project.statuses))
+        .first()
+    )
+    if not project:
+        raise HTTPException(status_code=404, detail="Проект не найден.")
     _check_project_access(user, project, db)
 
+    final_status_ids = [s.id for s in project.statuses if s.is_final]
+
     qs = db.query(Task).filter(Task.project_id == project.id).options(
-        joinedload(Task.assignee), joinedload(Task.comments)
+        joinedload(Task.assignee),
+        joinedload(Task.comments),
+        joinedload(Task.status_obj),
     )
     if user.is_executor():
         qs = qs.filter(Task.assignee_id == user.id)
@@ -323,19 +434,34 @@ async def kanban(request: Request, project_uuid: uuid_lib.UUID, db: Session = De
     deadline = request.query_params.get("deadline")
     today = date.today()
     if deadline == "overdue":
-        qs = qs.filter(Task.deadline < today).filter(Task.status != STATUS_PRODUCTION)
+        if final_status_ids:
+            qs = qs.filter(Task.deadline < today).filter(~Task.status_id.in_(final_status_ids))
+        else:
+            qs = qs.filter(Task.deadline < today)
         deadline_filter = "overdue"
     elif deadline == "soon":
-        qs = qs.filter(Task.deadline >= today, Task.deadline <= today + timedelta(days=7)).filter(Task.status != STATUS_PRODUCTION)
+        if final_status_ids:
+            qs = qs.filter(Task.deadline >= today, Task.deadline <= today + timedelta(days=7)).filter(
+                ~Task.status_id.in_(final_status_ids)
+            )
+        else:
+            qs = qs.filter(Task.deadline >= today, Task.deadline <= today + timedelta(days=7))
         deadline_filter = "soon"
 
     all_tasks = qs.all()
 
     kanban_columns = [
-        {"key": "development",   "label": "Разработка",                 "color": "primary",   "icon": "bi-code-slash",         "tasks": sorted([t for t in all_tasks if t.status == "development"], key=lambda t: t.order)},
-        {"key": "test_nsk",      "label": "Тест НСК",                   "color": "warning",   "icon": "bi-bug",                "tasks": sorted([t for t in all_tasks if t.status == "test_nsk"], key=lambda t: t.order)},
-        {"key": "test_district", "label": "Тест район",                 "color": "warning",   "icon": "bi-geo-alt-fill",       "tasks": sorted([t for t in all_tasks if t.status == "test_district"], key=lambda t: t.order)},
-        {"key": "production",    "label": "Промышленная эксплуатация",  "color": "success",   "icon": "bi-check-circle-fill",  "tasks": sorted([t for t in all_tasks if t.status == "production"], key=lambda t: t.order)},
+        {
+            "key": str(s.id),
+            "label": s.name,
+            "color": s.color,
+            "icon": s.get_icon(),
+            "tasks": sorted(
+                [t for t in all_tasks if t.status_id == s.id],
+                key=lambda t: t.order,
+            ),
+        }
+        for s in project.statuses
     ]
 
     unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
@@ -346,7 +472,7 @@ async def kanban(request: Request, project_uuid: uuid_lib.UUID, db: Session = De
             "kanban_columns": kanban_columns, "executors": executors,
             "assignee_filter": assignee_filter, "priority_filter": priority_filter,
             "deadline_filter": deadline_filter,
-            "priority_choices": PRIORITY_CHOICES, "status_choices": STATUS_CHOICES,
+            "priority_choices": PRIORITY_CHOICES,
             "unread_notifications_count": unread_count,
         },
     )
@@ -365,15 +491,26 @@ async def task_move(request: Request, task_uuid: uuid_lib.UUID, db: Session = De
         return JSONResponse({"error": "Нет доступа"}, status_code=403)
 
     data = await request.json()
-    new_status = data.get("status")
+    new_status_str = data.get("status")
     column_ids = data.get("column_ids", [])
 
-    valid_statuses = [s[0] for s in STATUS_CHOICES]
-    if new_status not in valid_statuses:
+    try:
+        new_status_id = int(new_status_str)
+    except (TypeError, ValueError):
         return JSONResponse({"error": "Неверный статус"}, status_code=400)
 
-    old_status = task.status
-    task.status = new_status
+    # Validate that the status belongs to this project
+    project_statuses = db.query(ProjectStatus).filter(
+        ProjectStatus.project_id == task.project_id
+    ).all()
+    valid_ids = {s.id: s for s in project_statuses}
+    if new_status_id not in valid_ids:
+        return JSONResponse({"error": "Неверный статус"}, status_code=400)
+
+    old_status_name = task.status_obj.name if task.status_obj else ""
+    new_status_name = valid_ids[new_status_id].name
+
+    task.status_id = new_status_id
     db.commit()
 
     for idx, tuuid_str in enumerate(column_ids):
@@ -384,17 +521,19 @@ async def task_move(request: Request, task_uuid: uuid_lib.UUID, db: Session = De
             pass
     db.commit()
 
-    if old_status != new_status:
-        status_log = TaskStatusLog(task_id=task.id, changed_by_id=user.id, old_status=old_status, new_status=new_status)
+    if old_status_name != new_status_name:
+        status_log = TaskStatusLog(
+            task_id=task.id, changed_by_id=user.id,
+            old_status=old_status_name, new_status=new_status_name,
+        )
         db.add(status_log)
         db.commit()
-        label = dict(STATUS_CHOICES).get(new_status)
         recipients = set()
         if task.assignee_id and task.assignee_id != user.id:
             recipients.add(task.assignee_id)
         if task.project.manager_id != user.id:
             recipients.add(task.project.manager_id)
-        _notify(db, list(recipients), task.id, TYPE_TASK_STATUS, f"Статус задачи «{task.title}» изменён на «{label}»")
+        _notify(db, list(recipients), task.id, TYPE_TASK_STATUS, f"Статус задачи «{task.title}» изменён на «{new_status_name}»")
 
     return JSONResponse({"success": True})
 
@@ -405,7 +544,9 @@ async def kanban_state_api(request: Request, project_uuid: uuid_lib.UUID, db: Se
     project = _get_project_by_uuid(db, project_uuid)
     _check_project_access(user, project, db)
 
-    qs = db.query(Task).filter(Task.project_id == project.id).options(joinedload(Task.assignee))
+    qs = db.query(Task).filter(Task.project_id == project.id).options(
+        joinedload(Task.assignee), joinedload(Task.status_obj)
+    )
     if user.is_executor():
         qs = qs.filter(Task.assignee_id == user.id)
     elif user.is_client():
@@ -416,7 +557,7 @@ async def kanban_state_api(request: Request, project_uuid: uuid_lib.UUID, db: Se
         tasks_data.append({
             "uuid": str(task.uuid),
             "title": task.title,
-            "status": task.status,
+            "status": str(task.status_id) if task.status_id else "",
             "priority": task.priority,
             "assignee_name": task.assignee.get_display_name() if task.assignee else "",
             "deadline": task.deadline.isoformat() if task.deadline else None,
@@ -440,6 +581,7 @@ async def task_detail(request: Request, uuid: uuid_lib.UUID, db: Session = Depen
             joinedload(Task.assignee),
             joinedload(Task.project),
             joinedload(Task.created_by),
+            joinedload(Task.status_obj),
             selectinload(Task.comments).joinedload(Comment.author),
             selectinload(Task.change_logs).joinedload(TaskChangeLog.changed_by),
             selectinload(Task.status_logs).joinedload(TaskStatusLog.changed_by),
@@ -466,8 +608,8 @@ async def task_detail(request: Request, uuid: uuid_lib.UUID, db: Session = Depen
             "type": "status",
             "changed_by": log.changed_by,
             "field_name": "Статус",
-            "old_value": dict(STATUS_CHOICES).get(log.old_status, log.old_status),
-            "new_value": dict(STATUS_CHOICES).get(log.new_status, log.new_status),
+            "old_value": log.old_status,
+            "new_value": log.new_status,
             "changed_at": log.changed_at,
         })
     for log in task.change_logs:
@@ -488,7 +630,6 @@ async def task_detail(request: Request, uuid: uuid_lib.UUID, db: Session = Depen
             "request": request, "user": user, "task": task,
             "can_edit": can_edit,
             "history": history,
-            "status_choices": STATUS_CHOICES,
             "unread_notifications_count": unread_count,
         },
     )
@@ -532,15 +673,15 @@ async def task_create_get(request: Request, project_uuid: uuid_lib.UUID, db: Ses
         raise HTTPException(status_code=403)
 
     assignees = list(project.executors) + [user]
-    task_clients = list(project.clients)
+    task_clients_list = list(project.clients)
     unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
     return templates.TemplateResponse(
         "projects/task_form.html",
         {
             "request": request, "user": user, "project": project,
             "title": "Новая задача", "task": None,
-            "assignees": assignees, "task_clients": task_clients,
-            "status_choices": STATUS_CHOICES, "priority_choices": PRIORITY_CHOICES,
+            "assignees": assignees, "task_clients": task_clients_list,
+            "project_statuses": project.statuses, "priority_choices": PRIORITY_CHOICES,
             "errors": {}, "manager_id": user.id,
             "unread_notifications_count": unread_count,
         },
@@ -561,7 +702,7 @@ async def task_create_post(
     form = await request.form()
     title = form.get("title", "").strip()
     description = form.get("description", "").strip()
-    status_val = form.get("status", STATUS_DEVELOPMENT)
+    status_id_str = form.get("status_id", "")
     priority = form.get("priority", "medium")
     assignee_id_str = form.get("assignee", "")
     client_ids = [int(x) for x in form.getlist("clients") if x.isdigit()]
@@ -575,6 +716,10 @@ async def task_create_post(
     if assignee_id_str and assignee_id_str.isdigit():
         assignee_id = int(assignee_id_str)
 
+    status_id = None
+    if status_id_str and status_id_str.isdigit():
+        status_id = int(status_id_str)
+
     deadline = None
     if deadline_str:
         try:
@@ -585,15 +730,15 @@ async def task_create_post(
 
     if errors:
         assignees = list(project.executors) + [user]
-        task_clients = list(project.clients)
+        task_clients_list = list(project.clients)
         unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
         return templates.TemplateResponse(
             "projects/task_form.html",
             {
                 "request": request, "user": user, "project": project,
                 "title": "Новая задача", "task": None,
-                "assignees": assignees, "task_clients": task_clients,
-                "status_choices": STATUS_CHOICES, "priority_choices": PRIORITY_CHOICES,
+                "assignees": assignees, "task_clients": task_clients_list,
+                "project_statuses": project.statuses, "priority_choices": PRIORITY_CHOICES,
                 "errors": errors, "manager_id": user.id,
                 "unread_notifications_count": unread_count,
             },
@@ -601,7 +746,7 @@ async def task_create_post(
 
     task = Task(
         title=title, description=description,
-        project_id=project.id, status=status_val, priority=priority,
+        project_id=project.id, status_id=status_id, priority=priority,
         assignee_id=assignee_id, created_by_id=user.id, deadline=deadline,
     )
     db.add(task)
@@ -642,7 +787,7 @@ async def task_edit_get(request: Request, uuid: uuid_lib.UUID, db: Session = Dep
             "request": request, "user": user, "task": task, "project": project,
             "title": "Редактировать задачу",
             "assignees": assignees, "task_clients": task_clients_list,
-            "status_choices": STATUS_CHOICES, "priority_choices": PRIORITY_CHOICES,
+            "project_statuses": project.statuses, "priority_choices": PRIORITY_CHOICES,
             "errors": {}, "manager_id": user.id if user.is_manager() else None,
             "unread_notifications_count": unread_count,
         },
@@ -652,7 +797,14 @@ async def task_edit_get(request: Request, uuid: uuid_lib.UUID, db: Session = Dep
 @router.post("/t/{uuid}/edit/", name="task_edit_post")
 async def task_edit_post(request: Request, uuid: uuid_lib.UUID, db: Session = Depends(get_db)):
     user = require_auth(request, db)
-    task = _get_task_by_uuid(db, uuid)
+    task = (
+        db.query(Task)
+        .filter(Task.uuid == uuid)
+        .options(joinedload(Task.status_obj))
+        .first()
+    )
+    if not task:
+        raise HTTPException(status_code=404)
     project = task.project
 
     if user.is_client():
@@ -663,14 +815,23 @@ async def task_edit_post(request: Request, uuid: uuid_lib.UUID, db: Session = De
         raise HTTPException(status_code=403)
 
     form = await request.form()
-    old_status = task.status
+    old_status_name = task.status_obj.name if task.status_obj else ""
+    old_status_id = task.status_id
     old_assignee_id = task.assignee_id
+
+    # Load project statuses for validation
+    project_statuses = db.query(ProjectStatus).filter(
+        ProjectStatus.project_id == project.id
+    ).all()
+    valid_status_ids = {s.id: s for s in project_statuses}
 
     if user.is_executor():
         # Только статус
-        new_status = form.get("status", task.status)
-        if new_status in [s[0] for s in STATUS_CHOICES]:
-            task.status = new_status
+        status_id_str = form.get("status_id", "")
+        if status_id_str and status_id_str.isdigit():
+            new_status_id = int(status_id_str)
+            if new_status_id in valid_status_ids:
+                task.status_id = new_status_id
     else:
         # Полное редактирование (менеджер)
         title = form.get("title", "").strip()
@@ -684,9 +845,11 @@ async def task_edit_post(request: Request, uuid: uuid_lib.UUID, db: Session = De
             db.add(TaskChangeLog(task_id=task.id, changed_by_id=user.id, field_name="Описание", old_value=task.description, new_value=description))
         task.description = description
 
-        new_status = form.get("status", task.status)
-        if new_status in [s[0] for s in STATUS_CHOICES]:
-            task.status = new_status
+        status_id_str = form.get("status_id", "")
+        if status_id_str and status_id_str.isdigit():
+            new_status_id = int(status_id_str)
+            if new_status_id in valid_status_ids:
+                task.status_id = new_status_id
 
         priority = form.get("priority", task.priority)
         if priority in [p[0] for p in PRIORITY_CHOICES]:
@@ -723,15 +886,16 @@ async def task_edit_post(request: Request, uuid: uuid_lib.UUID, db: Session = De
         client_ids = [int(x) for x in form.getlist("clients") if x.isdigit()]
         task.clients = db.query(User).filter(User.id.in_(client_ids)).all() if client_ids else []
 
-    if old_status != task.status:
-        db.add(TaskStatusLog(task_id=task.id, changed_by_id=user.id, old_status=old_status, new_status=task.status))
-        label = dict(STATUS_CHOICES).get(task.status)
+    # Log status change if changed
+    if task.status_id != old_status_id:
+        new_status_name = valid_status_ids[task.status_id].name if task.status_id in valid_status_ids else ""
+        db.add(TaskStatusLog(task_id=task.id, changed_by_id=user.id, old_status=old_status_name, new_status=new_status_name))
         recipients = set()
         if task.assignee_id and task.assignee_id != user.id:
             recipients.add(task.assignee_id)
         if project.manager_id != user.id:
             recipients.add(project.manager_id)
-        _notify(db, list(recipients), task.id, TYPE_TASK_STATUS, f"Статус задачи «{task.title}» изменён на «{label}»")
+        _notify(db, list(recipients), task.id, TYPE_TASK_STATUS, f"Статус задачи «{task.title}» изменён на «{new_status_name}»")
 
     db.commit()
     flash(request, "Задача обновлена.", "success")
@@ -801,27 +965,32 @@ async def bulk_task_update(request: Request, db: Session = Depends(get_db)):
         .filter(Task.uuid.in_([uuid_lib.UUID(u) for u in task_uuids if len(u) == 36]))
         .join(Project)
         .filter(Project.manager_id == user.id)
-        .options(joinedload(Task.assignee), joinedload(Task.project))
+        .options(joinedload(Task.assignee), joinedload(Task.project), joinedload(Task.status_obj))
         .all()
     )
 
     updated = 0
     if action == "change_status":
-        valid_statuses = [s[0] for s in STATUS_CHOICES]
-        if value not in valid_statuses:
+        if not value.isdigit():
             flash(request, "Неверный статус.", "danger")
             return RedirectResponse(url=referer, status_code=302)
-        label = dict(STATUS_CHOICES).get(value)
+        new_status_id = int(value)
+        new_status_obj = db.query(ProjectStatus).filter(ProjectStatus.id == new_status_id).first()
+        if not new_status_obj:
+            flash(request, "Неверный статус.", "danger")
+            return RedirectResponse(url=referer, status_code=302)
+        new_status_name = new_status_obj.name
         for task in tasks:
-            old_status = task.status
-            if old_status != value:
-                task.status = value
-                db.add(TaskStatusLog(task_id=task.id, changed_by_id=user.id, old_status=old_status, new_status=value))
+            old_status_id = task.status_id
+            if old_status_id != new_status_id:
+                old_status_name = task.status_obj.name if task.status_obj else ""
+                task.status_id = new_status_id
+                db.add(TaskStatusLog(task_id=task.id, changed_by_id=user.id, old_status=old_status_name, new_status=new_status_name))
                 db.add(TaskChangeLog(
                     task_id=task.id, changed_by_id=user.id,
                     field_name="Статус",
-                    old_value=dict(STATUS_CHOICES).get(old_status, old_status),
-                    new_value=label,
+                    old_value=old_status_name,
+                    new_value=new_status_name,
                 ))
                 updated += 1
 

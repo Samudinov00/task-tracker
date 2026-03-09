@@ -237,8 +237,8 @@
 
     <select class="form-select form-select-sm" id="bulkStatusSelect" style="width:auto">
       <option value="">Сменить статус…</option>
-      {% for key, label in status_choices %}
-      <option value="{{ key }}">{{ label }}</option>
+      {% for col in kanban_columns %}
+      <option value="{{ col.key }}">{{ col.label }}</option>
       {% endfor %}
     </select>
 

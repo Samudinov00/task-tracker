@@ -23,9 +23,9 @@
         <div class="row g-4">
           <div class="col-md-6">
             <label class="form-label">Статус</label>
-            <select name="status" class="form-select">
-              {% for value, label in status_choices %}
-                <option value="{{ value }}" {% if task and task.status == value %}selected{% endif %}>{{ label }}</option>
+            <select name="status_id" class="form-select">
+              {% for status in project_statuses %}
+                <option value="{{ status.id }}" {% if task and task.status_id == status.id %}selected{% endif %}>{{ status.name }}</option>
               {% endfor %}
             </select>
           </div>
@@ -50,9 +50,9 @@
         <div class="row g-4 mb-4">
           <div class="col-md-6">
             <label class="form-label">Статус</label>
-            <select name="status" class="form-select">
-              {% for value, label in status_choices %}
-                <option value="{{ value }}" {% if task and task.status == value %}selected{% endif %}>{{ label }}</option>
+            <select name="status_id" class="form-select">
+              {% for status in project_statuses %}
+                <option value="{{ status.id }}" {% if task and task.status_id == status.id %}selected{% endif %}>{{ status.name }}</option>
               {% endfor %}
             </select>
           </div>
