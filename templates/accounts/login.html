@@ -18,34 +18,52 @@
         <div class="alert alert-warning">Сессия истекла из-за бездействия. Войдите снова.</div>
       {% endif %}
 
-      <form method="post" novalidate>
+      {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+      {% endif %}
 
-        <div class="mb-4">
+      {# ── Telegram Login ── #}
+      {% if telegram_bot_username %}
+      <div class="text-center mb-4">
+        <script async src="https://telegram.org/js/telegram-widget.js?22"
+                data-telegram-login="{{ telegram_bot_username }}"
+                data-size="large"
+                data-auth-url="/accounts/telegram-callback/"
+                data-request-access="write">
+        </script>
+        <p class="text-muted mt-3" style="font-size:.85rem">
+          Войдите через Telegram-аккаунт, привязанный к системе.
+        </p>
+      </div>
+      {% endif %}
+
+      {# ── Форма логин/пароль — только для админа (/accounts/login/?admin=1) ── #}
+      {% if show_password_form or not telegram_bot_username %}
+      <hr class="my-3">
+      <form method="post" novalidate>
+        <div class="mb-3">
           <label class="form-label">Логин</label>
           <input type="text" name="username" class="form-control form-control-lg"
-                 placeholder="Введите логин" autofocus
-                 value="{{ username_value or '' }}">
+                 placeholder="Введите логин" autofocus value="{{ username_value or '' }}">
         </div>
-
-        <div class="mb-4">
+        <div class="mb-3">
           <label class="form-label">Пароль</label>
           <input type="password" name="password" class="form-control form-control-lg"
                  placeholder="Введите пароль">
         </div>
-
-        {% if error %}
-          <div class="alert alert-danger">{{ error }}</div>
-        {% endif %}
-
-        <div class="mb-4 form-check">
+        <div class="mb-3 form-check">
           <input type="checkbox" name="remember_me" class="form-check-input" id="id_remember_me">
           <label class="form-check-label" for="id_remember_me">Запомнить меня</label>
         </div>
-
         <button type="submit" class="btn btn-primary w-100 btn-lg">
           <i class="bi bi-box-arrow-in-right me-2"></i>Войти
         </button>
       </form>
+      {% elif not show_password_form %}
+      <div class="text-center mt-3">
+        <a href="?admin=1" class="text-muted" style="font-size:.8rem">Войти как администратор</a>
+      </div>
+      {% endif %}
     </div>
   </div>
 </div>

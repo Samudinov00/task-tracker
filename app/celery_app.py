@@ -9,7 +9,7 @@ celery_app = Celery(
     "task_tracker",
     broker=CELERY_BROKER_URL,
     backend=CELERY_RESULT_BACKEND,
-    include=["app.tasks.notifications"],
+    include=["app.tasks.notifications", "app.tasks.deadline_reminders"],
 )
 
 celery_app.conf.update(
@@ -19,4 +19,10 @@ celery_app.conf.update(
     timezone=TIMEZONE,
     enable_utc=True,
     task_track_started=True,
+    beat_schedule={
+        "deadline-reminders-daily": {
+            "task": "app.tasks.deadline_reminders.send_deadline_reminders",
+            "schedule": 86400,  # раз в сутки
+        },
+    },
 )

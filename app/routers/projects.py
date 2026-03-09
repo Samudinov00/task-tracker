@@ -23,6 +23,7 @@ from app.models.project import (
 )
 from app.models.user import User
 from app.utils import flash, templates
+from app import telegram as tg
 
 router = APIRouter()
 
@@ -760,6 +761,9 @@ async def task_create_post(
 
     if assignee_id and assignee_id != user.id:
         _notify(db, [assignee_id], task.id, TYPE_TASK_ASSIGNED, f"Вам назначена задача «{task.title}» в проекте «{project.name}»")
+        assignee = db.query(User).filter(User.id == assignee_id).first()
+        if assignee and assignee.telegram_id:
+            tg.notify_task_assigned(assignee.telegram_id, task.title, project.name, str(task.uuid))
 
     flash(request, f"Задача «{title}» создана.", "success")
     return RedirectResponse(url=f"/p/{project.uuid}/board/", status_code=302)
@@ -867,6 +871,8 @@ async def task_edit_post(request: Request, uuid: uuid_lib.UUID, db: Session = De
             task.assignee_id = new_assignee_id
             if new_assignee_id and new_assignee_id != user.id:
                 _notify(db, [new_assignee_id], task.id, TYPE_TASK_ASSIGNED, f"Вам назначена задача «{task.title}»")
+                if new_user and new_user.telegram_id:
+                    tg.notify_task_assigned(new_user.telegram_id, task.title, task.project.name, str(task.uuid))
 
         deadline_str = form.get("deadline", "")
         if deadline_str:

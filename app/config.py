@@ -54,3 +54,8 @@ TEMPLATES_DIR = BASE_DIR / "templates"
 
 # ── Timezone ──────────────────────────────────────────────────────────────────
 TIMEZONE = "Asia/Bishkek"
+
+# ── Telegram ──────────────────────────────────────────────────────────────────
+TELEGRAM_BOT_TOKEN    = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_BOT_USERNAME = os.environ.get("TELEGRAM_BOT_USERNAME", "")  # без @
+SITE_URL              = os.environ.get("SITE_URL", "https://ddssrd.xyz")

@@ -61,6 +61,19 @@
           </div>
           {% endif %}
 
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              <i class="bi bi-telegram me-1 text-primary"></i>Telegram ID
+            </label>
+            <input type="number" name="telegram_id" class="form-control"
+                   value="{{ form_data.telegram_id if form_data else (edit_user.telegram_id if edit_user and edit_user.telegram_id else '') }}"
+                   placeholder="Числовой ID (например 123456789)">
+            <div class="form-text">
+              Пользователь может узнать свой ID через <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a>.
+              Нужен для Telegram-уведомлений и входа через Telegram.
+            </div>
+          </div>
+
           {% if edit_user %}
           <div class="mb-3 form-check">
             <input type="checkbox" name="is_active" class="form-check-input" id="id_is_active"

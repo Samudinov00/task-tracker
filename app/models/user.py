@@ -5,7 +5,7 @@ import uuid as uuid_lib
 from datetime import datetime
 
 from passlib.context import CryptContext
-from sqlalchemy import Boolean, Column, DateTime, Integer, String
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -37,6 +37,7 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
     date_joined = Column(DateTime, default=datetime.utcnow)
+    telegram_id = Column(BigInteger, unique=True, nullable=True, index=True)
 
     # relationships (back-referenced from project.py)
     managed_projects = relationship("Project", back_populates="manager", foreign_keys="Project.manager_id")
