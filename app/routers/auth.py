@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Form, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.config import REMEMBER_ME_MAX_AGE, SESSION_MAX_AGE, TELEGRAM_BOT_USERNAME
+from app.config import REMEMBER_ME_MAX_AGE, SESSION_MAX_AGE, TELEGRAM_BOT_USERNAME, SITE_URL
 from app.database import SessionLocal
 from app.models.user import User
 from app.utils import flash, templates
@@ -35,7 +35,7 @@ async def login_get(request: Request):
             "request": request,
             "error": None,
             "reason": request.query_params.get("reason"),
-            "telegram_bot_username": TELEGRAM_BOT_USERNAME,
+            "telegram_bot_username": TELEGRAM_BOT_USERNAME, "site_url": SITE_URL,
             # admin=1 показывает форму логин/пароль
             "show_password_form": request.query_params.get("admin") == "1",
         },
@@ -53,7 +53,7 @@ async def telegram_callback(request: Request, db: Session = Depends(get_db)):
             {
                 "request": request,
                 "error": "Ошибка проверки данных Telegram. Попробуйте ещё раз.",
-                "telegram_bot_username": TELEGRAM_BOT_USERNAME,
+                "telegram_bot_username": TELEGRAM_BOT_USERNAME, "site_url": SITE_URL,
                 "show_password_form": False,
             },
         )
@@ -67,7 +67,7 @@ async def telegram_callback(request: Request, db: Session = Depends(get_db)):
             {
                 "request": request,
                 "error": "Ваш Telegram-аккаунт не привязан к системе. Обратитесь к менеджеру.",
-                "telegram_bot_username": TELEGRAM_BOT_USERNAME,
+                "telegram_bot_username": TELEGRAM_BOT_USERNAME, "site_url": SITE_URL,
                 "show_password_form": False,
             },
         )
