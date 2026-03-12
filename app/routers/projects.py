@@ -535,6 +535,9 @@ async def task_move(request: Request, task_uuid: uuid_lib.UUID, db: Session = De
         if task.project.manager_id != user.id:
             recipients.add(task.project.manager_id)
         _notify(db, list(recipients), task.id, TYPE_TASK_STATUS, f"Статус задачи «{task.title}» изменён на «{new_status_name}»")
+        # Telegram-уведомление исполнителю
+        if task.assignee and task.assignee.telegram_id and task.assignee_id != user.id:
+            tg.notify_task_status_changed(task.assignee.telegram_id, task.title, old_status_name, new_status_name, str(task.uuid))
 
     return JSONResponse({"success": True})
 
@@ -902,6 +905,8 @@ async def task_edit_post(request: Request, uuid: uuid_lib.UUID, db: Session = De
         if project.manager_id != user.id:
             recipients.add(project.manager_id)
         _notify(db, list(recipients), task.id, TYPE_TASK_STATUS, f"Статус задачи «{task.title}» изменён на «{new_status_name}»")
+        if task.assignee and task.assignee.telegram_id and task.assignee_id != user.id:
+            tg.notify_task_status_changed(task.assignee.telegram_id, task.title, old_status_name, new_status_name, str(task.uuid))
 
     db.commit()
     flash(request, "Задача обновлена.", "success")
