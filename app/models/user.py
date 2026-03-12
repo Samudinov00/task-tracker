@@ -37,7 +37,8 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
     date_joined = Column(DateTime, default=datetime.utcnow)
-    telegram_id = Column(BigInteger, unique=True, nullable=True, index=True)
+    telegram_id       = Column(BigInteger, unique=True, nullable=True, index=True)
+    telegram_username = Column(String(100), unique=True, nullable=True, index=True)
 
     # relationships (back-referenced from project.py)
     managed_projects = relationship("Project", back_populates="manager", foreign_keys="Project.manager_id")

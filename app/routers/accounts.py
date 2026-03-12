@@ -145,11 +145,10 @@ async def user_create_post(
         )
 
     form = await request.form()
-    tg_id_str = form.get("telegram_id", "").strip()
-    telegram_id = int(tg_id_str) if tg_id_str.isdigit() else None
+    tg_username = form.get("telegram_username", "").strip().lstrip("@") or None
 
     new_user = User(username=username, first_name=first_name, last_name=last_name,
-                    role=role, telegram_id=telegram_id)
+                    role=role, telegram_username=tg_username)
     new_user.set_password(password1)
     db.add(new_user)
     db.commit()
@@ -215,13 +214,13 @@ async def user_edit_post(
         )
 
     form = await request.form()
-    tg_id_str = form.get("telegram_id", "").strip()
+    tg_username = form.get("telegram_username", "").strip().lstrip("@") or None
     edit_user.username = username
     edit_user.first_name = first_name
     edit_user.last_name = last_name
     edit_user.role = role
     edit_user.is_active = is_active
-    edit_user.telegram_id = int(tg_id_str) if tg_id_str.isdigit() else None
+    edit_user.telegram_username = tg_username
     db.commit()
     flash(request, "Данные пользователя обновлены.", "success")
     return RedirectResponse(url="/accounts/users/", status_code=302)

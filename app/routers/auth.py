@@ -11,8 +11,11 @@ from app.config import REMEMBER_ME_MAX_AGE, SESSION_MAX_AGE, TELEGRAM_BOT_USERNA
 from app.database import SessionLocal
 from app.models.user import User
 from app.utils import flash, templates
-from app.telegram import validate_telegram_auth, generate_login_code, validate_login_code, send_message
-from app.config import TELEGRAM_BOT_USERNAME as _BOT_USERNAME
+from app.telegram import (
+    validate_telegram_auth, generate_login_code, validate_login_code,
+    send_message, answer_callback, notify_managers_registration,
+    _inline_kb, _reply_kb, _pending_reg,
+)
 
 router = APIRouter()
 
@@ -121,36 +124,125 @@ async def logout(request: Request):
 
 @router.post("/bot/webhook/", name="bot_webhook", include_in_schema=False)
 async def bot_webhook(request: Request, db: Session = Depends(get_db)):
-    """Webhook от Telegram Bot — обрабатывает команду /login."""
+    """Webhook от Telegram Bot."""
     from fastapi.responses import JSONResponse
     try:
         data = await request.json()
     except Exception:
         return JSONResponse({"ok": True})
 
+    # ── Обработка нажатий inline-кнопок ──────────────────────────────────────
+    if "callback_query" in data:
+        cq = data["callback_query"]
+        cq_id = cq.get("id")
+        cq_data = cq.get("data", "")
+        from_user = cq.get("from", {})
+        telegram_id = from_user.get("id")
+        tg_username = from_user.get("username", "")
+
+        if cq_data == "reg_request":
+            # Начать заявку на регистрацию
+            _pending_reg[telegram_id] = {"username": tg_username, "step": "await_name"}
+            answer_callback(cq_id)
+            send_message(telegram_id,
+                "📝 Введите ваше имя и фамилию:",
+                _reply_kb(["Отмена"], one_time=True))
+
+        elif cq_data == "get_code":
+            user = db.query(User).filter(
+                User.telegram_id == telegram_id, User.is_active == True
+            ).first()
+            if user:
+                code = generate_login_code(telegram_id)
+                answer_callback(cq_id, "Код отправлен!")
+                send_message(telegram_id,
+                    f"🔑 Ваш код для входа:\n\n<code>{code}</code>\n\n⏱ Действителен 5 минут.",
+                    _reply_kb(["🔑 Получить новый код"], ["❓ Помощь"]))
+            else:
+                answer_callback(cq_id, "Нет доступа")
+
+        elif cq_data == "help":
+            answer_callback(cq_id)
+            send_message(telegram_id,
+                "ℹ️ <b>Справка</b>\n\n"
+                "/login — получить код для входа на сайт\n"
+                "/start — главное меню\n\n"
+                "Если вы не зарегистрированы — нажмите «Подать заявку» "
+                "и менеджер добавит вас в систему.")
+
+        return JSONResponse({"ok": True})
+
+    # ── Обработка текстовых сообщений ─────────────────────────────────────────
     message = data.get("message", {})
-    text = message.get("text", "")
+    if not message:
+        return JSONResponse({"ok": True})
+
+    text = message.get("text", "").strip()
+    from_user = message.get("from", {})
     chat = message.get("chat", {})
     telegram_id = chat.get("id")
-    first_name = message.get("from", {}).get("first_name", "")
+    tg_username = from_user.get("username", "")
+    first_name = from_user.get("first_name", "")
 
     if not telegram_id:
         return JSONResponse({"ok": True})
 
-    if text.startswith("/start") or text.startswith("/login"):
-        user = db.query(User).filter(User.telegram_id == telegram_id, User.is_active == True).first()
-        if not user:
-            send_message(telegram_id,
-                "❌ Ваш Telegram-аккаунт не привязан к системе.\n"
-                "Обратитесь к менеджеру для добавления.")
+    # ── Проверяем состояние заявки ────────────────────────────────────────────
+    pending = _pending_reg.get(telegram_id)
+    if pending and pending.get("step") == "await_name":
+        if text == "Отмена":
+            del _pending_reg[telegram_id]
+            send_message(telegram_id, "Отменено.", _reply_kb(["Подать заявку"], ["❓ Помощь"]))
         else:
+            # Получили имя — отправляем заявку менеджерам
+            del _pending_reg[telegram_id]
+            notify_managers_registration(telegram_id, tg_username, text)
+            send_message(telegram_id,
+                f"✅ Заявка отправлена!\n\n"
+                f"Менеджер рассмотрит её и добавит вас в систему.\n"
+                f"После этого напишите /login чтобы войти.")
+        return JSONResponse({"ok": True})
+
+    # ── Ищем пользователя в системе ──────────────────────────────────────────
+    user = db.query(User).filter(
+        User.telegram_id == telegram_id, User.is_active == True
+    ).first()
+
+    # Если не нашли по ID — пробуем по username и привязываем ID
+    if not user and tg_username:
+        user = db.query(User).filter(
+            User.telegram_username == tg_username, User.is_active == True
+        ).first()
+        if user and user.telegram_id is None:
+            user.telegram_id = telegram_id
+            db.commit()
+
+    # ── Команды ──────────────────────────────────────────────────────────────
+    if text in ("/start", "/login", "🔑 Получить новый код"):
+        if user:
             code = generate_login_code(telegram_id)
             send_message(telegram_id,
-                f"👋 Привет, {first_name}!\n\n"
-                f"Ваш код для входа:\n\n"
-                f"<code>{code}</code>\n\n"
-                f"Введите его на странице входа.\n"
-                f"⏱ Код действителен 5 минут.")
+                f"👋 Привет, {user.get_display_name()}!\n\n"
+                f"🔑 Ваш код для входа:\n\n<code>{code}</code>\n\n"
+                f"⏱ Действителен 5 минут.\n\n"
+                f"Введите его на странице входа: {SITE_URL}",
+                _reply_kb(["🔑 Получить новый код"], ["❓ Помощь"]))
+        else:
+            send_message(telegram_id,
+                f"👋 Привет, {first_name or 'пользователь'}!\n\n"
+                f"Вы не зарегистрированы в системе.\n"
+                f"Подайте заявку — менеджер добавит вас.",
+                _inline_kb(
+                    [("📝 Подать заявку на регистрацию", "reg_request")],
+                    [("❓ Помощь", "help")],
+                ))
+
+    elif text == "❓ Помощь":
+        send_message(telegram_id,
+            "ℹ️ <b>Справка</b>\n\n"
+            "/login — получить код для входа\n"
+            "/start — главное меню\n\n"
+            f"Сайт: {SITE_URL}")
 
     return JSONResponse({"ok": True})
 

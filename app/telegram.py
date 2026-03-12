@@ -15,7 +15,8 @@ import httpx
 from app.config import TELEGRAM_BOT_TOKEN, SITE_URL
 
 # ── Коды входа через бота (in-memory, TTL 5 минут) ───────────────────────────
-_login_codes: dict = {}  # code → {"telegram_id": int, "expires": float}
+_login_codes: dict = {}       # code → {"telegram_id": int, "expires": float}
+_pending_reg:  dict = {}      # telegram_id → {"username": str, "step": str, "name": str}
 
 
 def generate_login_code(telegram_id: int) -> str:
@@ -37,6 +38,22 @@ def validate_login_code(code: str) -> Optional[int]:
     del _login_codes[code]
     return telegram_id
 
+
+# ── Клавиатуры ───────────────────────────────────────────────────────────────
+
+def _inline_kb(*rows):
+    """Строит InlineKeyboardMarkup из списка списков (text, callback_data)."""
+    return {"inline_keyboard": [[{"text": t, "callback_data": d} for t, d in row] for row in rows]}
+
+
+def _reply_kb(*buttons, one_time=False):
+    """Строит ReplyKeyboardMarkup."""
+    return {
+        "keyboard": [[{"text": b} for b in row] for row in buttons],
+        "resize_keyboard": True,
+        "one_time_keyboard": one_time,
+    }
+
 logger = logging.getLogger(__name__)
 
 _TG_API = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
@@ -44,20 +61,60 @@ _TG_API = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
 
 # ── Отправка сообщений ────────────────────────────────────────────────────────
 
-def send_message(telegram_id: int, text: str) -> bool:
+def send_message(telegram_id: int, text: str, reply_markup: dict = None) -> bool:
     """Отправить сообщение пользователю. Возвращает True при успехе."""
     if not TELEGRAM_BOT_TOKEN or not telegram_id:
         return False
     try:
-        resp = httpx.post(
-            f"{_TG_API}/sendMessage",
-            json={"chat_id": telegram_id, "text": text, "parse_mode": "HTML"},
-            timeout=5,
-        )
+        payload = {"chat_id": telegram_id, "text": text, "parse_mode": "HTML"}
+        if reply_markup:
+            payload["reply_markup"] = reply_markup
+        resp = httpx.post(f"{_TG_API}/sendMessage", json=payload, timeout=5)
         return resp.status_code == 200
     except Exception as e:
         logger.warning("Telegram sendMessage failed: %s", e)
         return False
+
+
+def answer_callback(callback_query_id: str, text: str = "") -> None:
+    """Ответить на нажатие inline-кнопки."""
+    if not TELEGRAM_BOT_TOKEN:
+        return
+    try:
+        httpx.post(
+            f"{_TG_API}/answerCallbackQuery",
+            json={"callback_query_id": callback_query_id, "text": text},
+            timeout=3,
+        )
+    except Exception:
+        pass
+
+
+def notify_managers_registration(applicant_id: int, applicant_username: str,
+                                  applicant_name: str) -> None:
+    """Уведомить всех менеджеров о новой заявке на регистрацию."""
+    from app.database import SessionLocal
+    from app.models.user import User, ROLE_MANAGER
+    db = SessionLocal()
+    try:
+        managers = db.query(User).filter(
+            User.role == ROLE_MANAGER,
+            User.telegram_id.isnot(None),
+            User.is_active == True,
+        ).all()
+        username_str = f"@{applicant_username}" if applicant_username else "без username"
+        text = (
+            f"🆕 <b>Новая заявка на регистрацию</b>\n\n"
+            f"👤 Имя: <b>{applicant_name}</b>\n"
+            f"📱 Telegram: {username_str}\n"
+            f"🆔 ID: <code>{applicant_id}</code>\n\n"
+            f"Чтобы подтвердить — добавьте этого пользователя в систему "
+            f"и укажите его Telegram username или ID."
+        )
+        for m in managers:
+            send_message(m.telegram_id, text)
+    finally:
+        db.close()
 
 
 def notify_task_assigned(assignee_telegram_id: int, task_title: str,
