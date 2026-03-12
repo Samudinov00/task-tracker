@@ -5,6 +5,7 @@
 """
 import hashlib
 import hmac
+import secrets
 import time
 import logging
 from typing import Optional
@@ -12,6 +13,29 @@ from typing import Optional
 import httpx
 
 from app.config import TELEGRAM_BOT_TOKEN, SITE_URL
+
+# ── Коды входа через бота (in-memory, TTL 5 минут) ───────────────────────────
+_login_codes: dict = {}  # code → {"telegram_id": int, "expires": float}
+
+
+def generate_login_code(telegram_id: int) -> str:
+    """Генерирует 6-значный код входа для telegram_id."""
+    code = str(secrets.randbelow(900000) + 100000)
+    _login_codes[code] = {"telegram_id": telegram_id, "expires": time.time() + 300}
+    return code
+
+
+def validate_login_code(code: str) -> Optional[int]:
+    """Проверяет код входа. Возвращает telegram_id или None."""
+    entry = _login_codes.get(code)
+    if not entry:
+        return None
+    if time.time() > entry["expires"]:
+        del _login_codes[code]
+        return None
+    telegram_id = entry["telegram_id"]
+    del _login_codes[code]
+    return telegram_id
 
 logger = logging.getLogger(__name__)
 

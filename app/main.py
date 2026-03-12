@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.config import SECRET_KEY, STATIC_DIR, MEDIA_DIR, DEBUG
+from app.config import SECRET_KEY, STATIC_DIR, MEDIA_DIR, DEBUG, TELEGRAM_BOT_TOKEN, SITE_URL
 from app.middleware import SessionInactivityMiddleware
 from app.routers import auth, accounts, projects, notifications, analytics
 
@@ -49,6 +49,23 @@ app.include_router(analytics.router)
 @app.get("/health/", include_in_schema=False)
 async def health():
     return JSONResponse({"status": "ok"})
+
+
+# ── Регистрация Telegram webhook при старте ───────────────────────────────────
+@app.on_event("startup")
+async def register_telegram_webhook():
+    if not TELEGRAM_BOT_TOKEN:
+        return
+    import httpx
+    webhook_url = f"{SITE_URL}/bot/webhook/"
+    try:
+        httpx.post(
+            f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook",
+            json={"url": webhook_url},
+            timeout=5,
+        )
+    except Exception:
+        pass
 
 
 # ── Обработчики ошибок ────────────────────────────────────────────────────────
