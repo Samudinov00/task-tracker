@@ -54,6 +54,19 @@ def _reply_kb(*buttons, one_time=False):
         "one_time_keyboard": one_time,
     }
 
+
+def _contact_kb():
+    """Кнопка запроса номера телефона (Telegram отправляет его автоматически)."""
+    return {
+        "keyboard": [
+            [{"text": "📱 Поделиться номером", "request_contact": True}],
+            [{"text": "Отмена"}],
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": True,
+    }
+
+
 logger = logging.getLogger(__name__)
 
 _TG_API = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
@@ -91,7 +104,8 @@ def answer_callback(callback_query_id: str, text: str = "") -> None:
 
 
 def notify_managers_registration(applicant_id: int, applicant_username: str,
-                                  applicant_name: str) -> None:
+                                  applicant_name: str,
+                                  applicant_phone: str = "") -> None:
     """Уведомить всех менеджеров о новой заявке на регистрацию."""
     from app.database import SessionLocal
     from app.models.user import User, ROLE_MANAGER
@@ -102,14 +116,15 @@ def notify_managers_registration(applicant_id: int, applicant_username: str,
             User.telegram_id.isnot(None),
             User.is_active == True,
         ).all()
-        username_str = f"@{applicant_username}" if applicant_username else "без username"
+        username_str = f"@{applicant_username}" if applicant_username else "—"
+        phone_str    = applicant_phone if applicant_phone else "—"
         text = (
             f"🆕 <b>Новая заявка на регистрацию</b>\n\n"
             f"👤 Имя: <b>{applicant_name}</b>\n"
-            f"📱 Telegram: {username_str}\n"
-            f"🆔 ID: <code>{applicant_id}</code>\n\n"
-            f"Чтобы подтвердить — добавьте этого пользователя в систему "
-            f"и укажите его Telegram username или ID."
+            f"📱 Username: {username_str}\n"
+            f"☎️ Телефон: {phone_str}\n"
+            f"🆔 Telegram ID: <code>{applicant_id}</code>\n\n"
+            f"Добавьте пользователя в систему и укажите его Telegram ID."
         )
         for m in managers:
             send_message(m.telegram_id, text)
