@@ -104,8 +104,7 @@ def answer_callback(callback_query_id: str, text: str = "") -> None:
 
 
 def notify_managers_registration(applicant_id: int, applicant_username: str,
-                                  applicant_name: str,
-                                  applicant_phone: str = "") -> None:
+                                  applicant_name: str) -> None:
     """Уведомить всех менеджеров о новой заявке на регистрацию."""
     from app.database import SessionLocal
     from app.models.user import User, ROLE_MANAGER
@@ -117,14 +116,13 @@ def notify_managers_registration(applicant_id: int, applicant_username: str,
             User.is_active == True,
         ).all()
         username_str = f"@{applicant_username}" if applicant_username else "—"
-        phone_str    = applicant_phone if applicant_phone else "—"
         text = (
             f"🆕 <b>Новая заявка на регистрацию</b>\n\n"
             f"👤 Имя: <b>{applicant_name}</b>\n"
             f"📱 Username: {username_str}\n"
-            f"☎️ Телефон: {phone_str}\n"
             f"🆔 Telegram ID: <code>{applicant_id}</code>\n\n"
-            f"Добавьте пользователя в систему и укажите его Telegram ID."
+            f"Для добавления пользователя в систему укажите его Telegram ID:\n"
+            f"<b>{applicant_id}</b>"
         )
         for m in managers:
             send_message(m.telegram_id, text)

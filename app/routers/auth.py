@@ -14,7 +14,7 @@ from app.utils import flash, templates
 from app.telegram import (
     validate_telegram_auth, generate_login_code, validate_login_code,
     send_message, answer_callback, notify_managers_registration,
-    _inline_kb, _reply_kb, _contact_kb, _pending_reg,
+    _inline_kb, _reply_kb, _pending_reg,
 )
 
 router = APIRouter()
@@ -145,7 +145,7 @@ async def bot_webhook(request: Request, db: Session = Depends(get_db)):
             _pending_reg[telegram_id] = {"username": tg_username, "step": "await_name"}
             answer_callback(cq_id)
             send_message(telegram_id,
-                "📝 Шаг 1/2. Введите ваше имя и фамилию:",
+                "📝 Введите ваше имя и фамилию:",
                 _reply_kb(["Отмена"], one_time=True))
 
         elif cq_data == "get_code":
@@ -196,35 +196,14 @@ async def bot_webhook(request: Request, db: Session = Depends(get_db)):
             del _pending_reg[telegram_id]
             send_message(telegram_id, "Отменено.", _reply_kb(["Подать заявку"], ["❓ Помощь"]))
         else:
-            # Получили имя — просим номер телефона
-            pending["name"] = text
-            pending["step"] = "await_phone"
-            send_message(telegram_id,
-                "📱 Шаг 2/2. Поделитесь номером телефона — это поможет менеджеру "
-                "вас идентифицировать:",
-                _contact_kb())
-        return JSONResponse({"ok": True})
-
-    if pending and pending.get("step") == "await_phone":
-        if text == "Отмена":
+            name = text
             del _pending_reg[telegram_id]
-            send_message(telegram_id, "Отменено.", _reply_kb(["Подать заявку"], ["❓ Помощь"]))
-            return JSONResponse({"ok": True})
-
-        # Принимаем либо контакт (кнопка), либо пропуск шага (текст)
-        phone = ""
-        if contact:
-            phone = contact.get("phone_number", "")
-        # Если пользователь написал текст вместо кнопки — продолжаем без телефона
-
-        name = pending.get("name", first_name)
-        del _pending_reg[telegram_id]
-        notify_managers_registration(telegram_id, tg_username, name, phone)
-        send_message(telegram_id,
-            "✅ Заявка отправлена!\n\n"
-            "Менеджер рассмотрит её и добавит вас в систему.\n"
-            "После этого напишите /login чтобы войти.",
-            _reply_kb(["❓ Помощь"]))
+            notify_managers_registration(telegram_id, tg_username, name)
+            send_message(telegram_id,
+                "✅ Заявка отправлена!\n\n"
+                "Менеджер рассмотрит её и добавит вас в систему.\n"
+                "После этого напишите /login чтобы войти.",
+                _reply_kb(["❓ Помощь"]))
         return JSONResponse({"ok": True})
 
     # ── Ищем пользователя в системе ──────────────────────────────────────────
