@@ -535,9 +535,11 @@ async def task_move(request: Request, task_uuid: uuid_lib.UUID, db: Session = De
         if task.project.manager_id != user.id:
             recipients.add(task.project.manager_id)
         _notify(db, list(recipients), task.id, TYPE_TASK_STATUS, f"Статус задачи «{task.title}» изменён на «{new_status_name}»")
-        # Telegram-уведомление исполнителю
-        if task.assignee and task.assignee.telegram_id and task.assignee_id != user.id:
-            tg.notify_task_status_changed(task.assignee.telegram_id, task.title, old_status_name, new_status_name, str(task.uuid))
+        assignee_tg = task.assignee.telegram_id if task.assignee and task.assignee_id != user.id else None
+        manager = db.query(User).filter(User.id == task.project.manager_id).first()
+        manager_tg = manager.telegram_id if manager and task.project.manager_id != user.id else None
+        if assignee_tg or manager_tg:
+            tg.notify_task_status_changed(assignee_tg, task.title, old_status_name, new_status_name, str(task.uuid), manager_tg)
 
     return JSONResponse({"success": True})
 
@@ -665,6 +667,12 @@ async def task_comment_post(
         recipients.add(task.project.manager_id)
     _notify(db, list(recipients), task.id, TYPE_COMMENT, f"{user.get_display_name()} прокомментировал задачу «{task.title}»")
 
+    assignee_tg = task.assignee.telegram_id if task.assignee and task.assignee_id != user.id else None
+    manager = db.query(User).filter(User.id == task.project.manager_id).first()
+    manager_tg = manager.telegram_id if manager and task.project.manager_id != user.id else None
+    if assignee_tg or manager_tg:
+        tg.notify_task_comment(task.title, user.get_display_name(), str(task.uuid), assignee_tg, manager_tg)
+
     flash(request, "Комментарий добавлен.", "success")
     return RedirectResponse(url=f"/t/{task.uuid}/", status_code=302)
 
@@ -765,8 +773,13 @@ async def task_create_post(
     if assignee_id and assignee_id != user.id:
         _notify(db, [assignee_id], task.id, TYPE_TASK_ASSIGNED, f"Вам назначена задача «{task.title}» в проекте «{project.name}»")
         assignee = db.query(User).filter(User.id == assignee_id).first()
-        if assignee and assignee.telegram_id:
-            tg.notify_task_assigned(assignee.telegram_id, task.title, project.name, str(task.uuid))
+        manager_obj = db.query(User).filter(User.id == project.manager_id).first()
+        manager_tg = manager_obj.telegram_id if manager_obj and project.manager_id != user.id else None
+        tg.notify_task_assigned(
+            assignee.telegram_id if assignee else None,
+            task.title, project.name, str(task.uuid),
+            manager_tg,
+        )
 
     flash(request, f"Задача «{title}» создана.", "success")
     return RedirectResponse(url=f"/p/{project.uuid}/board/", status_code=302)
@@ -874,8 +887,13 @@ async def task_edit_post(request: Request, uuid: uuid_lib.UUID, db: Session = De
             task.assignee_id = new_assignee_id
             if new_assignee_id and new_assignee_id != user.id:
                 _notify(db, [new_assignee_id], task.id, TYPE_TASK_ASSIGNED, f"Вам назначена задача «{task.title}»")
-                if new_user and new_user.telegram_id:
-                    tg.notify_task_assigned(new_user.telegram_id, task.title, task.project.name, str(task.uuid))
+                manager_obj2 = db.query(User).filter(User.id == task.project.manager_id).first()
+                manager_tg2 = manager_obj2.telegram_id if manager_obj2 and task.project.manager_id != user.id else None
+                tg.notify_task_assigned(
+                    new_user.telegram_id if new_user else None,
+                    task.title, task.project.name, str(task.uuid),
+                    manager_tg2,
+                )
 
         deadline_str = form.get("deadline", "")
         if deadline_str:
@@ -905,8 +923,11 @@ async def task_edit_post(request: Request, uuid: uuid_lib.UUID, db: Session = De
         if project.manager_id != user.id:
             recipients.add(project.manager_id)
         _notify(db, list(recipients), task.id, TYPE_TASK_STATUS, f"Статус задачи «{task.title}» изменён на «{new_status_name}»")
-        if task.assignee and task.assignee.telegram_id and task.assignee_id != user.id:
-            tg.notify_task_status_changed(task.assignee.telegram_id, task.title, old_status_name, new_status_name, str(task.uuid))
+        assignee_tg2 = task.assignee.telegram_id if task.assignee and task.assignee_id != user.id else None
+        manager_obj3 = db.query(User).filter(User.id == project.manager_id).first()
+        manager_tg3 = manager_obj3.telegram_id if manager_obj3 and project.manager_id != user.id else None
+        if assignee_tg2 or manager_tg3:
+            tg.notify_task_status_changed(assignee_tg2, task.title, old_status_name, new_status_name, str(task.uuid), manager_tg3)
 
     db.commit()
     flash(request, "Задача обновлена.", "success")

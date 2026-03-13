@@ -6,6 +6,7 @@
 import hashlib
 import hmac
 import secrets
+import threading
 import time
 import logging
 from typing import Optional
@@ -74,19 +75,51 @@ _TG_API = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
 
 # ── Отправка сообщений ────────────────────────────────────────────────────────
 
-def send_message(telegram_id: int, text: str, reply_markup: dict = None) -> bool:
-    """Отправить сообщение пользователю. Возвращает True при успехе."""
+def send_message(telegram_id: int, text: str, reply_markup: dict = None) -> Optional[int]:
+    """Отправить сообщение пользователю. Возвращает message_id или None."""
     if not TELEGRAM_BOT_TOKEN or not telegram_id:
-        return False
+        return None
     try:
         payload = {"chat_id": telegram_id, "text": text, "parse_mode": "HTML"}
         if reply_markup:
             payload["reply_markup"] = reply_markup
         resp = httpx.post(f"{_TG_API}/sendMessage", json=payload, timeout=5)
-        return resp.status_code == 200
+        if resp.status_code == 200:
+            return resp.json().get("result", {}).get("message_id")
+        return None
     except Exception as e:
         logger.warning("Telegram sendMessage failed: %s", e)
-        return False
+        return None
+
+
+def delete_message(telegram_id: int, message_id: int) -> None:
+    """Удалить сообщение из чата."""
+    if not TELEGRAM_BOT_TOKEN:
+        return
+    try:
+        httpx.post(
+            f"{_TG_API}/deleteMessage",
+            json={"chat_id": telegram_id, "message_id": message_id},
+            timeout=5,
+        )
+    except Exception:
+        pass
+
+
+def _schedule_delete(telegram_id: int, message_id: int, delay: int = 1800) -> None:
+    """Запланировать удаление сообщения через delay секунд (по умолчанию 30 мин)."""
+    def _do():
+        delete_message(telegram_id, message_id)
+    t = threading.Timer(delay, _do)
+    t.daemon = True
+    t.start()
+
+
+def send_notification(telegram_id: int, text: str) -> None:
+    """Отправить уведомление и автоматически удалить его через 30 минут."""
+    message_id = send_message(telegram_id, text)
+    if message_id:
+        _schedule_delete(telegram_id, message_id)
 
 
 def answer_callback(callback_query_id: str, text: str = "") -> None:
@@ -130,23 +163,43 @@ def notify_managers_registration(applicant_id: int, applicant_username: str,
         db.close()
 
 
+def _notify_many(telegram_ids: list, text: str) -> None:
+    """Отправить уведомление нескольким пользователям (дедупликация)."""
+    seen = set()
+    for tid in telegram_ids:
+        if tid and tid not in seen:
+            seen.add(tid)
+            send_notification(tid, text)
+
+
 def notify_task_assigned(assignee_telegram_id: int, task_title: str,
-                         project_name: str, task_uuid: str) -> None:
-    """Уведомить исполнителя о назначении задачи."""
+                         project_name: str, task_uuid: str,
+                         manager_telegram_id: int = None) -> None:
+    """Уведомить исполнителя и менеджера о назначении задачи."""
     url = f"{SITE_URL}/t/{task_uuid}/"
-    text = (
+    assignee_text = (
         f"📋 <b>Вам назначена задача</b>\n\n"
         f"<b>{task_title}</b>\n"
         f"Проект: {project_name}\n\n"
         f'<a href="{url}">Открыть задачу</a>'
     )
-    send_message(assignee_telegram_id, text)
+    manager_text = (
+        f"📋 <b>Задача назначена исполнителю</b>\n\n"
+        f"<b>{task_title}</b>\n"
+        f"Проект: {project_name}\n\n"
+        f'<a href="{url}">Открыть задачу</a>'
+    )
+    if assignee_telegram_id:
+        send_notification(assignee_telegram_id, assignee_text)
+    if manager_telegram_id and manager_telegram_id != assignee_telegram_id:
+        send_notification(manager_telegram_id, manager_text)
 
 
 def notify_task_status_changed(telegram_id: int, task_title: str,
                                 old_status: str, new_status: str,
-                                task_uuid: str) -> None:
-    """Уведомить о смене статуса задачи."""
+                                task_uuid: str,
+                                manager_telegram_id: int = None) -> None:
+    """Уведомить исполнителя и менеджера о смене статуса задачи."""
     url = f"{SITE_URL}/t/{task_uuid}/"
     text = (
         f"🔄 <b>Статус задачи изменён</b>\n\n"
@@ -154,7 +207,24 @@ def notify_task_status_changed(telegram_id: int, task_title: str,
         f"{old_status} → <b>{new_status}</b>\n\n"
         f'<a href="{url}">Открыть задачу</a>'
     )
-    send_message(telegram_id, text)
+    recipients = [telegram_id]
+    if manager_telegram_id and manager_telegram_id != telegram_id:
+        recipients.append(manager_telegram_id)
+    _notify_many(recipients, text)
+
+
+def notify_task_comment(task_title: str, author_name: str, task_uuid: str,
+                        assignee_telegram_id: int = None,
+                        manager_telegram_id: int = None) -> None:
+    """Уведомить исполнителя и менеджера о новом комментарии."""
+    url = f"{SITE_URL}/t/{task_uuid}/"
+    text = (
+        f"💬 <b>Новый комментарий к задаче</b>\n\n"
+        f"<b>{task_title}</b>\n"
+        f"Автор: {author_name}\n\n"
+        f'<a href="{url}">Открыть задачу</a>'
+    )
+    _notify_many([assignee_telegram_id, manager_telegram_id], text)
 
 
 def notify_deadline_reminder(telegram_id: int, task_title: str,
@@ -169,7 +239,7 @@ def notify_deadline_reminder(telegram_id: int, task_title: str,
         f"Дедлайн: {deadline_str}\n\n"
         f'<a href="{url}">Открыть задачу</a>'
     )
-    send_message(telegram_id, text)
+    send_notification(telegram_id, text)
 
 
 # ── Валидация Telegram Login Widget ──────────────────────────────────────────
