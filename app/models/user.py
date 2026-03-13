@@ -90,3 +90,12 @@ class LoginCode(Base):
     code = Column(String(6), primary_key=True)
     telegram_id = Column(BigInteger, nullable=False, index=True)
     expires = Column(Float, nullable=False)  # unix timestamp
+
+
+class PendingRegistration(Base):
+    """Состояние заявки на регистрацию через бота (хранится в БД)."""
+    __tablename__ = "pending_registrations"
+
+    telegram_id = Column(BigInteger, primary_key=True)
+    tg_username = Column(String(100), default="")
+    step = Column(String(50), nullable=False)  # await_name

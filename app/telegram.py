@@ -15,8 +15,43 @@ import httpx
 
 from app.config import TELEGRAM_BOT_TOKEN, SITE_URL
 
-# ── Состояние заявок на регистрацию (in-memory, не критично) ─────────────────
-_pending_reg: dict = {}       # telegram_id → {"username": str, "step": str}
+# ── Хелперы для pending_registrations в БД ───────────────────────────────────
+
+def get_pending_reg(telegram_id: int):
+    from app.database import SessionLocal
+    from app.models.user import PendingRegistration
+    db = SessionLocal()
+    try:
+        return db.query(PendingRegistration).filter(PendingRegistration.telegram_id == telegram_id).first()
+    finally:
+        db.close()
+
+
+def set_pending_reg(telegram_id: int, tg_username: str, step: str) -> None:
+    from app.database import SessionLocal
+    from app.models.user import PendingRegistration
+    db = SessionLocal()
+    try:
+        existing = db.query(PendingRegistration).filter(PendingRegistration.telegram_id == telegram_id).first()
+        if existing:
+            existing.step = step
+            existing.tg_username = tg_username
+        else:
+            db.add(PendingRegistration(telegram_id=telegram_id, tg_username=tg_username, step=step))
+        db.commit()
+    finally:
+        db.close()
+
+
+def delete_pending_reg(telegram_id: int) -> None:
+    from app.database import SessionLocal
+    from app.models.user import PendingRegistration
+    db = SessionLocal()
+    try:
+        db.query(PendingRegistration).filter(PendingRegistration.telegram_id == telegram_id).delete()
+        db.commit()
+    finally:
+        db.close()
 
 
 def generate_login_code(telegram_id: int) -> str:

@@ -14,7 +14,8 @@ from app.utils import flash, templates
 from app.telegram import (
     validate_telegram_auth, generate_login_code, validate_login_code,
     send_message, answer_callback, notify_managers_registration,
-    _inline_kb, _reply_kb, _pending_reg,
+    _inline_kb, _reply_kb,
+    get_pending_reg, set_pending_reg, delete_pending_reg,
 )
 
 router = APIRouter()
@@ -153,7 +154,7 @@ async def bot_webhook(request: Request, db: Session = Depends(get_db)):
 
         if cq_data == "reg_request":
             # Начать заявку на регистрацию
-            _pending_reg[telegram_id] = {"username": tg_username, "step": "await_name"}
+            set_pending_reg(telegram_id, tg_username, "await_name")
             answer_callback(cq_id)
             send_message(telegram_id,
                 "📝 Введите ваше имя и фамилию:",
@@ -200,15 +201,15 @@ async def bot_webhook(request: Request, db: Session = Depends(get_db)):
         return JSONResponse({"ok": True})
 
     # ── Проверяем состояние заявки ────────────────────────────────────────────
-    pending = _pending_reg.get(telegram_id)
+    pending = get_pending_reg(telegram_id)
 
-    if pending and pending.get("step") == "await_name":
+    if pending and pending.step == "await_name":
         if text == "Отмена":
-            del _pending_reg[telegram_id]
+            delete_pending_reg(telegram_id)
             send_message(telegram_id, "Отменено.", _reply_kb(["Подать заявку"], ["❓ Помощь"]))
         else:
             name = text
-            del _pending_reg[telegram_id]
+            delete_pending_reg(telegram_id)
             notify_managers_registration(telegram_id, tg_username, name)
             send_message(telegram_id,
                 "✅ Заявка отправлена!\n\n"
@@ -253,7 +254,7 @@ async def bot_webhook(request: Request, db: Session = Depends(get_db)):
             send_message(telegram_id, "Вы уже зарегистрированы!",
                 _reply_kb(["🔑 Получить код для входа"], ["❓ Помощь"]))
         else:
-            _pending_reg[telegram_id] = {"username": tg_username, "step": "await_name"}
+            set_pending_reg(telegram_id, tg_username, "await_name")
             send_message(telegram_id,
                 "📝 Введите ваше имя и фамилию:",
                 _reply_kb(["Отмена"], one_time=True))
