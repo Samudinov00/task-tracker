@@ -32,8 +32,9 @@ RUN pip install --no-cache-dir /wheels/* && rm -rf /wheels
 
 COPY --chown=appuser:appgroup . .
 
-RUN mkdir -p /app/static /app/media && \
-    chown -R appuser:appgroup /app/static /app/media
+RUN mkdir -p /app/static /app/media /app/static_src && \
+    cp -r /app/static/. /app/static_src/ && \
+    chown -R appuser:appgroup /app/static /app/media /app/static_src
 
 RUN chmod +x /app/entrypoint.sh
 

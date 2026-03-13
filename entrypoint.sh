@@ -27,6 +27,9 @@ except Exception:
 done
 echo "==> [entrypoint] Database is ready."
 
+echo "==> [entrypoint] Syncing static files to volume..."
+cp -ru /app/static_src/. /app/static/ 2>/dev/null || true
+
 echo "==> [entrypoint] Running database migrations..."
 if ! python -m alembic upgrade head 2>&1; then
     echo "[entrypoint] ERROR: alembic upgrade head failed (see above). Exiting." >&2
