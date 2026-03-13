@@ -22,32 +22,45 @@
         <div class="alert alert-danger">{{ error }}</div>
       {% endif %}
 
-      {# ── Вход через Telegram-бот (основной способ) ── #}
+      {# ── Кнопка Telegram Login Widget (один клик) ── #}
       {% if telegram_bot_username %}
-      <div class="mb-4">
-        <p class="text-center fw-semibold mb-3">
-          <i class="bi bi-telegram text-primary me-1"></i>Вход через Telegram
+      <div class="text-center mb-4">
+        <p class="text-muted mb-3" style="font-size:.9rem">
+          Нажмите кнопку и авторизуйтесь через Telegram
         </p>
-        <ol class="text-muted mb-3" style="font-size:.9rem">
-          <li>Напишите <a href="https://t.me/{{ telegram_bot_username }}" target="_blank"><b>@{{ telegram_bot_username }}</b></a> команду <code>/login</code></li>
-          <li>Бот пришлёт 6-значный код</li>
-          <li>Введите его ниже</li>
-        </ol>
-        <form method="post" action="/accounts/login-by-code/" novalidate>
-          <div class="input-group">
-            <input type="text" name="code" class="form-control form-control-lg text-center"
-                   placeholder="123456" maxlength="6" autofocus
-                   style="letter-spacing:.3em;font-size:1.4rem;font-weight:700">
-            <button type="submit" class="btn btn-primary btn-lg px-4">
-              Войти
-            </button>
-          </div>
-        </form>
+        <script async src="https://telegram.org/js/telegram-widget.js?22"
+                data-telegram-login="{{ telegram_bot_username }}"
+                data-size="large"
+                data-radius="8"
+                data-auth-url="{{ site_url }}/accounts/telegram-callback/"
+                data-request-access="write">
+        </script>
       </div>
+
+      <hr class="my-4">
+
+      {# ── Вход через код из бота (резервный способ) ── #}
+      <p class="text-center text-muted mb-2" style="font-size:.85rem">
+        или введите код из бота
+        <a href="https://t.me/{{ telegram_bot_username }}" target="_blank" class="text-decoration-none">
+          @{{ telegram_bot_username }}
+        </a>
+        (команда <code>/login</code>)
+      </p>
+      <form method="post" action="/accounts/login-by-code/" novalidate>
+        <div class="input-group">
+          <input type="text" name="code" class="form-control form-control-lg text-center"
+                 placeholder="123456" maxlength="6"
+                 style="letter-spacing:.3em;font-size:1.4rem;font-weight:700">
+          <button type="submit" class="btn btn-outline-primary btn-lg px-4">
+            Войти
+          </button>
+        </div>
+      </form>
       {% endif %}
 
-      {# ── Форма логин/пароль — только для админа (/accounts/login/?admin=1) ── #}
-      {% if show_password_form or not telegram_bot_username %}
+      {# ── Форма логин/пароль — только для суперадмина (?admin=1) ── #}
+      {% if show_password_form %}
       <hr class="my-3">
       <form method="post" novalidate>
         <div class="mb-3">
@@ -68,10 +81,24 @@
           <i class="bi bi-box-arrow-in-right me-2"></i>Войти
         </button>
       </form>
-      {% else %}
-      <div class="text-center mt-3">
-        <a href="?admin=1" class="text-muted" style="font-size:.8rem">Войти как администратор</a>
-      </div>
+      {% endif %}
+
+      {% if not show_password_form and not telegram_bot_username %}
+      <form method="post" novalidate>
+        <div class="mb-3">
+          <label class="form-label">Логин</label>
+          <input type="text" name="username" class="form-control form-control-lg"
+                 placeholder="Введите логин" value="{{ username_value or '' }}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Пароль</label>
+          <input type="password" name="password" class="form-control form-control-lg"
+                 placeholder="Введите пароль">
+        </div>
+        <button type="submit" class="btn btn-primary w-100 btn-lg">
+          <i class="bi bi-box-arrow-in-right me-2"></i>Войти
+        </button>
+      </form>
       {% endif %}
     </div>
   </div>
