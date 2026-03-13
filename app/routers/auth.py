@@ -66,7 +66,18 @@ async def telegram_callback(request: Request, db: Session = Depends(get_db)):
         )
 
     telegram_id = int(data.get("id", 0))
+    tg_username = data.get("username", "")
+
     user = db.query(User).filter(User.telegram_id == telegram_id, User.is_active == True).first()
+
+    # Если не нашли по ID — пробуем по telegram_username и привязываем ID
+    if not user and tg_username:
+        user = db.query(User).filter(
+            User.telegram_username == tg_username, User.is_active == True
+        ).first()
+        if user and user.telegram_id is None:
+            user.telegram_id = telegram_id
+            db.commit()
 
     if not user:
         return templates.TemplateResponse(
