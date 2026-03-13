@@ -232,7 +232,7 @@ async def bot_webhook(request: Request, db: Session = Depends(get_db)):
             db.commit()
 
     # ── Команды ──────────────────────────────────────────────────────────────
-    if text in ("/start", "/login", "🔑 Получить новый код"):
+    if text in ("/start", "/login", "🔑 Получить код для входа"):
         if user:
             code = generate_login_code(telegram_id)
             send_message(telegram_id,
@@ -240,23 +240,32 @@ async def bot_webhook(request: Request, db: Session = Depends(get_db)):
                 f"🔑 Ваш код для входа:\n\n<code>{code}</code>\n\n"
                 f"⏱ Действителен 5 минут.\n\n"
                 f"Введите его на странице входа: {SITE_URL}",
-                _reply_kb(["🔑 Получить новый код"], ["❓ Помощь"]))
+                _reply_kb(["🔑 Получить код для входа"], ["❓ Помощь"]))
         else:
             send_message(telegram_id,
                 f"👋 Привет, {first_name or 'пользователь'}!\n\n"
-                f"Вы не зарегистрированы в системе.\n"
-                f"Подайте заявку — менеджер добавит вас.",
-                _inline_kb(
-                    [("📝 Подать заявку на регистрацию", "reg_request")],
-                    [("❓ Помощь", "help")],
-                ))
+                f"Вы ещё не зарегистрированы в системе.\n"
+                f"Нажмите кнопку ниже чтобы подать заявку:",
+                _reply_kb(["📝 Подать заявку"], ["❓ Помощь"]))
+
+    elif text == "📝 Подать заявку":
+        if user:
+            send_message(telegram_id, "Вы уже зарегистрированы!",
+                _reply_kb(["🔑 Получить код для входа"], ["❓ Помощь"]))
+        else:
+            _pending_reg[telegram_id] = {"username": tg_username, "step": "await_name"}
+            send_message(telegram_id,
+                "📝 Введите ваше имя и фамилию:",
+                _reply_kb(["Отмена"], one_time=True))
 
     elif text == "❓ Помощь":
+        kb = _reply_kb(["🔑 Получить код для входа"], ["❓ Помощь"]) if user else _reply_kb(["📝 Подать заявку"], ["❓ Помощь"])
         send_message(telegram_id,
             "ℹ️ <b>Справка</b>\n\n"
-            "/login — получить код для входа\n"
-            "/start — главное меню\n\n"
-            f"Сайт: {SITE_URL}")
+            "🔑 <b>Получить код для входа</b> — войти на сайт\n"
+            "📝 <b>Подать заявку</b> — зарегистрироваться\n\n"
+            f"Сайт: {SITE_URL}",
+            kb)
 
     return JSONResponse({"ok": True})
 
