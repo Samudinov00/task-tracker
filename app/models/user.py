@@ -5,7 +5,7 @@ import uuid as uuid_lib
 from datetime import datetime
 
 from passlib.context import CryptContext
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Integer, String
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -81,3 +81,12 @@ class User(Base):
 
     def __repr__(self) -> str:
         return f"<User {self.username}>"
+
+
+class LoginCode(Base):
+    """Одноразовый код входа через Telegram-бота (хранится в БД, а не in-memory)."""
+    __tablename__ = "login_codes"
+
+    code = Column(String(6), primary_key=True)
+    telegram_id = Column(BigInteger, nullable=False, index=True)
+    expires = Column(Float, nullable=False)  # unix timestamp

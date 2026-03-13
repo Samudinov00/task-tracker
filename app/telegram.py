@@ -15,29 +15,47 @@ import httpx
 
 from app.config import TELEGRAM_BOT_TOKEN, SITE_URL
 
-# ── Коды входа через бота (in-memory, TTL 5 минут) ───────────────────────────
-_login_codes: dict = {}       # code → {"telegram_id": int, "expires": float}
-_pending_reg:  dict = {}      # telegram_id → {"username": str, "step": str, "name": str}
+# ── Состояние заявок на регистрацию (in-memory, не критично) ─────────────────
+_pending_reg: dict = {}       # telegram_id → {"username": str, "step": str}
 
 
 def generate_login_code(telegram_id: int) -> str:
-    """Генерирует 6-значный код входа для telegram_id."""
+    """Генерирует 6-значный код входа и сохраняет его в БД (TTL 5 минут)."""
+    from app.database import SessionLocal
+    from app.models.user import LoginCode
     code = str(secrets.randbelow(900000) + 100000)
-    _login_codes[code] = {"telegram_id": telegram_id, "expires": time.time() + 300}
+    db = SessionLocal()
+    try:
+        # Удаляем старые коды для этого пользователя и истёкшие
+        db.query(LoginCode).filter(
+            (LoginCode.telegram_id == telegram_id) | (LoginCode.expires < time.time())
+        ).delete()
+        db.add(LoginCode(code=code, telegram_id=telegram_id, expires=time.time() + 300))
+        db.commit()
+    finally:
+        db.close()
     return code
 
 
 def validate_login_code(code: str) -> Optional[int]:
-    """Проверяет код входа. Возвращает telegram_id или None."""
-    entry = _login_codes.get(code)
-    if not entry:
-        return None
-    if time.time() > entry["expires"]:
-        del _login_codes[code]
-        return None
-    telegram_id = entry["telegram_id"]
-    del _login_codes[code]
-    return telegram_id
+    """Проверяет код входа из БД. Возвращает telegram_id или None."""
+    from app.database import SessionLocal
+    from app.models.user import LoginCode
+    db = SessionLocal()
+    try:
+        entry = db.query(LoginCode).filter(LoginCode.code == code).first()
+        if not entry:
+            return None
+        if time.time() > entry.expires:
+            db.delete(entry)
+            db.commit()
+            return None
+        telegram_id = entry.telegram_id
+        db.delete(entry)
+        db.commit()
+        return telegram_id
+    finally:
+        db.close()
 
 
 # ── Клавиатуры ───────────────────────────────────────────────────────────────
