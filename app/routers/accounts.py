@@ -42,8 +42,11 @@ async def profile_post(
     user = require_auth(request, db)
 
     if save_profile is not None:
+        form = await request.form()
+        tg_username = form.get("telegram_username", "").strip().lstrip("@") or None
         user.first_name = first_name
         user.last_name = last_name
+        user.telegram_username = tg_username
         db.commit()
         flash(request, "Профиль успешно обновлён.", "success")
         return RedirectResponse(url="/accounts/profile/", status_code=302)
