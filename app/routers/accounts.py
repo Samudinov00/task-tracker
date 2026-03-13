@@ -217,13 +217,14 @@ async def user_edit_post(
         )
 
     form = await request.form()
-    tg_username = form.get("telegram_username", "").strip().lstrip("@") or None
+    tg_id_raw = form.get("telegram_id", "").strip()
+    tg_id = int(tg_id_raw) if tg_id_raw.isdigit() else None
     edit_user.username = username
     edit_user.first_name = first_name
     edit_user.last_name = last_name
     edit_user.role = role
     edit_user.is_active = is_active
-    edit_user.telegram_username = tg_username
+    edit_user.telegram_id = tg_id
     db.commit()
     flash(request, "Данные пользователя обновлены.", "success")
     return RedirectResponse(url="/accounts/users/", status_code=302)

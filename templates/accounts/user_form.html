@@ -63,16 +63,13 @@
 
           <div class="mb-3">
             <label class="form-label fw-semibold">
-              <i class="bi bi-telegram me-1 text-primary"></i>Telegram username
+              <i class="bi bi-telegram me-1 text-primary"></i>Telegram ID
             </label>
-            <div class="input-group">
-              <span class="input-group-text">@</span>
-              <input type="text" name="telegram_username" class="form-control"
-                     value="{{ form_data.telegram_username if form_data else (edit_user.telegram_username if edit_user and edit_user.telegram_username else '') }}"
-                     placeholder="username (без @)">
-            </div>
+            <input type="number" name="telegram_id" class="form-control"
+                   value="{{ form_data.telegram_id if form_data else (edit_user.telegram_id if edit_user and edit_user.telegram_id else '') }}"
+                   placeholder="Числовой ID пользователя в Telegram">
             <div class="form-text">
-              Имя пользователя в Telegram (без @). При первом входе через бота ID привяжется автоматически.
+              Числовой Telegram ID пользователя. Узнать можно у бота @userinfobot.
             </div>
           </div>
 
