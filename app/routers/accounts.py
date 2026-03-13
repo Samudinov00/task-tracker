@@ -148,10 +148,11 @@ async def user_create_post(
         )
 
     form = await request.form()
-    tg_username = form.get("telegram_username", "").strip().lstrip("@") or None
+    tg_id_raw = form.get("telegram_id", "").strip()
+    tg_id = int(tg_id_raw) if tg_id_raw.isdigit() else None
 
     new_user = User(username=username, first_name=first_name, last_name=last_name,
-                    role=role, telegram_username=tg_username)
+                    role=role, telegram_id=tg_id)
     new_user.set_password(password1)
     db.add(new_user)
     db.commit()
