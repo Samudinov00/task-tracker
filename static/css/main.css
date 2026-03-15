@@ -510,8 +510,8 @@ body.notif-open          { overflow: hidden; }
 
 /* ── Bootstrap card переопределения: Mobile First ───────────── */
 .card {
-  /* border-slate-200 вместо тени — flat/Linear-стиль */
-  border: 1px solid #e2e8f0;
+  /* border-slate-100 — ещё мягче, карточки «плавают» на фоне */
+  border: 1px solid #f1f5f9;
   border-radius: var(--card-radius);
   box-shadow: none;
   /* Scale при нажатии — тактильный отклик на мобильном */
@@ -603,6 +603,29 @@ body.notif-open          { overflow: hidden; }
   box-shadow: none !important;
 }
 
+/* Футер карточки проекта — чуть прозрачнее, не перетягивает внимание */
+.project-card .card-footer { opacity: 0.6; }
+
+/* ── FAB «Новый проект» (mobile only) ──────────────────────── */
+@media (max-width: 767.98px) {
+  .btn-fab {
+    position: fixed;
+    bottom: calc(var(--bottom-bar-h) + env(safe-area-inset-bottom, 0px) + 1rem);
+    right: 1rem;
+    width: 48px;
+    height: 48px;
+    min-height: 48px;
+    border-radius: 50%;
+    padding: 0;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.35);
+    z-index: 200;
+  }
+  .btn-fab .fab-label { display: none; }
+}
+
 /* ── Страница входа ─────────────────────────────────────────── */
 .login-page {
   background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
@@ -682,17 +705,16 @@ body.notif-open          { overflow: hidden; }
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
+  align-items: center;     /* на всех экранах — всегда по центру */
+  flex-wrap: nowrap;       /* заголовок и кнопка '+' — всегда в одну строку */
   gap: .75rem;
   margin-bottom: 1.5rem;
 }
-.page-header > div:last-child { flex-wrap: wrap; }
 .page-header-title { font-size: 1.1rem; font-weight: 700; margin: 0; }
 .page-header-sub { font-size: .875rem; color: var(--text-muted); margin-top: .2rem; }
 
 @media (min-width: 768px) {
-  .page-header { align-items: center; margin-bottom: 2rem; }
+  .page-header { margin-bottom: 2rem; }
   .page-header-title { font-size: 1.35rem; }
 }
 
@@ -925,11 +947,11 @@ textarea.form-control-autogrow {
   /* Учёт safe-area на iOS (вырез под Home-indicator) */
   height: calc(var(--bottom-bar-h) + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  /* Стекло-эффект: полупрозрачный фон + размытие */
-  background: rgba(255, 255, 255, .88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-top: 1px solid rgba(226, 232, 240, .7);
+  /* Apple-style стекло: полупрозрачный фон + размытие */
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
   box-shadow: 0 -2px 12px rgba(0, 0, 0, .08);
   display: flex;
   align-items: stretch;
