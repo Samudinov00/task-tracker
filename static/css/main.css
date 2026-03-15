@@ -153,7 +153,7 @@ body.sidebar-open { overflow: hidden; }
   color: var(--sidebar-text);
   text-decoration: none;
   font-size: .9rem;
-  font-weight: 450;
+  font-weight: 500;
   white-space: nowrap;
   border-radius: 0;
   transition: background var(--transition), color var(--transition);
@@ -234,9 +234,10 @@ body.sidebar-open { overflow: hidden; }
   z-index: 10;
 }
 
-/* Заголовок в топбаре — Mobile First: truncate, чтобы не вытеснял иконки */
+/* Заголовок в топбаре — Mobile First: truncate, чтобы не вытеснял иконки.
+   Показываем на всех экранах, но с меньшим шрифтом на xs. */
 .topbar-title {
-  font-size: 1rem;
+  font-size: .85rem;
   font-weight: 600;
   color: var(--text);
   flex: 1;
@@ -244,13 +245,11 @@ body.sidebar-open { overflow: hidden; }
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  /* Скрыт на очень маленьких экранах */
-  display: none;
+  display: block;
 }
 
-/* Показываем заголовок начиная с sm (≥576px) */
 @media (min-width: 576px) {
-  .topbar-title { display: block; }
+  .topbar-title { font-size: 1rem; }
 }
 
 /* Десктоп: топбар с нормальными отступами */
@@ -648,7 +647,7 @@ body.notif-open          { overflow: hidden; }
   font-size: .825rem;
   padding: .35rem .75rem;
   border-radius: .4rem;
-  min-height: 38px; /* чуть меньше для sm — всё ещё удобно */
+  min-height: 44px; /* тач-цель ≥ 44px — одинаково для всех размеров */
 }
 .btn-lg {
   font-size: 1rem;
@@ -689,11 +688,30 @@ body.notif-open          { overflow: hidden; }
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;     /* Firefox */
   padding-bottom: .375rem;
+  /* Показываем тонкий скроллбар как индикатор наличия контента */
+  position: relative;
 }
 .filters-scroll::-webkit-scrollbar { display: none; }
 /* Запрет переноса внутренних кнопок */
 .filters-scroll > .d-flex { flex-wrap: nowrap !important; }
 .filters-scroll .btn { flex-shrink: 0; }
+
+/* Fade-индикатор справа — намекает что контент продолжается.
+   Видим только когда контейнер уже, чем содержимое (overflow активен). */
+@media (max-width: 767.98px) {
+  .filters-scroll-wrap {
+    position: relative;
+  }
+  .filters-scroll-wrap::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 2.5rem;
+    background: linear-gradient(to right, transparent, var(--bg));
+    pointer-events: none;
+    border-radius: 0;
+  }
+}
 
 /* Метаданные задачи — sticky только на десктопе.
    На мобильном не используем sticky: карточка идёт первой (order-1)
