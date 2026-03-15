@@ -1,5 +1,9 @@
 /* ============================================================
-   TaskTracker — главный CSS  |  PC-only modern design
+   TaskTracker — Mobile-First CSS
+   Base styles → mobile (<576px)
+   @media (min-width: 576px)  → sm
+   @media (min-width: 768px)  → md (tablet)
+   @media (min-width: 992px)  → lg (desktop, sidebar visible)
    ============================================================ */
 
 :root {
@@ -29,9 +33,6 @@
 body {
   overflow-x: hidden;
   max-width: 100%;
-}
-
-body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   font-size: 15px;
   background: var(--bg);
@@ -43,10 +44,6 @@ body {
 #wrapper {
   min-height: 100vh;
   display: flex;
-  /* НЕ добавляем overflow:hidden / max-width сюда — это делает #wrapper
-     containing block для position:fixed (sidebar, backdrop), из-за чего
-     backdrop не покрывает весь экран на мобильном. Горизонтальный скролл
-     уже заблокирован на уровне html/body выше. */
 }
 
 /* Предотвратить разрыв рамок длинными словами */
@@ -56,22 +53,62 @@ body {
   min-width: 0;
 }
 
-/* ── Боковая панель ─────────────────────────────────────────── */
+/* ── Боковая панель: Mobile First (скрыта) ──────────────────── */
+/* На мобильном сайдбар скрыт за левым краем экрана */
 .sidebar {
-  width: var(--sidebar-w);
+  transform: translateX(-100%);
   position: fixed;
-  top: 0; left: 0; bottom: 0;
-  z-index: 200;
+  top: 0; left: 0;
+  /* Явная высота для Chrome Android с динамической адресной строкой */
+  bottom: auto;
+  height: 100vh;    /* fallback */
+  height: 100dvh;   /* dynamic viewport height: Chrome 108+, Firefox 101+ */
+  z-index: 1050;
   display: flex;
   flex-direction: column;
-  transition: width var(--transition);
-  overflow: hidden;
+  width: var(--sidebar-w);
   background: var(--sidebar-bg);
-  /* НЕ используем will-change:transform и backface-visibility:hidden глобально —
-     на Android Chrome они создают GPU-слой, чья hit-область не обновляется
-     после изменения transform, из-за чего кнопки внутри не реагируют на тапы. */
+  overflow: hidden;
+  /* will-change только на мобильном где нужна анимация transform */
+  will-change: transform;
+  /* pointer-events: none когда скрыт — кнопки за пределами сайдбара
+     не блокируются даже при высоком z-index */
+  pointer-events: none;
+  transition: transform var(--transition);
 }
 
+/* При открытии — правила вне media query, чтобы работало на любом viewport
+   (Android Chrome иногда сообщает viewport ≥ 992px на реальных телефонах) */
+body.sidebar-open .sidebar {
+  transform: translateX(0) !important;
+  pointer-events: auto !important;
+}
+body.sidebar-open .sidebar-backdrop { display: block; }
+/* Блокировать скролл страницы пока сайдбар открыт */
+body.sidebar-open { overflow: hidden; }
+
+/* Десктоп: сайдбар постоянно виден */
+@media (min-width: 992px) {
+  .sidebar {
+    transform: translateX(0);
+    pointer-events: auto;
+    will-change: auto;
+    /* На десктопе используем bottom:0 вместо height — надёжнее */
+    bottom: 0;
+    height: auto;
+    transition: width var(--transition);
+  }
+
+  /* Свёрнутый сайдбар (только на десктопе) */
+  body.sidebar-collapsed .sidebar { width: 56px; }
+  body.sidebar-collapsed .sidebar .sidebar-brand span,
+  body.sidebar-collapsed .sidebar .sidebar-link span,
+  body.sidebar-collapsed .sidebar .sidebar-section-label,
+  body.sidebar-collapsed .sidebar .sidebar-link .badge { display: none; }
+  body.sidebar-collapsed #page-content-wrapper { margin-left: 56px; }
+}
+
+/* ── Внутренности сайдбара ──────────────────────────────────── */
 .sidebar-brand {
   display: flex;
   align-items: center;
@@ -112,6 +149,7 @@ body {
   align-items: center;
   gap: .875rem;
   padding: .7rem 1.25rem;
+  min-height: 44px; /* тач-цель ≥ 44px */
   color: var(--sidebar-text);
   text-decoration: none;
   font-size: .9rem;
@@ -120,6 +158,9 @@ body {
   border-radius: 0;
   transition: background var(--transition), color var(--transition);
   position: relative;
+  /* Убирает 300ms задержку на мобильном */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 .sidebar-link i {
   font-size: 1.05rem;
@@ -152,17 +193,9 @@ body {
   margin: .5rem 0;
 }
 
-/* Свёрнутый сайдбар */
-body.sidebar-collapsed .sidebar { width: 56px; }
-body.sidebar-collapsed .sidebar .sidebar-brand span,
-body.sidebar-collapsed .sidebar .sidebar-link span,
-body.sidebar-collapsed .sidebar .sidebar-section-label,
-body.sidebar-collapsed .sidebar .sidebar-link .badge { display: none; }
-body.sidebar-collapsed #page-content-wrapper { margin-left: 56px; }
-
-/* ── Основной контент ───────────────────────────────────────── */
+/* ── Основной контент: Mobile First (без отступа) ───────────── */
 #page-content-wrapper {
-  margin-left: var(--sidebar-w);
+  margin-left: 0; /* mobile: на всю ширину */
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -170,35 +203,70 @@ body.sidebar-collapsed #page-content-wrapper { margin-left: 56px; }
   flex: 1;
   min-width: 0;
   max-width: 100%;
-  /* НЕ используем overflow-x:hidden здесь: по CSS-спецификации это автоматически
-     меняет overflow-y с visible на auto, превращая элемент в scroll-контейнер.
-     Это ломает position:sticky у топбара (sticky начинает работать относительно
-     этого контейнера, а не вьюпорта). Горизонтальный скролл блокируется на уровне body. */
   /* Создаём stacking context — на мобильном backdrop (z:1040) гарантированно
      перекрывает весь контент, а кнопки в сайдбаре (z:1050) остаются выше */
   position: relative;
   z-index: 1;
 }
 
-/* ── Топ-бар ────────────────────────────────────────────────── */
+/* Десктоп: контент отступает на ширину сайдбара */
+@media (min-width: 992px) {
+  #page-content-wrapper {
+    margin-left: var(--sidebar-w);
+    /* НЕ используем overflow-x:hidden здесь: по CSS-спецификации это автоматически
+       меняет overflow-y с visible на auto, превращая элемент в scroll-контейнер.
+       Это ломает position:sticky у топбара. Горизонтальный скролл блокируется на body. */
+  }
+}
+
+/* ── Топ-бар: Mobile First ──────────────────────────────────── */
 .topbar {
   height: var(--topbar-h);
   background: #fff;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  padding: 0 2rem;
-  gap: 1rem;
+  padding: 0 .875rem; /* мобильный отступ */
+  gap: .5rem;
   position: sticky;
   top: 0;
   /* z-index нужен чтобы топбар при скролле оставался выше контента страницы */
   z-index: 10;
 }
+
+/* Заголовок в топбаре — Mobile First: truncate, чтобы не вытеснял иконки */
 .topbar-title {
   font-size: 1rem;
   font-weight: 600;
   color: var(--text);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* Скрыт на очень маленьких экранах */
+  display: none;
 }
+
+/* Показываем заголовок начиная с sm (≥576px) */
+@media (min-width: 576px) {
+  .topbar-title { display: block; }
+}
+
+/* Десктоп: топбар с нормальными отступами */
+@media (min-width: 992px) {
+  .topbar {
+    padding: 0 2rem;
+    gap: 1rem;
+  }
+  .topbar-title {
+    flex: initial;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+}
+
 .btn-ghost {
   background: transparent;
   border: none;
@@ -212,12 +280,20 @@ body.sidebar-collapsed #page-content-wrapper { margin-left: 56px; }
 }
 .btn-ghost:hover { background: #f1f5f9; color: var(--text); }
 
-/* ── Контент страницы ───────────────────────────────────────── */
+/* ── Контент страницы: Mobile First ────────────────────────── */
 main.page-content {
-  padding: 2rem 2.5rem;
+  padding: 1rem; /* mobile */
   flex: 1;
   /* Горизонтальный скролл блокируем только здесь — sticky топбар не пострадает */
   overflow-x: hidden;
+}
+
+@media (min-width: 768px) {
+  main.page-content { padding: 1.25rem 1.5rem; }
+}
+
+@media (min-width: 992px) {
+  main.page-content { padding: 2rem 2.5rem; }
 }
 
 /* ── Аватар ─────────────────────────────────────────────────── */
@@ -244,7 +320,7 @@ main.page-content {
   justify-content: center;
 }
 
-/* ── Уведомления (дропдаун) ─────────────────────────────────── */
+/* ── Уведомления — badge ────────────────────────────────────── */
 .notif-badge {
   position: absolute;
   top: 2px; right: 2px;
@@ -258,11 +334,76 @@ main.page-content {
   line-height: 18px;
   text-align: center;
 }
+
+/* ── Уведомления — Mobile First: Bottom Sheet ──────────────────
+   Анимация объявлена глобально (вне @media) — некоторые WebKit-движки
+   не подхватывают @keyframes внутри @media-блока. */
+@keyframes notifBottomSheetIn {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* Mobile: bottom sheet выезжает снизу.
+   data-bs-display="static" на bellBtn гарантирует, что Popper.js
+   не добавит инлайн transform/top/left, которые сломали бы позиционирование. */
 .notif-dropdown {
-  width: 360px;
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  top: auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  border-radius: 1rem 1rem 0 0;
+  border: none;
+  border-top: 1px solid var(--border);
+  max-height: 70vh;
+  overflow-y: auto;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, .18) !important;
+  animation: notifBottomSheetIn .25s cubic-bezier(.32,1,.23,1);
   /* Ниже сайдбара (1050) и backdrop (1040), но выше обычного контента */
   z-index: 1000;
 }
+
+/* Ручка-индикатор сверху — стандартный паттерн Bottom Sheet */
+.notif-dropdown::before {
+  content: '';
+  display: block;
+  width: 36px;
+  height: 4px;
+  background: #cbd5e1;
+  border-radius: 2px;
+  margin: .75rem auto .25rem;
+}
+
+/* Список уведомлений — больший max-height внутри bottom sheet */
+.notif-dropdown .notif-list {
+  max-height: calc(70vh - 9rem);
+  overflow-y: auto;
+}
+
+/* Планшет/Десктоп: обычный дропдаун */
+@media (min-width: 768px) {
+  .notif-dropdown {
+    position: absolute !important;
+    left: auto !important;
+    right: 0 !important;
+    bottom: auto !important;
+    top: 100% !important;
+    width: 360px !important;
+    max-width: 360px !important;
+    border-radius: var(--card-radius);
+    border: 1px solid var(--border);
+    max-height: none;
+    overflow-y: visible;
+    box-shadow: 0 4px 16px rgba(0,0,0,.12) !important;
+    animation: none;
+    z-index: 1000;
+  }
+  .notif-dropdown::before { display: none; }
+  .notif-dropdown .notif-list { max-height: 340px; overflow-y: auto; }
+}
+
 .notif-header {
   border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
@@ -271,7 +412,6 @@ main.page-content {
 /* Кнопка «Прочитать все» — не обрезается по краю */
 #markAllReadBtn { white-space: nowrap; flex-shrink: 0; }
 .notif-footer   { border-top: 1px solid var(--border); }
-.notif-list     { max-height: 340px; overflow-y: auto; }
 .notif-item {
   padding: .875rem 1.25rem;
   border-bottom: 1px solid #f1f5f9;
@@ -293,13 +433,43 @@ main.page-content {
 }
 .notif-unread { background: #eff6ff; }
 
-/* ── Карточки статистики ────────────────────────────────────── */
+/* ── Затемнение за сайдбаром (мобильный overlay) ───────────────
+   z-index иерархия: sidebar 1050 > sidebar-backdrop 1040 > notif-dropdown 1000
+                     > notif-backdrop 999 > topbar 10 > page-content 1 */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .45);
+  /* Размытие контента под backdrop — предотвращает случайные клики */
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 1040;
+  cursor: pointer;
+  touch-action: manipulation; /* убирает 300мс задержку на мобильном */
+}
+
+/* Затемнение под уведомлениями (bottom sheet на мобильном) */
+.notif-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .4);
+  z-index: 999;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.notif-backdrop.show     { display: block; }
+/* Блокировать скролл пока bottom sheet открыт */
+body.notif-open          { overflow: hidden; }
+
+/* ── Карточки статистики: Mobile First (компактные) ─────────── */
 .stat-card {
   border-radius: var(--card-radius);
-  padding: 1.5rem 1.75rem;
+  padding: .875rem 1rem; /* mobile */
   display: flex;
   align-items: center;
-  gap: 1.25rem;
+  gap: .75rem;
   background: #fff;
   border: 1px solid var(--border);
   box-shadow: 0 1px 3px rgba(0,0,0,.05);
@@ -307,22 +477,30 @@ main.page-content {
 }
 .stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); }
 .stat-card__icon {
-  font-size: 1.75rem;
-  width: 56px; height: 56px;
-  border-radius: .75rem;
+  font-size: 1.4rem;
+  width: 44px; height: 44px;
+  border-radius: .625rem;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
 .stat-card__value {
-  font-size: 2rem;
+  font-size: 1.5rem; /* mobile */
   font-weight: 700;
   line-height: 1;
   color: var(--text);
 }
 .stat-card__label {
-  font-size: .85rem;
+  font-size: .8rem;
   color: var(--text-muted);
   margin-top: .2rem;
+}
+
+/* Десктоп: полный размер */
+@media (min-width: 992px) {
+  .stat-card        { padding: 1.5rem 1.75rem; gap: 1.25rem; }
+  .stat-card__icon  { font-size: 1.75rem; width: 56px; height: 56px; border-radius: .75rem; }
+  .stat-card__value { font-size: 2rem; }
+  .stat-card__label { font-size: .85rem; }
 }
 
 .stat-card--blue   .stat-card__icon { background: #dbeafe; color: #2563eb; }
@@ -331,40 +509,46 @@ main.page-content {
 .stat-card--gray   .stat-card__icon { background: #f1f5f9; color: #475569; }
 .stat-card--purple .stat-card__icon { background: #ede9fe; color: #7c3aed; }
 
-/* ── Bootstrap card переопределения ────────────────────────── */
+/* ── Bootstrap card переопределения: Mobile First ───────────── */
 .card {
   border: 1px solid var(--border);
   border-radius: var(--card-radius);
   box-shadow: 0 1px 3px rgba(0,0,0,.05);
 }
 .card-header {
-  padding: 1rem 1.5rem;
+  padding: .875rem 1rem; /* mobile */
   font-size: .95rem;
   background: #fff;
   border-bottom: 1px solid var(--border);
 }
-.card-body { padding: 1.5rem; }
+.card-body { padding: 1rem; } /* mobile */
 .card-footer {
-  padding: .875rem 1.5rem;
+  padding: .75rem 1rem; /* mobile */
   background: #fafbfc;
   border-top: 1px solid var(--border);
   font-size: .875rem;
   flex-wrap: wrap;
 }
 
-/* ── Таблицы ────────────────────────────────────────────────── */
+@media (min-width: 768px) {
+  .card-header { padding: 1rem 1.5rem; }
+  .card-body   { padding: 1.5rem; }
+  .card-footer { padding: .875rem 1.5rem; }
+}
+
+/* ── Таблицы: Mobile First ──────────────────────────────────── */
 .table th {
   font-size: .78rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: .06em;
   color: var(--text-muted);
-  padding: .875rem 1.25rem;
+  padding: .6rem .75rem; /* mobile */
   border-bottom: 2px solid var(--border);
   white-space: nowrap;
 }
 .table td {
-  padding: .9rem 1.25rem;
+  padding: .6rem .75rem; /* mobile */
   vertical-align: middle;
   font-size: .9rem;
   border-bottom: 1px solid #f1f5f9;
@@ -372,10 +556,21 @@ main.page-content {
 .table tbody tr:last-child td { border-bottom: none; }
 .table-hover tbody tr:hover { background: #f8fafc; }
 
+@media (min-width: 768px) {
+  .table th { padding: .875rem 1.25rem; }
+  .table td { padding: .9rem 1.25rem; }
+}
+
 /* ── Kanban ─────────────────────────────────────────────────── */
 .kanban-board { overflow-x: auto; padding-bottom: 1rem; }
-.kanban-column { min-width: 300px; max-width: 340px; flex: 1 1 300px; }
+/* Mobile: колонки чуть уже */
+.kanban-column { min-width: 270px; max-width: 340px; flex: 1 1 270px; }
 .kanban-col-body { min-height: 480px; }
+
+/* Десктоп: стандартная ширина колонок */
+@media (min-width: 992px) {
+  .kanban-column { min-width: 300px; }
+}
 
 .task-card {
   border: 1px solid var(--border) !important;
@@ -385,7 +580,7 @@ main.page-content {
 }
 .task-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1) !important; }
 .task-card:active { cursor: grabbing; }
-.task-card .card-body { padding: 1rem 1.125rem; }
+.task-card .card-body { padding: .875rem 1rem; }
 
 /* ── Карточки проектов ──────────────────────────────────────── */
 .project-card {
@@ -416,13 +611,16 @@ main.page-content {
   margin: 0 auto;
 }
 
-/* ── Форм-контрол увеличенный ───────────────────────────────── */
+/* ── Форм-контрол: Mobile First
+   font-size: 1rem (16px) — обязательно, иначе iOS автоматически
+   масштабирует страницу при фокусе на инпуте ────────────────── */
 .form-control,
 .form-select {
-  font-size: .95rem;
+  font-size: 1rem; /* 16px — предотвращает iOS auto-zoom */
   padding: .55rem .875rem;
   border-color: var(--border);
   border-radius: .5rem;
+  min-height: 44px; /* тач-цель ≥ 44px */
 }
 .form-control:focus,
 .form-select:focus {
@@ -436,21 +634,26 @@ main.page-content {
   margin-bottom: .4rem;
 }
 
-/* ── Кнопки ─────────────────────────────────────────────────── */
+/* ── Кнопки: Mobile First (тач-цели ≥ 44px) ─────────────────── */
 .btn {
   font-size: .9rem;
   font-weight: 500;
   padding: .5rem 1.125rem;
   border-radius: .5rem;
+  min-height: 44px; /* тач-цель */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 .btn-sm {
   font-size: .825rem;
   padding: .35rem .75rem;
   border-radius: .4rem;
+  min-height: 38px; /* чуть меньше для sm — всё ещё удобно */
 }
 .btn-lg {
   font-size: 1rem;
   padding: .7rem 1.5rem;
+  min-height: 48px;
 }
 
 /* ── Бейджи ─────────────────────────────────────────────────── */
@@ -460,203 +663,27 @@ main.page-content {
   padding: .35em .65em;
 }
 
-/* ── Утилиты ────────────────────────────────────────────────── */
+/* ── Заголовок страницы: Mobile First ──────────────────────── */
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: .75rem;
+  margin-bottom: 1.5rem;
 }
-.page-header-title { font-size: 1.35rem; font-weight: 700; margin: 0; }
+.page-header > div:last-child { flex-wrap: wrap; }
+.page-header-title { font-size: 1.1rem; font-weight: 700; margin: 0; }
 .page-header-sub { font-size: .875rem; color: var(--text-muted); margin-top: .2rem; }
 
-/* ── Мобильная адаптация ────────────────────────────────────── */
-
-/* ── Анимация Bottom Sheet для уведомлений ──────────────────────
-   Определяем ВНЕ @media — некоторые WebKit-движки
-   не подхватывают @keyframes внутри @media-блока. */
-@keyframes notifBottomSheetIn {
-  from { transform: translateY(100%); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
-}
-
-/* Затемнение за сайдбаром (мобильный overlay).
-   z-index иерархия: sidebar 1050 > sidebar-backdrop 1040 > notif-dropdown 1000
-                     > notif-backdrop 999 > topbar 10 > page-content 1
-   Весь контент (включая топбар) внутри page-content-wrapper и ниже backdrop —
-   любой тап по контенту при открытом сайдбаре закрывает его через backdrop */
-.sidebar-backdrop {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, .45);
-  /* Размытие контента под backdrop — предотвращает случайные клики */
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-  z-index: 1040;
-  cursor: pointer;
-  touch-action: manipulation; /* убирает 300мс задержку на мобильном */
-}
-
-/* Затемнение под уведомлениями (bottom sheet на мобильном).
-   Ниже дропдауна (1000), выше контента и топбара. */
-.notif-backdrop {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, .4);
-  z-index: 999;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-.notif-backdrop.show     { display: block; }
-/* Блокировать скролл пока bottom sheet открыт */
-body.notif-open          { overflow: hidden; }
-
-/* При открытии — правила вне media query, чтобы работало на любом viewport
-   (Android Chrome иногда сообщает viewport ≥ 992px на реальных телефонах) */
-body.sidebar-open .sidebar {
-  transform: translateX(0) !important;
-  z-index: 1050 !important;
-  pointer-events: auto !important;
-}
-body.sidebar-open .sidebar-backdrop { display: block; }
-/* Блокировать скролл страницы пока сайдбар открыт (работает на любом viewport) */
-body.sidebar-open { overflow: hidden; }
-
-@media (max-width: 991.98px) {
-  /* Сайдбар уходит за левый край экрана */
-  .sidebar {
-    transform: translateX(-100%);
-    transition: transform var(--transition);
-    z-index: 1050;
-    /* pointer-events: none когда скрыт — кнопки за пределами сайдбара
-       не блокируются даже при высоком z-index */
-    pointer-events: none;
-    /* Явная высота для Chrome Android с динамической адресной строкой.
-       Убираем bottom:0 (из базовых стилей) и заменяем height:
-       top:0 + height = надёжнее, чем top+bottom при изменении visual viewport */
-    bottom: auto;
-    height: 100vh;    /* fallback для старых браузеров */
-    height: 100dvh;   /* dynamic viewport height: Chrome 108+, Firefox 101+ */
-    /* will-change только на мобильном где нужна анимация transform */
-    will-change: transform;
-  }
-
-  /* Collapsed-стиль не нужен на мобильном — сайдбар скрыт */
-  body.sidebar-collapsed .sidebar { transform: translateX(-100%); width: var(--sidebar-w); }
-
-  /* Основной контент — всегда на всю ширину */
-  #page-content-wrapper,
-  body.sidebar-collapsed #page-content-wrapper {
-    margin-left: 0 !important;
-    width: 100%;
-  }
-
-  /* Топ-бар — уменьшенные отступы */
-  .topbar { padding: 0 .875rem; gap: .5rem; }
-
-  /* Заголовок в топбаре — truncate, чтобы не вытеснял иконки */
-  .topbar-title {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  /* Контент страницы */
-  main.page-content { padding: 1.25rem 1rem; }
-
-  /* Заголовок страницы: переносится */
-  .page-header { flex-wrap: wrap; gap: .75rem; }
-  .page-header > div:last-child { flex-wrap: wrap; }
-
-  /* Карточки статистики */
-  .stat-card { padding: 1rem 1.125rem; gap: .875rem; }
-  .stat-card__value { font-size: 1.5rem; }
-  .stat-card__icon { width: 46px; height: 46px; font-size: 1.4rem; }
-
-  /* Уведомления — не вылезают за экран */
-  .notif-dropdown { width: min(360px, calc(100vw - 2rem)); }
-
-  /* Kanban — колонки чуть уже */
-  .kanban-column { min-width: 270px; }
-
-}
-
-/* ── Уведомления — Bottom Sheet на мобильном (< 768px) ─────── */
-@media (max-width: 767.98px) {
-  /* Превращаем дропдаун в «шторку», выезжающую снизу.
-     data-bs-display="static" на bellBtn гарантирует, что Popper.js
-     не добавит инлайн transform/top/left, которые сломали бы позиционирование. */
-  .notif-dropdown {
-    position: fixed !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    top: auto !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    border-radius: 1rem 1rem 0 0;
-    border: none;
-    border-top: 1px solid var(--border);
-    max-height: 70vh;
-    overflow-y: auto;
-    box-shadow: 0 -4px 24px rgba(0, 0, 0, .18) !important;
-    /* Анимация объявлена глобально выше (вне @media) */
-    animation: notifBottomSheetIn .25s cubic-bezier(.32,1,.23,1);
-  }
-
-  /* Ручка-индикатор сверху — стандартный паттерн Bottom Sheet */
-  .notif-dropdown::before {
-    content: '';
-    display: block;
-    width: 36px;
-    height: 4px;
-    background: #cbd5e1;
-    border-radius: 2px;
-    margin: .75rem auto .25rem;
-  }
-
-  /* Список уведомлений — больший max-height внутри bottom sheet */
-  .notif-dropdown .notif-list {
-    max-height: calc(70vh - 9rem);
-  }
-}
-
-/* Очень маленькие экраны (< 576px) */
-@media (max-width: 575.98px) {
-  /* Заголовок в топбаре — скрыть совсем, места нет */
-  .topbar-title { display: none; }
-
-  /* Немного увеличиваем боковые отступы контента, чтобы карточки не прижимались к краю */
-  main.page-content { padding: 1rem 1rem; }
-  .card-body { padding: 1rem; }
-  .card-header { padding: .875rem 1rem; }
-  .card-footer { padding: .75rem 1rem; }
-  .table th, .table td { padding: .6rem .75rem; }
-  .page-header-title { font-size: 1.1rem; }
-  .breadcrumb { font-size: .8rem; }
-
-  /* Карточки статистики — компактнее на мини-экранах */
-  .stat-card { padding: .75rem; gap: .625rem; }
-  .stat-card__icon { width: 38px; height: 38px; font-size: 1.1rem; }
-  .stat-card__value { font-size: 1.25rem; }
-  .stat-card__label { font-size: .75rem; }
-
-  /* page-header — вертикально на мини-экранах */
-  .page-header { flex-direction: column; align-items: flex-start; }
-  .page-header > div:last-child { width: 100%; }
-
-  /* Канбан-фильтры: мельче */
-  .kanban-board .btn-sm { font-size: .75rem; padding: .25rem .5rem; }
+@media (min-width: 768px) {
+  .page-header { align-items: center; margin-bottom: 2rem; }
+  .page-header-title { font-size: 1.35rem; }
 }
 
 /* ── Дополнительная мобильная адаптация ────────────────────── */
 
-/* Горизонтальный скролл для длинных рядов фильтров.
-   Используется в канбане, аналитике и др. страницах. */
+/* Горизонтальный скролл для длинных рядов фильтров */
 .filters-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -668,32 +695,28 @@ body.sidebar-open { overflow: hidden; }
 .filters-scroll > .d-flex { flex-wrap: nowrap !important; }
 .filters-scroll .btn { flex-shrink: 0; }
 
-/* Метаданные задачи — не sticky на мобильном (sticky мешает,
-   когда карточка находится вверху страницы) */
-@media (max-width: 991.98px) {
-  .task-meta-sticky { position: static !important; }
+/* Метаданные задачи — sticky только на десктопе */
+@media (min-width: 992px) {
+  .task-meta-sticky {
+    position: sticky !important;
+    top: 80px;
+  }
 }
 
-/* Кнопки шапки страниц — компактные на мобильном */
+/* Комментарии — дата под именем на мобильных */
 @media (max-width: 767.98px) {
-  .page-header-actions .btn {
-    font-size: .825rem;
-    padding: .35rem .875rem;
-    border-radius: .4rem;
-  }
-  /* Комментарии — дата под именем на маленьких экранах */
   .comment-meta { flex-wrap: wrap; }
   .comment-meta .comment-date {
     margin-left: 0 !important;
     width: 100%;
     margin-top: .15rem;
   }
-  /* Гарантируем минимальную высоту тач-цели для интерактивных элементов */
-  .btn, .form-control, .form-select { min-height: 38px; }
-  .btn-sm { min-height: 32px; }
 }
 
+/* ── Очень маленькие экраны (<576px) ───────────────────────── */
 @media (max-width: 575.98px) {
+  .breadcrumb { font-size: .8rem; }
+
   /* История изменений — перенос «старое → новое» */
   .history-change-row {
     flex-wrap: wrap;
@@ -719,9 +742,9 @@ body.sidebar-open { overflow: hidden; }
   .bulk-panel .form-select-sm,
   .bulk-panel .btn-sm { font-size: .75rem; padding: .25rem .5rem; }
 
-  /* Кнопки в шапке — ещё компактнее */
+  /* Кнопки шапки страниц — компактнее */
   .page-header-actions .btn {
     font-size: .8rem;
-    padding: .3rem .65rem;
+    padding: .3rem .75rem;
   }
 }
