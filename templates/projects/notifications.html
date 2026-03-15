@@ -18,9 +18,9 @@
 
 <div class="card">
   {% for notif in notifications %}
-  <div class="px-4 py-3 {% if not loop.last %}border-bottom{% endif %}
+  <div class="px-3 px-md-4 py-3 notif-page-item {% if not loop.last %}border-bottom{% endif %}
               {% if not notif.is_read %}notif-unread{% endif %}">
-    <div class="d-flex align-items-start gap-4">
+    <div class="d-flex align-items-start gap-3">
       <div class="notif-icon-circle flex-shrink-0
         {% if notif.notification_type == 'task_assigned' %}bg-primary-subtle text-primary
         {% elif notif.notification_type == 'task_status' %}bg-warning-subtle text-warning
@@ -33,11 +33,11 @@
           <i class="bi bi-chat-left-fill"></i>
         {% endif %}
       </div>
-      <div class="flex-grow-1">
+      <div class="flex-grow-1 min-w-0">
         <div class="{% if not notif.is_read %}fw-semibold{% endif %}" style="font-size:.95rem">
           {{ notif.message }}
         </div>
-        <div class="d-flex gap-4 mt-1">
+        <div class="d-flex gap-3 mt-1 notif-meta-row flex-wrap">
           <span class="text-muted" style="font-size:.85rem">{{ notif.created_at.strftime('%d.%m.%Y %H:%M') if notif.created_at else '' }}</span>
           {% if notif.task %}
           <a href="{{ url_for('task_detail', uuid=notif.task.uuid) }}"
@@ -48,7 +48,7 @@
         </div>
       </div>
       {% if not notif.is_read %}
-      <span class="badge bg-primary">Новое</span>
+      <span class="badge bg-primary flex-shrink-0">Новое</span>
       {% endif %}
     </div>
   </div>

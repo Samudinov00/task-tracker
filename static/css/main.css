@@ -753,3 +753,129 @@ body.notif-open          { overflow: hidden; }
     padding: .3rem .75rem;
   }
 }
+
+/* ── Утилиты ────────────────────────────────────────────────── */
+
+/* Разрешает text-overflow работать внутри flex-контейнеров
+   (Bootstrap 5 не включает это в базовый набор) */
+.min-w-0 { min-width: 0; }
+
+/* Ограничение текста 2 и 3 строками с многоточием */
+.line-clamp-2,
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.line-clamp-2 { -webkit-line-clamp: 2; }
+.line-clamp-3 { -webkit-line-clamp: 3; }
+
+/* ── Kanban: мобильная прокрутка ────────────────────────────── */
+
+/* Предотвращает срабатывание swipe-back браузера
+   при горизонтальной прокрутке доски */
+.kanban-board {
+  overscroll-behavior-x: contain;
+  /* Тонкий скроллбар — визуально намекает на наличие горизонтального контента */
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+.kanban-board::-webkit-scrollbar { height: 4px; }
+.kanban-board::-webkit-scrollbar-track { background: transparent; }
+.kanban-board::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+/* Ограничение длины заголовка карточки задачи (3 строки) */
+.task-card-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Textarea: resize ───────────────────────────────────────── */
+
+/* Разрешаем только вертикальное изменение размера (по умолчанию) */
+textarea.form-control { resize: vertical; }
+
+/* На мобильных запрещаем resize: пользователь может случайно
+   потянуть ручку и сломать компоновку страницы */
+@media (max-width: 767.98px) {
+  textarea.form-control { resize: none; }
+}
+
+/* ── Автоувеличение textarea (через field-sizing, Chrome 123+) ─ */
+textarea.form-control-autogrow {
+  field-sizing: content;
+  min-height: 80px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+/* ── Таймер сессии — мобильный (в dropdown) ─────────────────── */
+.session-timer-mobile {
+  display: flex;
+  align-items: center;
+  gap: .375rem;
+  font-size: .8rem;
+  color: var(--text-muted);
+  padding: .375rem 1rem;
+}
+.session-timer-mobile.warn { color: var(--bs-danger, #dc3545); }
+
+/* ── Фильтры Канбана: коллапс на мобильном ─────────────────── */
+.kanban-filters-toggle {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: .875rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: .375rem 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.kanban-filters-toggle:hover { color: var(--text); }
+.kanban-filters-toggle .filters-count-badge {
+  background: var(--primary);
+  color: #fff;
+  border-radius: 10px;
+  padding: .1em .45em;
+  font-size: .7rem;
+  font-weight: 700;
+}
+
+/* На мобильном фильтры скрыты по умолчанию, раскрываются по кнопке */
+@media (max-width: 767.98px) {
+  .kanban-filters-collapsible { display: none; }
+  .kanban-filters-collapsible.show { display: block; }
+  /* Кнопка-переключатель видна только на мобильном */
+  .kanban-filters-toggle-wrap { display: block; margin-bottom: .5rem; }
+}
+@media (min-width: 768px) {
+  /* На планшете/десктопе фильтры всегда видны */
+  .kanban-filters-collapsible { display: block !important; }
+  .kanban-filters-toggle-wrap { display: none; }
+}
+
+/* ── Уведомления: мобильная вёрстка ────────────────────────── */
+@media (max-width: 575.98px) {
+  /* Уменьшаем отступы в полноэкранном списке уведомлений */
+  .notif-page-item {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  .notif-page-item .notif-icon-circle {
+    width: 36px;
+    height: 36px;
+    font-size: .875rem;
+  }
+  /* Дата и ссылка "Перейти" — переносятся на новую строку */
+  .notif-meta-row {
+    flex-wrap: wrap;
+    gap: .25rem !important;
+  }
+}

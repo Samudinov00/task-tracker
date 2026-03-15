@@ -86,56 +86,71 @@
   </div>
 </div>
 
-{% if user.is_manager() %}
-<div class="filters-scroll mb-2">
-  <div class="d-flex gap-2 align-items-center">
-    <span class="text-muted me-1 flex-shrink-0" style="font-size:.9rem">Исполнитель:</span>
-    <a href="?{% if priority_filter %}priority={{ priority_filter }}&{% endif %}{% if deadline_filter %}deadline={{ deadline_filter }}{% endif %}"
-       class="btn btn-sm {% if not assignee_filter %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
-      Все
-    </a>
-    {% for executor in executors %}
-    <a href="?assignee={{ executor.id }}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if deadline_filter %}&deadline={{ deadline_filter }}{% endif %}"
-       class="btn btn-sm {% if assignee_filter == executor.id|string %}btn-primary{% else %}btn-outline-primary{% endif %}">
-      <span class="avatar-xs avatar-initials me-1" style="font-size:.5rem;width:18px;height:18px;display:inline-flex">{{ executor.get_initials() }}</span>
-      {{ executor.get_display_name() }}
-    </a>
-    {% endfor %}
-    <a href="?assignee=none{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if deadline_filter %}&deadline={{ deadline_filter }}{% endif %}"
-       class="btn btn-sm {% if assignee_filter == 'none' %}btn-outline-danger{% else %}btn-outline-secondary{% endif %}">
-      Не назначен
-    </a>
-  </div>
+{# ── Кнопка-переключатель фильтров (видна только на мобильном) ─ #}
+{% set active_filter_count = (1 if assignee_filter else 0) + (1 if priority_filter else 0) + (1 if deadline_filter else 0) %}
+<div class="kanban-filters-toggle-wrap">
+  <button type="button" class="kanban-filters-toggle" id="filtersToggleBtn"
+          aria-expanded="false" aria-controls="kanbanFilters">
+    <i class="bi bi-funnel me-1"></i>Фильтры
+    {% if active_filter_count > 0 %}
+    <span class="filters-count-badge">{{ active_filter_count }}</span>
+    {% endif %}
+    <i class="bi bi-chevron-down ms-auto" id="filtersChevron" style="transition:transform .2s"></i>
+  </button>
 </div>
-{% endif %}
 
-<div class="filters-scroll mb-3">
-  <div class="d-flex gap-2 align-items-center">
-    <span class="text-muted me-1 flex-shrink-0" style="font-size:.9rem">Приоритет:</span>
-    <a href="?{% if assignee_filter %}assignee={{ assignee_filter }}&{% endif %}{% if deadline_filter %}deadline={{ deadline_filter }}{% endif %}"
-       class="btn btn-sm {% if not priority_filter %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
-      Все
-    </a>
-    {% for pkey, plabel in priority_choices %}
-    <a href="?priority={{ pkey }}{% if assignee_filter %}&assignee={{ assignee_filter }}{% endif %}{% if deadline_filter %}&deadline={{ deadline_filter }}{% endif %}"
-       class="btn btn-sm {% if priority_filter == pkey %}btn-warning{% else %}btn-outline-warning{% endif %}">
-      {{ plabel }}
-    </a>
-    {% endfor %}
+<div id="kanbanFilters" class="kanban-filters-collapsible{% if active_filter_count > 0 %} show{% endif %}">
+  {% if user.is_manager() %}
+  <div class="filters-scroll mb-2">
+    <div class="d-flex gap-2 align-items-center">
+      <span class="text-muted me-1 flex-shrink-0" style="font-size:.9rem">Исполнитель:</span>
+      <a href="?{% if priority_filter %}priority={{ priority_filter }}&{% endif %}{% if deadline_filter %}deadline={{ deadline_filter }}{% endif %}"
+         class="btn btn-sm {% if not assignee_filter %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+        Все
+      </a>
+      {% for executor in executors %}
+      <a href="?assignee={{ executor.id }}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if deadline_filter %}&deadline={{ deadline_filter }}{% endif %}"
+         class="btn btn-sm {% if assignee_filter == executor.id|string %}btn-primary{% else %}btn-outline-primary{% endif %}">
+        <span class="avatar-xs avatar-initials me-1" style="font-size:.5rem;width:18px;height:18px;display:inline-flex">{{ executor.get_initials() }}</span>
+        {{ executor.get_display_name() }}
+      </a>
+      {% endfor %}
+      <a href="?assignee=none{% if priority_filter %}&priority={{ priority_filter }}{% endif %}{% if deadline_filter %}&deadline={{ deadline_filter }}{% endif %}"
+         class="btn btn-sm {% if assignee_filter == 'none' %}btn-outline-danger{% else %}btn-outline-secondary{% endif %}">
+        Не назначен
+      </a>
+    </div>
+  </div>
+  {% endif %}
 
-    <span class="text-muted ms-3 me-1 flex-shrink-0" style="font-size:.9rem">Дедлайн:</span>
-    <a href="?{% if assignee_filter %}assignee={{ assignee_filter }}&{% endif %}{% if priority_filter %}priority={{ priority_filter }}{% endif %}"
-       class="btn btn-sm {% if not deadline_filter %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
-      Все
-    </a>
-    <a href="?deadline=overdue{% if assignee_filter %}&assignee={{ assignee_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}"
-       class="btn btn-sm {% if deadline_filter == 'overdue' %}btn-danger{% else %}btn-outline-danger{% endif %}">
-      Просрочено
-    </a>
-    <a href="?deadline=soon{% if assignee_filter %}&assignee={{ assignee_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}"
-       class="btn btn-sm {% if deadline_filter == 'soon' %}btn-warning{% else %}btn-outline-warning{% endif %}">
-      Скоро (7 дн)
-    </a>
+  <div class="filters-scroll mb-3">
+    <div class="d-flex gap-2 align-items-center">
+      <span class="text-muted me-1 flex-shrink-0" style="font-size:.9rem">Приоритет:</span>
+      <a href="?{% if assignee_filter %}assignee={{ assignee_filter }}&{% endif %}{% if deadline_filter %}deadline={{ deadline_filter }}{% endif %}"
+         class="btn btn-sm {% if not priority_filter %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+        Все
+      </a>
+      {% for pkey, plabel in priority_choices %}
+      <a href="?priority={{ pkey }}{% if assignee_filter %}&assignee={{ assignee_filter }}{% endif %}{% if deadline_filter %}&deadline={{ deadline_filter }}{% endif %}"
+         class="btn btn-sm {% if priority_filter == pkey %}btn-warning{% else %}btn-outline-warning{% endif %}">
+        {{ plabel }}
+      </a>
+      {% endfor %}
+
+      <span class="text-muted ms-3 me-1 flex-shrink-0" style="font-size:.9rem">Дедлайн:</span>
+      <a href="?{% if assignee_filter %}assignee={{ assignee_filter }}&{% endif %}{% if priority_filter %}priority={{ priority_filter }}{% endif %}"
+         class="btn btn-sm {% if not deadline_filter %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+        Все
+      </a>
+      <a href="?deadline=overdue{% if assignee_filter %}&assignee={{ assignee_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}"
+         class="btn btn-sm {% if deadline_filter == 'overdue' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+        Просрочено
+      </a>
+      <a href="?deadline=soon{% if assignee_filter %}&assignee={{ assignee_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}"
+         class="btn btn-sm {% if deadline_filter == 'soon' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+        Скоро (7 дн)
+      </a>
+    </div>
   </div>
 </div>
 
@@ -172,7 +187,7 @@
                      value="{{ task.uuid }}" data-task-uuid="{{ task.uuid }}">
               {% endif %}
               <a href="{{ url_for('task_detail', uuid=task.uuid) }}"
-                 class="text-decoration-none text-dark fw-semibold flex-grow-1" style="font-size:.9rem;line-height:1.4">
+                 class="text-decoration-none text-dark fw-semibold flex-grow-1 task-card-title" style="font-size:.9rem;line-height:1.4">
                 {{ task.title }}
               </a>
               {% if user.is_manager() %}
@@ -283,6 +298,21 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+// ── Переключатель фильтров (только на мобильном) ─────────────
+(function () {
+  const btn     = document.getElementById('filtersToggleBtn');
+  const panel   = document.getElementById('kanbanFilters');
+  const chevron = document.getElementById('filtersChevron');
+  if (!btn || !panel) return;
+
+  btn.addEventListener('click', function () {
+    const expanded = panel.classList.toggle('show');
+    btn.setAttribute('aria-expanded', expanded);
+    if (chevron) chevron.style.transform = expanded ? 'rotate(180deg)' : '';
+  });
+})();
+</script>
 <script>
   const CAN_DRAG   = {{ 'true' if user.is_manager() or user.is_executor() else 'false' }};
   const IS_MANAGER = {{ 'true' if user.is_manager() else 'false' }};
