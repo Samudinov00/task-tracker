@@ -211,7 +211,14 @@
     }
   }
 
+  /* Флаг предотвращает повторное открытие сайдбара сразу после закрытия.
+     На Android Chrome e.preventDefault() на touchend не всегда отменяет
+     синтетический click: после того как backdrop скрывается, click
+     «проваливается» на кнопку toggle в топбаре и открывает сайдбар снова. */
+  let justClosed = false;
+
   function openSidebar() {
+    if (justClosed) return;
     document.body.classList.add('sidebar-open');
     updateToggleIcon();
     document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(function (el) {
@@ -221,6 +228,8 @@
   }
   function closeSidebar() {
     document.body.classList.remove('sidebar-open');
+    justClosed = true;
+    setTimeout(function() { justClosed = false; }, 400);
     updateToggleIcon();
   }
 
