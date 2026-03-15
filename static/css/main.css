@@ -510,8 +510,8 @@ body.notif-open          { overflow: hidden; }
 
 /* ── Bootstrap card переопределения: Mobile First ───────────── */
 .card {
-  /* Граница slate-100 вместо тени — современный flat-стиль */
-  border: 1px solid #f1f5f9;
+  /* border-slate-200 вместо тени — flat/Linear-стиль */
+  border: 1px solid #e2e8f0;
   border-radius: var(--card-radius);
   box-shadow: none;
   /* Scale при нажатии — тактильный отклик на мобильном */
@@ -576,7 +576,7 @@ body.notif-open          { overflow: hidden; }
 }
 
 .task-card {
-  border: 1px solid #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
   border-radius: var(--card-radius) !important;
   box-shadow: none !important;
   transition: box-shadow var(--transition), transform .12s ease, border-color .15s ease;
@@ -1011,8 +1011,7 @@ textarea.form-control-autogrow {
   body.sidebar-open .sidebar-backdrop { display: none !important; }
   body.sidebar-open { overflow: initial !important; }
 
-  /* Заголовок по центру между иконкой меню и аватаром */
-  .topbar-title {
-    text-align: center;
-  }
+  /* Мобильная шапка — отдельный div, занимает всю ширину топбара */
+  .topbar { padding: 0; }
+  .topbar-mobile { padding: 0 .25rem; }
 }
