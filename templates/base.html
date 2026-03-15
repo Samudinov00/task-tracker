@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Менеджер задач{% endblock %}</title>
   <link rel="icon" type="image/svg+xml" href="{{ static('img/favicon.svg') }}">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
@@ -50,7 +50,7 @@
       {% endif %}
 
       <a href="{{ url_for('notifications') }}"
-         class="sidebar-link d-none d-lg-flex {% if '/notifications' in request.url.path %}active{% endif %}">
+         class="sidebar-link {% if '/notifications' in request.url.path %}active{% endif %}">
         <i class="bi bi-bell-fill"></i>
         <span>Уведомления</span>
         {% if (unread_notifications_count | default(0)) > 0 %}
@@ -121,7 +121,7 @@
         {# Аватар / меню пользователя #}
         <div class="dropdown">
           <button class="btn btn-ghost btn-sm d-flex align-items-center gap-2"
-                  data-bs-toggle="dropdown">
+                  data-bs-toggle="dropdown" data-bs-display="static">
             <div class="avatar-xs avatar-initials">{{ user.get_initials() }}</div>
             <div class="d-none d-lg-flex flex-column align-items-start lh-1">
               <span style="font-size:.875rem">{{ user.get_display_name() }}</span>
@@ -152,7 +152,7 @@
     </header>
 
     {# Flash-сообщения #}
-    <div class="px-4 pt-3">
+    <div class="px-3 px-md-4 pt-3">
       {% for message in get_flashed_messages(request) %}
         <div class="alert alert-{{ message.tags or 'info' }} alert-dismissible fade show" role="alert">
           {{ message.message }}

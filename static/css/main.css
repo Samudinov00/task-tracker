@@ -695,7 +695,12 @@ body.notif-open          { overflow: hidden; }
 .filters-scroll > .d-flex { flex-wrap: nowrap !important; }
 .filters-scroll .btn { flex-shrink: 0; }
 
-/* Метаданные задачи — sticky только на десктопе */
+/* Метаданные задачи — sticky только на десктопе.
+   На мобильном не используем sticky: карточка идёт первой (order-1)
+   и "прилипание" занимает экранное пространство при скролле. */
+.task-meta-sticky {
+  position: static;
+}
 @media (min-width: 992px) {
   .task-meta-sticky {
     position: sticky !important;
