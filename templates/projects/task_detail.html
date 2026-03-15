@@ -1,32 +1,36 @@
 {% extends 'base.html' %}
 
 {% block title %}{{ task.title }}{% endblock %}
-{% block page_title %}{{ task.title }}{% endblock %}
+{% block page_title %}{{ task.title[:40] }}{% if task.title|length > 40 %}…{% endif %}{% endblock %}
 
 {% block content %}
 <div class="page-header">
-  <div>
+  <div class="min-w-0 flex-grow-1">
     <nav aria-label="breadcrumb">
       <ol class="breadcrumb mb-1">
         <li class="breadcrumb-item"><a href="{{ url_for('project_list') }}">Проекты</a></li>
         <li class="breadcrumb-item"><a href="{{ url_for('kanban', project_uuid=task.project.uuid) }}">{{ task.project.name }}</a></li>
-        <li class="breadcrumb-item active">{{ task.title[:40] }}{% if task.title|length > 40 %}…{% endif %}</li>
+        <li class="breadcrumb-item active line-clamp-1">{{ task.title[:50] }}{% if task.title|length > 50 %}…{% endif %}</li>
       </ol>
     </nav>
     <h1 class="page-header-title {% if task.is_overdue() %}text-danger{% endif %}">
       {{ task.title }}
-      {% if task.is_overdue() %}<span class="badge bg-danger fs-6 ms-2">Просрочено</span>{% endif %}
+      {% if task.is_overdue() %}
+      <span class="badge ms-2 align-middle" style="font-size:.65rem;background:#fee2e2;color:#b91c1c">Просрочено</span>
+      {% endif %}
     </h1>
   </div>
-  <div class="d-flex flex-wrap gap-2 page-header-actions">
+  <div class="d-flex gap-2 flex-shrink-0">
     {% if can_edit %}
-    <a href="{{ url_for('task_edit', uuid=task.uuid) }}" class="btn btn-outline-primary btn-sm">
-      <i class="bi bi-pencil me-1"></i>Изменить
+    <a href="{{ url_for('task_edit', uuid=task.uuid) }}" class="btn btn-sm"
+       style="background:var(--surface);border:1px solid var(--border);color:var(--text-2)">
+      <i class="bi bi-pencil me-1"></i><span class="d-none d-sm-inline">Изменить</span>
     </a>
     {% endif %}
     {% if user.is_manager() %}
-    <a href="{{ url_for('task_delete', uuid=task.uuid) }}" class="btn btn-outline-danger btn-sm">
-      <i class="bi bi-trash me-1"></i>Удалить
+    <a href="{{ url_for('task_delete', uuid=task.uuid) }}" class="btn-icon"
+       style="color:#ef4444;width:36px;height:36px;border:1px solid #fecaca;border-radius:var(--r-sm)">
+      <i class="bi bi-trash" style="font-size:.85rem"></i>
     </a>
     {% endif %}
   </div>
@@ -34,44 +38,54 @@
 
 <div class="row g-4">
 
-  {# ── Левая колонка (основной контент) — на мобильном идёт второй ────────── #}
+  {# Left: description + comments + history (second on mobile) #}
   <div class="col-lg-8 order-2 order-lg-1">
 
+    {# Description #}
     {% if task.description %}
     <div class="card mb-4">
-      <div class="card-header fw-semibold">Описание</div>
+      <div class="card-header">
+        <i class="bi bi-text-left me-2 text-muted"></i>Описание
+      </div>
       <div class="card-body">
-        <p class="mb-0" style="white-space:pre-wrap;font-size:.95rem;line-height:1.7">{{ task.description }}</p>
+        <p class="mb-0" style="white-space:pre-wrap;font-size:.875rem;line-height:1.7;color:var(--text-2)">{{ task.description }}</p>
       </div>
     </div>
     {% endif %}
 
-    {# ── Комментарии ── #}
+    {# Comments #}
     <div class="card mb-4" id="comments">
-      <div class="card-header fw-semibold">
-        <i class="bi bi-chat-left-text me-2"></i>Комментарии ({{ task.comments|length }})
+      <div class="card-header">
+        <i class="bi bi-chat-left-text me-2 text-muted"></i>
+        Комментарии
+        <span class="ms-1" style="font-size:.7rem;color:var(--text-subtle)">({{ task.comments|length }})</span>
       </div>
+
       <div class="card-body p-0">
         {% for comment in task.comments %}
         <div class="px-4 py-3 {% if not loop.last %}border-bottom{% endif %}">
           <div class="d-flex align-items-center gap-3 mb-2 comment-meta">
             <div class="avatar-xs avatar-initials flex-shrink-0">{{ comment.author.get_initials() }}</div>
-            <span class="fw-semibold">{{ comment.author.get_display_name() }}</span>
-            <span class="text-muted ms-auto comment-date" style="font-size:.85rem">{{ comment.created_at.strftime('%d.%m.%Y %H:%M') if comment.created_at else '' }}</span>
+            <span class="fw-semibold" style="font-size:.825rem">{{ comment.author.get_display_name() }}</span>
+            <span class="text-muted ms-auto comment-date" style="font-size:.75rem">
+              {{ comment.created_at.strftime('%d.%m.%Y %H:%M') if comment.created_at else '' }}
+            </span>
           </div>
-          <p class="mb-1" style="white-space:pre-wrap;font-size:.9rem">{{ comment.text }}</p>
+          <p class="mb-0" style="white-space:pre-wrap;font-size:.825rem;color:var(--text-2);line-height:1.6">{{ comment.text }}</p>
         </div>
         {% else %}
-        <div class="text-center text-muted py-4">Комментариев пока нет.</div>
+        <div class="text-center text-muted py-4" style="font-size:.825rem">Комментариев пока нет</div>
         {% endfor %}
 
+        {# Comment form #}
         <div class="border-top p-4">
           <form method="post" novalidate>
             <textarea name="text" class="form-control form-control-autogrow" rows="3"
-                      placeholder="Написать комментарий…"></textarea>
-            <div class="mt-3 text-end">
-              <button type="submit" name="comment_submit" class="btn btn-primary">
-                <i class="bi bi-send me-2"></i>Отправить
+                      placeholder="Напишите комментарий…"
+                      style="font-size:.875rem;border-radius:var(--r-sm)"></textarea>
+            <div class="mt-2 text-end">
+              <button type="submit" name="comment_submit" class="btn btn-primary btn-sm">
+                <i class="bi bi-send me-1"></i>Отправить
               </button>
             </div>
           </form>
@@ -79,29 +93,37 @@
       </div>
     </div>
 
-    {# ── История изменений ── #}
+    {# Change history #}
     {% if history %}
-    <div class="card mb-4" id="history">
-      <div class="card-header fw-semibold">
-        <i class="bi bi-clock-history me-2"></i>История изменений ({{ history|length }})
+    <div class="card" id="history">
+      <div class="card-header">
+        <i class="bi bi-clock-history me-2 text-muted"></i>
+        История изменений
+        <span class="ms-1" style="font-size:.7rem;color:var(--text-subtle)">({{ history|length }})</span>
       </div>
       <div class="card-body p-0">
         {% for entry in history %}
         <div class="px-4 py-3 {% if not loop.last %}border-bottom{% endif %}">
           <div class="d-flex align-items-center gap-2 mb-1">
             {% if entry.changed_by %}
-            <div class="avatar-xs avatar-initials" style="font-size:.45rem;width:20px;height:20px">{{ entry.changed_by.get_initials() }}</div>
-            <span class="fw-semibold" style="font-size:.875rem">{{ entry.changed_by.get_display_name() }}</span>
+            <div class="avatar-xs avatar-initials" style="width:20px;height:20px;font-size:.42rem">
+              {{ entry.changed_by.get_initials() }}
+            </div>
+            <span class="fw-semibold" style="font-size:.8rem">{{ entry.changed_by.get_display_name() }}</span>
             {% else %}
-            <span class="text-muted" style="font-size:.875rem">Система</span>
+            <span class="text-muted" style="font-size:.8rem">Система</span>
             {% endif %}
-            <span class="badge bg-secondary-subtle text-secondary-emphasis" style="font-size:.7rem">{{ entry.field_name }}</span>
-            <span class="text-muted ms-auto" style="font-size:.8rem">{{ entry.changed_at.strftime('%d.%m.%Y %H:%M') if entry.changed_at else '' }}</span>
+            <span class="badge ms-1" style="background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border);font-size:.65rem">
+              {{ entry.field_name }}
+            </span>
+            <span class="text-muted ms-auto" style="font-size:.72rem">
+              {{ entry.changed_at.strftime('%d.%m.%Y %H:%M') if entry.changed_at else '' }}
+            </span>
           </div>
-          <div class="d-flex align-items-center gap-2 history-change-row" style="font-size:.875rem">
-            <span class="text-muted text-decoration-line-through">{{ (entry.old_value or '—')[:40] }}</span>
-            <i class="bi bi-arrow-right text-muted history-arrow"></i>
-            <span class="fw-semibold history-new">{{ (entry.new_value or '—')[:40] }}</span>
+          <div class="d-flex align-items-center gap-2 history-change-row">
+            <span class="text-muted text-decoration-line-through">{{ (entry.old_value or '—')[:60] }}</span>
+            <i class="bi bi-arrow-right text-muted history-arrow" style="font-size:.75rem"></i>
+            <span class="fw-semibold history-new" style="color:var(--text-2)">{{ (entry.new_value or '—')[:60] }}</span>
           </div>
         </div>
         {% endfor %}
@@ -111,37 +133,42 @@
 
   </div>
 
-  {# ── Правая колонка: метаданные — на мобильном идёт первой ─────────────── #}
+  {# Right: metadata (first on mobile) #}
   <div class="col-lg-4 order-1 order-lg-2">
     <div class="card task-meta-sticky">
-      <div class="card-header fw-semibold">Детали задачи</div>
+      <div class="card-header">
+        <i class="bi bi-info-circle me-2 text-muted"></i>Детали задачи
+      </div>
       <div class="card-body">
         <div class="task-detail-meta">
-          <div class="task-meta-item mb-4">
-            <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Статус</div>
-            <span class="badge bg-{{ task.get_status_badge() }} fs-6">{{ task.get_status_display() }}</span>
-          </div>
 
           <div class="task-meta-item mb-4">
-            <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Приоритет</div>
-            <span class="badge bg-{{ task.get_priority_badge() }}">
-              {{ task.get_priority_display() }}
+            <div class="task-meta-label">Статус</div>
+            <span class="badge bg-{{ task.get_status_badge() }}" style="font-size:.75rem">
+              {{ task.get_status_display() }}
             </span>
           </div>
 
           <div class="task-meta-item mb-4">
-            <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Исполнитель</div>
+            <div class="task-meta-label">Приоритет</div>
+            <span class="priority-badge priority-{{ task.priority }}">
+              <i class="bi {{ task.get_priority_icon() }}"></i>{{ task.get_priority_display() }}
+            </span>
+          </div>
+
+          <div class="task-meta-item mb-4 task-meta-item--full">
+            <div class="task-meta-label">Исполнитель</div>
             {% if task.assignee %}
             <div class="d-flex align-items-center gap-2">
               <div class="avatar-xs avatar-initials">{{ task.assignee.get_initials() }}</div>
-              <span id="assignee-name">{{ task.assignee.get_display_name() }}</span>
+              <span style="font-size:.825rem">{{ task.assignee.get_display_name() }}</span>
             </div>
             {% else %}
-            <span class="text-muted fst-italic" id="assignee-name">Не назначен</span>
+            <span class="text-muted fst-italic" style="font-size:.825rem">Не назначен</span>
             {% endif %}
             {% if user.is_manager() and task.project.manager_id == user.id and task.assignee_id != user.id %}
-            <form method="post" action="{{ url_for('task_self_assign', uuid=task.uuid) }}" class="mt-2" id="self-assign-form">
-              <button type="submit" class="btn btn-sm btn-outline-secondary">
+            <form method="post" action="{{ url_for('task_self_assign', uuid=task.uuid) }}" class="mt-2">
+              <button type="submit" class="btn btn-sm btn-ghost" style="font-size:.75rem">
                 <i class="bi bi-person-check me-1"></i>Назначить себя
               </button>
             </form>
@@ -149,37 +176,45 @@
           </div>
 
           <div class="task-meta-item mb-4">
-            <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Дедлайн</div>
+            <div class="task-meta-label">Дедлайн</div>
             {% if task.deadline %}
-            <span class="{% if task.is_overdue() %}text-danger fw-semibold{% endif %}">
+            <span class="{% if task.is_overdue() %}text-danger fw-semibold{% endif %}"
+                  style="font-size:.825rem">
               <i class="bi bi-calendar3 me-1"></i>{{ task.deadline.strftime('%d.%m.%Y') }}
             </span>
             {% else %}
-            <span class="text-muted">Не указан</span>
+            <span class="text-muted" style="font-size:.825rem">Не указан</span>
             {% endif %}
           </div>
 
-          <div class="task-meta-item mb-4">
-            <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Проект</div>
-            <a href="{{ url_for('kanban', project_uuid=task.project.uuid) }}" class="text-decoration-none">{{ task.project.name }}</a>
+          <div class="task-meta-item mb-4 task-meta-item--full">
+            <div class="task-meta-label">Проект</div>
+            <a href="{{ url_for('kanban', project_uuid=task.project.uuid) }}"
+               class="text-decoration-none" style="font-size:.825rem;color:var(--brand)">
+              {{ task.project.name }}
+            </a>
           </div>
 
           <div class="task-meta-item mb-4">
-            <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Создал</div>
-            <span>{{ task.created_by.get_display_name() }}</span>
+            <div class="task-meta-label">Создал</div>
+            <span style="font-size:.825rem">{{ task.created_by.get_display_name() }}</span>
           </div>
 
           <div class="task-meta-item">
-            <div class="text-muted mb-1" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Обновлено</div>
-            <span class="text-muted">{{ task.updated_at.strftime('%d.%m.%Y %H:%M') if task.updated_at else '' }}</span>
+            <div class="task-meta-label">Обновлено</div>
+            <span class="text-muted" style="font-size:.775rem">
+              {{ task.updated_at.strftime('%d.%m.%Y %H:%M') if task.updated_at else '—' }}
+            </span>
           </div>
+
         </div>
 
         {% if history %}
-        <hr>
-        <a href="#history" class="btn btn-outline-secondary btn-sm w-100">
-          <i class="bi bi-clock-history me-1"></i>История ({{ history|length }})
-        </a>
+        <div class="border-top mt-4 pt-3">
+          <a href="#history" class="btn btn-sm btn-ghost w-100" style="font-size:.775rem">
+            <i class="bi bi-clock-history me-1"></i>История ({{ history|length }})
+          </a>
+        </div>
         {% endif %}
       </div>
     </div>
@@ -190,15 +225,10 @@
 
 {% block extra_js %}
 <script>
-// Полифил автоувеличения textarea для браузеров без field-sizing
 (function () {
   document.querySelectorAll('textarea.form-control-autogrow').forEach(function (ta) {
-    // Если field-sizing уже поддерживается браузером — ничего не делаем
     if ('fieldSizing' in ta.style) return;
-    function resize() {
-      ta.style.height = 'auto';
-      ta.style.height = Math.min(ta.scrollHeight, 240) + 'px';
-    }
+    function resize() { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 240) + 'px'; }
     ta.addEventListener('input', resize);
     resize();
   });

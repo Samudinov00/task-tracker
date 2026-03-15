@@ -13,105 +13,118 @@
   </nav>
 </div>
 
-<div class="card">
-  <div class="card-header fw-semibold">{{ title }}</div>
+<div class="row justify-content-center">
+<div class="col-xl-8">
+
+<div class="card mb-4">
+  <div class="card-header">{{ title }}</div>
   <div class="card-body p-4">
     <form method="post" novalidate>
 
-      <div class="row g-4 mb-4">
-        <div class="col-12">
-          <label class="form-label">Название</label>
-          <input type="text" name="name" class="form-control"
-                 value="{{ form_data.name if form_data else (project.name if project else '') }}">
-          {% if errors.name %}
-            <div class="invalid-feedback d-block">{{ errors.name }}</div>
-          {% endif %}
-        </div>
-        <div class="col-12">
-          <label class="form-label">Описание</label>
-          <textarea name="description" class="form-control" rows="4">{{ form_data.description if form_data else (project.description if project else '') }}</textarea>
-        </div>
+      <div class="mb-4">
+        <label class="form-label">Название проекта</label>
+        <input type="text" name="name" class="form-control"
+               placeholder="Введите название"
+               value="{{ form_data.name if form_data else (project.name if project else '') }}">
+        {% if errors.name %}
+        <div class="invalid-feedback d-block">{{ errors.name }}</div>
+        {% endif %}
       </div>
 
-      <div class="row g-4 mb-4">
+      <div class="mb-4">
+        <label class="form-label">Описание</label>
+        <textarea name="description" class="form-control" rows="3"
+                  placeholder="Краткое описание проекта">{{ form_data.description if form_data else (project.description if project else '') }}</textarea>
+      </div>
+
+      <div class="row g-4 mb-2">
         <div class="col-md-6">
           <label class="form-label">Исполнители</label>
-          <div class="border rounded-2 p-3" style="max-height:220px;overflow-y:auto">
+          <div class="border rounded p-3" style="max-height:200px;overflow-y:auto;background:var(--surface-2)">
             {% for executor in all_executors %}
-              <div class="form-check py-1">
-                <input type="checkbox" name="executors" value="{{ executor.id }}"
-                       class="form-check-input" id="exec_{{ executor.id }}"
-                       {% if executor.id in selected_executor_ids %}checked{% endif %}>
-                <label class="form-check-label" for="exec_{{ executor.id }}">
-                  {{ executor.get_display_name() }}
-                </label>
-              </div>
+            <div class="form-check py-1">
+              <input type="checkbox" name="executors" value="{{ executor.id }}"
+                     class="form-check-input" id="exec_{{ executor.id }}"
+                     {% if executor.id in selected_executor_ids %}checked{% endif %}>
+              <label class="form-check-label" for="exec_{{ executor.id }}"
+                     style="font-size:.825rem;cursor:pointer">
+                {{ executor.get_display_name() }}
+              </label>
+            </div>
             {% else %}
-              <span class="text-muted">Нет доступных исполнителей</span>
+            <span class="text-muted" style="font-size:.8rem">Нет доступных исполнителей</span>
             {% endfor %}
           </div>
         </div>
         <div class="col-md-6">
           <label class="form-label">Клиенты</label>
-          <div class="border rounded-2 p-3" style="max-height:220px;overflow-y:auto">
+          <div class="border rounded p-3" style="max-height:200px;overflow-y:auto;background:var(--surface-2)">
             {% for client in all_clients %}
-              <div class="form-check py-1">
-                <input type="checkbox" name="clients" value="{{ client.id }}"
-                       class="form-check-input" id="client_{{ client.id }}"
-                       {% if client.id in selected_client_ids %}checked{% endif %}>
-                <label class="form-check-label" for="client_{{ client.id }}">
-                  {{ client.get_display_name() }}
-                </label>
-              </div>
+            <div class="form-check py-1">
+              <input type="checkbox" name="clients" value="{{ client.id }}"
+                     class="form-check-input" id="client_{{ client.id }}"
+                     {% if client.id in selected_client_ids %}checked{% endif %}>
+              <label class="form-check-label" for="client_{{ client.id }}"
+                     style="font-size:.825rem;cursor:pointer">
+                {{ client.get_display_name() }}
+              </label>
+            </div>
             {% else %}
-              <span class="text-muted">Нет доступных клиентов</span>
+            <span class="text-muted" style="font-size:.8rem">Нет доступных клиентов</span>
             {% endfor %}
           </div>
         </div>
       </div>
 
-      <div class="d-flex gap-3 pt-2 border-top">
+      <div class="d-flex gap-2 pt-4 mt-2 border-top">
         <button type="submit" class="btn btn-primary">
-          <i class="bi bi-save me-2"></i>Сохранить
+          <i class="bi bi-check-lg me-1"></i>Сохранить
         </button>
-        <a href="{{ url_for('project_list') }}" class="btn btn-outline-secondary">Отмена</a>
+        <a href="{{ url_for('project_list') }}" class="btn btn-ghost">Отмена</a>
       </div>
     </form>
+  </div>
+</div>
 
-    {% if project %}
-    <hr class="my-4">
-    <h5 class="fw-semibold mb-3"><i class="bi bi-kanban me-2"></i>Статусы канбана</h5>
-
+{# Kanban statuses section (edit mode only) #}
+{% if project %}
+<div class="card">
+  <div class="card-header">
+    <i class="bi bi-kanban me-2 text-muted"></i>Статусы канбана
+  </div>
+  <div class="card-body p-0">
     {% if project.statuses %}
-    <div class="table-responsive mb-3">
-      <table class="table table-sm align-middle">
+    <div class="table-responsive">
+      <table class="table mb-0 align-middle">
         <thead>
           <tr>
             <th>Название</th>
             <th>Цвет</th>
             <th>Порядок</th>
             <th>Финальный</th>
-            <th></th>
+            <th style="width:60px"></th>
           </tr>
         </thead>
         <tbody>
           {% for s in project.statuses %}
           <tr>
-            <td>{{ s.name }}</td>
-            <td><span class="badge bg-{{ s.color }}">{{ s.color }}</span></td>
-            <td>{{ s.order }}</td>
+            <td style="font-weight:500;font-size:.825rem">{{ s.name }}</td>
+            <td><span class="badge bg-{{ s.color }}" style="font-size:.65rem">{{ s.color }}</span></td>
+            <td style="color:var(--text-muted);font-size:.8rem">{{ s.order }}</td>
             <td>
               {% if s.is_final %}
-                <span class="badge bg-success">Да</span>
+              <span class="badge" style="background:#dcfce7;color:#15803d;font-size:.65rem">Финальный</span>
               {% else %}
-                <span class="text-muted">—</span>
+              <span style="color:var(--text-subtle);font-size:.8rem">—</span>
               {% endif %}
             </td>
             <td>
-              <form method="post" action="{{ url_for('project_status_delete', uuid=project.uuid, sid=s.id) }}"
+              <form method="post"
+                    action="{{ url_for('project_status_delete', uuid=project.uuid, sid=s.id) }}"
                     onsubmit="return confirm('Удалить статус «{{ s.name }}»?')">
-                <button type="submit" class="btn btn-sm btn-outline-danger">
-                  <i class="bi bi-trash"></i>
+                <button type="submit" class="btn-icon"
+                        style="width:28px;height:28px;color:#ef4444">
+                  <i class="bi bi-trash" style="font-size:.8rem"></i>
                 </button>
               </form>
             </td>
@@ -121,40 +134,43 @@
       </table>
     </div>
     {% else %}
-    <p class="text-muted">Нет статусов. Добавьте первый.</p>
-    {% endif %}
-
-    <div class="card mt-3">
-      <div class="card-header fw-semibold">Добавить статус</div>
-      <div class="card-body">
-        <form method="post" action="{{ url_for('project_status_add', uuid=project.uuid) }}">
-          <div class="row g-3 align-items-end">
-            <div class="col-md-4">
-              <label class="form-label">Название</label>
-              <input type="text" name="name" class="form-control" placeholder="Название статуса" required>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Цвет</label>
-              <select name="color" class="form-select">
-                {% for value, label in status_color_choices %}
-                  <option value="{{ value }}">{{ label }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-md-3 d-flex align-items-center gap-2 pt-3">
-              <input type="checkbox" name="is_final" id="is_final_check" class="form-check-input">
-              <label class="form-check-label" for="is_final_check">Финальный статус</label>
-            </div>
-            <div class="col-md-2">
-              <button type="submit" class="btn btn-success w-100">
-                <i class="bi bi-plus-lg me-1"></i>Добавить
-              </button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
+    <div class="py-4 text-center text-muted" style="font-size:.825rem">Нет статусов. Добавьте первый.</div>
     {% endif %}
   </div>
+
+  {# Add status #}
+  <div class="card-footer">
+    <form method="post" action="{{ url_for('project_status_add', uuid=project.uuid) }}">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label">Название</label>
+          <input type="text" name="name" class="form-control" placeholder="Название статуса" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Цвет</label>
+          <select name="color" class="form-select">
+            {% for value, label in status_color_choices %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3 d-flex align-items-center gap-2 pt-2">
+          <input type="checkbox" name="is_final" id="is_final_check" class="form-check-input m-0">
+          <label class="form-check-label" for="is_final_check" style="font-size:.8rem;cursor:pointer">
+            Финальный
+          </label>
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-sm btn-primary w-100">
+            <i class="bi bi-plus-lg me-1"></i>Добавить
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
 </div>
+{% endif %}
+
+</div>{# /col #}
+</div>{# /row #}
 {% endblock %}

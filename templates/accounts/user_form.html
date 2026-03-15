@@ -4,94 +4,110 @@
 {% block page_title %}{{ title }}{% endblock %}
 
 {% block content %}
+<div class="page-header">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{{ url_for('user_list') }}">Пользователи</a></li>
+      <li class="breadcrumb-item active">{{ title }}</li>
+    </ol>
+  </nav>
+</div>
+
 <div class="row justify-content-center">
-  <div class="col-lg-6">
-    <div class="card shadow-sm">
-      <div class="card-body p-4">
-        <form method="post" novalidate>
+<div class="col-lg-6">
+<div class="card">
+  <div class="card-header">{{ title }}</div>
+  <div class="card-body p-4">
+    <form method="post" novalidate>
 
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Логин</label>
-            <input type="text" name="username" class="form-control"
-                   value="{{ form_data.username if form_data else (edit_user.username if edit_user else '') }}">
-            {% if errors.username %}
-              <div class="invalid-feedback d-block">{{ errors.username }}</div>
-            {% endif %}
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Имя</label>
-            <input type="text" name="first_name" class="form-control"
-                   value="{{ form_data.first_name if form_data else (edit_user.first_name if edit_user else '') }}">
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Фамилия</label>
-            <input type="text" name="last_name" class="form-control"
-                   value="{{ form_data.last_name if form_data else (edit_user.last_name if edit_user else '') }}">
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Роль</label>
-            <select name="role" class="form-select">
-              {% for value, label in role_choices %}
-                <option value="{{ value }}"
-                  {% if form_data and form_data.role == value %}selected
-                  {% elif edit_user and edit_user.role == value %}selected{% endif %}>
-                  {{ label }}
-                </option>
-              {% endfor %}
-            </select>
-          </div>
-
-          {% if not edit_user %}
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Пароль</label>
-            <input type="password" name="password1" class="form-control">
-            {% if errors.password1 %}
-              <div class="invalid-feedback d-block">{{ errors.password1 }}</div>
-            {% endif %}
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Повторите пароль</label>
-            <input type="password" name="password2" class="form-control">
-            {% if errors.password2 %}
-              <div class="invalid-feedback d-block">{{ errors.password2 }}</div>
-            {% endif %}
-          </div>
-          {% endif %}
-
-          <div class="mb-3">
-            <label class="form-label fw-semibold">
-              <i class="bi bi-telegram me-1 text-primary"></i>Telegram ID
-            </label>
-            <input type="number" name="telegram_id" class="form-control"
-                   value="{{ form_data.telegram_id if form_data else (edit_user.telegram_id if edit_user and edit_user.telegram_id else '') }}"
-                   placeholder="Числовой ID пользователя в Telegram">
-            <div class="form-text">
-              Числовой Telegram ID пользователя. Узнать можно у бота @userinfobot.
-            </div>
-          </div>
-
-          {% if edit_user %}
-          <div class="mb-3 form-check">
-            <input type="checkbox" name="is_active" class="form-check-input" id="id_is_active"
-                   {% if edit_user.is_active %}checked{% endif %}>
-            <label class="form-check-label" for="id_is_active">Активен</label>
-          </div>
-          {% endif %}
-
-          <div class="d-flex gap-2 mt-4">
-            <button type="submit" class="btn btn-primary">
-              <i class="bi bi-save me-1"></i>Сохранить
-            </button>
-            <a href="{{ url_for('user_list') }}" class="btn btn-outline-secondary">
-              Отмена
-            </a>
-          </div>
-        </form>
+      <div class="mb-4">
+        <label class="form-label">Логин</label>
+        <input type="text" name="username" class="form-control"
+               placeholder="username"
+               value="{{ form_data.username if form_data else (edit_user.username if edit_user else '') }}"
+               autocomplete="username">
+        {% if errors.username %}
+        <div class="invalid-feedback d-block">{{ errors.username }}</div>
+        {% endif %}
       </div>
-    </div>
+
+      <div class="row g-4 mb-4">
+        <div class="col-md-6">
+          <label class="form-label">Имя</label>
+          <input type="text" name="first_name" class="form-control"
+                 placeholder="Имя"
+                 value="{{ form_data.first_name if form_data else (edit_user.first_name if edit_user else '') }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Фамилия</label>
+          <input type="text" name="last_name" class="form-control"
+                 placeholder="Фамилия"
+                 value="{{ form_data.last_name if form_data else (edit_user.last_name if edit_user else '') }}">
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label">Роль</label>
+        <select name="role" class="form-select">
+          {% for value, label in role_choices %}
+          <option value="{{ value }}"
+            {% if form_data and form_data.role == value %}selected
+            {% elif edit_user and edit_user.role == value %}selected{% endif %}>
+            {{ label }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {% if not edit_user %}
+      <div class="row g-4 mb-4">
+        <div class="col-md-6">
+          <label class="form-label">Пароль</label>
+          <input type="password" name="password1" class="form-control"
+                 placeholder="Введите пароль" autocomplete="new-password">
+          {% if errors.password1 %}
+          <div class="invalid-feedback d-block">{{ errors.password1 }}</div>
+          {% endif %}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Повторите пароль</label>
+          <input type="password" name="password2" class="form-control"
+                 placeholder="Повторите пароль" autocomplete="new-password">
+          {% if errors.password2 %}
+          <div class="invalid-feedback d-block">{{ errors.password2 }}</div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="mb-4">
+        <label class="form-label">
+          <i class="bi bi-telegram me-1" style="color:#2AABEE"></i>Telegram ID
+        </label>
+        <input type="number" name="telegram_id" class="form-control"
+               placeholder="Числовой ID"
+               value="{{ form_data.telegram_id if form_data else (edit_user.telegram_id if edit_user and edit_user.telegram_id else '') }}">
+        <div class="form-text">Числовой Telegram ID. Узнать можно у бота @userinfobot</div>
+      </div>
+
+      {% if edit_user %}
+      <div class="mb-4 d-flex align-items-center gap-2">
+        <input type="checkbox" name="is_active" class="form-check-input m-0" id="id_is_active"
+               {% if edit_user.is_active %}checked{% endif %}>
+        <label class="form-check-label" for="id_is_active"
+               style="font-size:.825rem;cursor:pointer">Активен</label>
+      </div>
+      {% endif %}
+
+      <div class="d-flex gap-2 pt-3 border-top">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg me-1"></i>Сохранить
+        </button>
+        <a href="{{ url_for('user_list') }}" class="btn btn-ghost">Отмена</a>
+      </div>
+    </form>
   </div>
+</div>
+</div>
 </div>
 {% endblock %}

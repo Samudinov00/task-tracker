@@ -5,90 +5,108 @@
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-lg-6">
+<div class="col-lg-6">
 
-    <!-- Профиль -->
-    <div class="card shadow-sm mb-4">
-      <div class="card-body p-4">
-        <div class="text-center mb-4">
-          <div class="avatar-lg avatar-initials mx-auto mb-2">{{ user.get_initials() }}</div>
-          <div class="fw-semibold">{{ user.get_display_name() }}</div>
-          <span class="badge
-            {% if user.is_manager() %}bg-danger
-            {% elif user.is_executor() %}bg-primary
-            {% else %}bg-success{% endif %}">
+  {# Profile card #}
+  <div class="card mb-4">
+    <div class="card-header">
+      <i class="bi bi-person-circle me-2 text-muted"></i>Личные данные
+    </div>
+    <div class="card-body p-4">
+
+      {# Avatar + name #}
+      <div class="d-flex align-items-center gap-4 mb-5">
+        <div class="avatar-xl avatar-initials">{{ user.get_initials() }}</div>
+        <div>
+          <div class="fw-bold" style="font-size:1.05rem">{{ user.get_display_name() }}</div>
+          <div class="text-muted mb-2" style="font-size:.8rem">@{{ user.username }}</div>
+          <span class="badge" style="font-size:.7rem;{% if user.is_manager() %}background:#fee2e2;color:#b91c1c{% elif user.is_executor() %}background:#eef2ff;color:#4338ca{% else %}background:#f0fdf4;color:#15803d{% endif %}">
             {{ user.get_role_display() }}
           </span>
         </div>
+      </div>
 
-        <form method="post" novalidate>
-          <div class="mb-3">
+      <form method="post" novalidate>
+        <div class="row g-4 mb-4">
+          <div class="col-md-6">
             <label class="form-label">Имя</label>
             <input type="text" name="first_name" class="form-control"
-                   value="{{ user.first_name or '' }}">
+                   placeholder="Имя" value="{{ user.first_name or '' }}">
             {% if errors.first_name %}
-              <div class="invalid-feedback d-block">{{ errors.first_name }}</div>
+            <div class="invalid-feedback d-block">{{ errors.first_name }}</div>
             {% endif %}
           </div>
-          <div class="mb-3">
+          <div class="col-md-6">
             <label class="form-label">Фамилия</label>
             <input type="text" name="last_name" class="form-control"
-                   value="{{ user.last_name or '' }}">
+                   placeholder="Фамилия" value="{{ user.last_name or '' }}">
             {% if errors.last_name %}
-              <div class="invalid-feedback d-block">{{ errors.last_name }}</div>
+            <div class="invalid-feedback d-block">{{ errors.last_name }}</div>
             {% endif %}
           </div>
-          <div class="mb-3">
-            <label class="form-label">Telegram username</label>
-            <div class="input-group">
-              <span class="input-group-text">@</span>
-              <input type="text" name="telegram_username" class="form-control"
-                     placeholder="username" value="{{ user.telegram_username or '' }}">
-            </div>
-            <div class="form-text">Нужен для входа через Telegram</div>
-          </div>
-          <button type="submit" name="save_profile" value="1" class="btn btn-primary w-100">
-            <i class="bi bi-save me-1"></i>Сохранить
-          </button>
-        </form>
-      </div>
-    </div>
+        </div>
 
-    <!-- Смена пароля -->
-    <div class="card shadow-sm">
-      <div class="card-header">
-        <h6 class="mb-0"><i class="bi bi-lock me-2"></i>Изменить пароль</h6>
-      </div>
-      <div class="card-body p-4">
-        <form method="post" novalidate>
-          <div class="mb-3">
-            <label class="form-label">Текущий пароль</label>
-            <input type="password" name="old_password" class="form-control">
-            {% if password_errors.old_password %}
-              <div class="invalid-feedback d-block">{{ password_errors.old_password }}</div>
-            {% endif %}
+        <div class="mb-4">
+          <label class="form-label">
+            <i class="bi bi-telegram me-1" style="color:#2AABEE"></i>Telegram username
+          </label>
+          <div class="input-group">
+            <span class="input-group-text" style="font-size:.825rem;color:var(--text-muted)">@</span>
+            <input type="text" name="telegram_username" class="form-control"
+                   placeholder="username" value="{{ user.telegram_username or '' }}">
           </div>
-          <div class="mb-3">
-            <label class="form-label">Новый пароль</label>
-            <input type="password" name="new_password1" class="form-control">
-            {% if password_errors.new_password1 %}
-              <div class="invalid-feedback d-block">{{ password_errors.new_password1 }}</div>
-            {% endif %}
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Повторите новый пароль</label>
-            <input type="password" name="new_password2" class="form-control">
-            {% if password_errors.new_password2 %}
-              <div class="invalid-feedback d-block">{{ password_errors.new_password2 }}</div>
-            {% endif %}
-          </div>
-          <button type="submit" name="save_password" value="1" class="btn btn-outline-primary w-100">
-            <i class="bi bi-key me-1"></i>Изменить пароль
-          </button>
-        </form>
-      </div>
-    </div>
+          <div class="form-text">Нужен для входа через Telegram</div>
+        </div>
 
+        <button type="submit" name="save_profile" value="1" class="btn btn-primary w-100">
+          <i class="bi bi-check-lg me-1"></i>Сохранить изменения
+        </button>
+      </form>
+    </div>
   </div>
+
+  {# Password card #}
+  <div class="card">
+    <div class="card-header">
+      <i class="bi bi-lock me-2 text-muted"></i>Изменить пароль
+    </div>
+    <div class="card-body p-4">
+      <form method="post" novalidate>
+        <div class="mb-4">
+          <label class="form-label">Текущий пароль</label>
+          <input type="password" name="old_password" class="form-control"
+                 placeholder="Введите текущий пароль" autocomplete="current-password">
+          {% if password_errors.old_password %}
+          <div class="invalid-feedback d-block">{{ password_errors.old_password }}</div>
+          {% endif %}
+        </div>
+        <div class="row g-4 mb-4">
+          <div class="col-md-6">
+            <label class="form-label">Новый пароль</label>
+            <input type="password" name="new_password1" class="form-control"
+                   placeholder="Новый пароль" autocomplete="new-password">
+            {% if password_errors.new_password1 %}
+            <div class="invalid-feedback d-block">{{ password_errors.new_password1 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Повторите пароль</label>
+            <input type="password" name="new_password2" class="form-control"
+                   placeholder="Повторите пароль" autocomplete="new-password">
+            {% if password_errors.new_password2 %}
+            <div class="invalid-feedback d-block">{{ password_errors.new_password2 }}</div>
+            {% endif %}
+          </div>
+        </div>
+        <button type="submit" name="save_password" value="1"
+                class="btn w-100"
+                style="background:var(--surface-2);border:1px solid var(--border);color:var(--text-2)">
+          <i class="bi bi-key me-1"></i>Изменить пароль
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div>
 </div>
 {% endblock %}
