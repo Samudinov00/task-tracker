@@ -2,7 +2,7 @@
  * notifications.js — колокольчик уведомлений в шапке
  *
  * Каждые 30 секунд запрашивает количество непрочитанных уведомлений.
- * При клике на колокольчик загружает список последних.
+ * Синхронизирует десктопный и мобильный колокольчики.
  */
 
 (function () {
@@ -18,31 +18,37 @@
     return '';
   }
 
-  const badge    = document.getElementById('notifBadge');
-  const listEl   = document.getElementById('notifList');
-  const bellBtn  = document.getElementById('bellBtn');
-  const markBtn  = document.getElementById('markAllReadBtn');
+  // Ссылки на десктопный и мобильный варианты
+  const badges   = [document.getElementById('notifBadge'), document.getElementById('notifBadgeMob')].filter(Boolean);
+  const listEls  = { desk: document.getElementById('notifList'), mob: document.getElementById('notifListMob') };
+  const bellBtns = [document.getElementById('bellBtn'), document.getElementById('bellBtnMob')].filter(Boolean);
+  const markBtns = [document.getElementById('markAllReadBtn'), document.getElementById('markAllReadBtnMob')].filter(Boolean);
 
-  if (!badge) return; // Вне авторизованной зоны
+  if (badges.length === 0) return; // Вне авторизованной зоны
 
-  // ── Обновить бейдж ────────────────────────────────────────────
+  // ── Обновить все бейджи ───────────────────────────────────────
   function updateBadge() {
     fetch('/notifications/count/', { credentials: 'same-origin' })
       .then(r => r.json())
       .then(data => {
         const count = data.count || 0;
-        if (count > 0) {
-          badge.textContent = count > 99 ? '99+' : count;
-          badge.classList.remove('d-none');
-        } else {
-          badge.classList.add('d-none');
-        }
+        const txt   = count > 99 ? '99+' : String(count);
+        badges.forEach(b => {
+          if (count > 0) { b.textContent = txt; b.classList.remove('d-none'); }
+          else           { b.classList.add('d-none'); }
+        });
       })
       .catch(() => {});
   }
 
-  // ── Загрузить последние уведомления в дропдаун ───────────────
-  function loadRecent() {
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // ── Загрузить последние уведомления в указанный список ───────
+  function loadRecent(listEl) {
     if (!listEl) return;
     listEl.innerHTML = '<div class="text-center text-muted py-3 small">Загрузка…</div>';
 
@@ -64,8 +70,7 @@
             </div>
           </div>
         `).join('');
-        // После просмотра сбросить бейдж
-        badge.classList.add('d-none');
+        badges.forEach(b => b.classList.add('d-none'));
       })
       .catch(() => {
         listEl.innerHTML =
@@ -73,17 +78,9 @@
       });
   }
 
-  function escHtml(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
-
-  // ── Кнопка «Прочитать все» ────────────────────────────────────
-  if (markBtn) {
-    markBtn.addEventListener('click', function (e) {
+  // ── Кнопки «Прочитать все» ────────────────────────────────────
+  markBtns.forEach(btn => {
+    btn.addEventListener('click', function (e) {
       e.stopPropagation();
       fetch('/notifications/mark-all-read/', {
         method: 'POST',
@@ -91,20 +88,21 @@
         headers: { 'X-CSRFToken': getCsrf() },
       })
       .then(() => {
-        badge.classList.add('d-none');
-        if (listEl) {
-          listEl.innerHTML =
+        badges.forEach(b => b.classList.add('d-none'));
+        Object.values(listEls).forEach(el => {
+          if (el) el.innerHTML =
             '<div class="text-center text-muted py-3 small">Новых уведомлений нет</div>';
-        }
+        });
       })
       .catch(() => {});
     });
-  }
+  });
 
-  // ── При открытии дропдауна — загрузить список ─────────────────
-  if (bellBtn) {
-    bellBtn.addEventListener('show.bs.dropdown', loadRecent);
-  }
+  // ── При открытии дропдаунов — загрузить список ───────────────
+  const bellBtnDesk = document.getElementById('bellBtn');
+  const bellBtnMob  = document.getElementById('bellBtnMob');
+  if (bellBtnDesk) bellBtnDesk.addEventListener('show.bs.dropdown', () => loadRecent(listEls.desk));
+  if (bellBtnMob)  bellBtnMob.addEventListener('show.bs.dropdown',  () => loadRecent(listEls.mob));
 
   // ── Первичный запрос + интервал ───────────────────────────────
   updateBadge();

@@ -121,15 +121,41 @@
   {# Topbar #}
   <header class="topbar">
 
-    {# Mobile (<768px): burger | title | avatar #}
-    <div class="topbar-mobile d-flex d-md-none align-items-center w-100" style="gap:.25rem">
-      <a href="{{ url_for('profile') }}" class="btn-icon flex-shrink-0" title="Профиль">
-        <i class="bi bi-list" style="font-size:1.2rem"></i>
+    {# Mobile (<768px): logo | title | bell + avatar #}
+    <div class="topbar-mobile d-flex d-md-none align-items-center w-100" style="gap:.375rem">
+      <a href="{{ url_for('home') }}" class="topbar-logo-btn flex-shrink-0" aria-label="Главная">
+        <div class="sidebar-brand-icon" style="width:30px;height:30px;font-size:.9rem">
+          <i class="bi bi-kanban-fill"></i>
+        </div>
       </a>
-      <span class="topbar-title text-center flex-grow-1 px-1">{% block page_title %}{% endblock %}</span>
-      <a href="{{ url_for('profile') }}" class="btn-icon flex-shrink-0" aria-label="Профиль">
-        <div class="avatar-xs avatar-initials">{{ user.get_initials() }}</div>
-      </a>
+      <span class="topbar-title flex-grow-1 px-1 text-truncate">{% block page_title %}{% endblock %}</span>
+      <div class="d-flex align-items-center gap-1 flex-shrink-0">
+        <div class="dropdown">
+          <button class="btn-icon position-relative" id="bellBtnMob"
+                  data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                  data-bs-display="static" aria-expanded="false" aria-label="Уведомления">
+            <i class="bi bi-bell" style="font-size:1.05rem"></i>
+            <span class="notif-badge d-none" id="notifBadgeMob">0</span>
+          </button>
+          <div class="dropdown-menu dropdown-menu-end notif-dropdown p-0" id="notifDropdownMob">
+            <div class="notif-header px-3 py-2 d-flex justify-content-between align-items-center">
+              <span class="fw-semibold" style="font-size:.825rem">Уведомления</span>
+              <button class="btn btn-link btn-sm p-0 text-muted" id="markAllReadBtnMob"
+                      style="font-size:.775rem">Прочитать все</button>
+            </div>
+            <div id="notifListMob" class="notif-list">
+              <div class="text-center text-muted py-4" style="font-size:.825rem">Загрузка…</div>
+            </div>
+            <div class="notif-footer text-center py-2">
+              <a href="{{ url_for('notifications') }}" class="btn btn-link btn-sm"
+                 style="font-size:.775rem">Все уведомления</a>
+            </div>
+          </div>
+        </div>
+        <a href="{{ url_for('profile') }}" class="btn-icon" aria-label="Профиль">
+          <div class="avatar-xs avatar-initials">{{ user.get_initials() }}</div>
+        </a>
+      </div>
     </div>
 
     {# Desktop/Tablet (≥768px) #}
@@ -362,17 +388,26 @@
   });
 
   const notifBackdrop = document.getElementById('notifBackdrop');
-  const bellBtn       = document.getElementById('bellBtn');
-  if (bellBtn && notifBackdrop) {
-    bellBtn.addEventListener('show.bs.dropdown', function () {
-      if (isMobile()) { notifBackdrop.classList.add('show'); document.body.classList.add('notif-open'); }
+
+  function bindBellDropdown(bellBtnId) {
+    const btn = document.getElementById(bellBtnId);
+    if (!btn || !notifBackdrop) return;
+    btn.addEventListener('show.bs.dropdown', function () {
+      notifBackdrop.classList.add('show'); document.body.classList.add('notif-open');
     });
-    bellBtn.addEventListener('hide.bs.dropdown', function () {
+    btn.addEventListener('hide.bs.dropdown', function () {
       notifBackdrop.classList.remove('show'); document.body.classList.remove('notif-open');
     });
+  }
+  bindBellDropdown('bellBtn');
+  bindBellDropdown('bellBtnMob');
+
+  if (notifBackdrop) {
     notifBackdrop.addEventListener('click', function () {
-      const dd = bootstrap.Dropdown.getInstance(bellBtn);
-      if (dd) dd.hide();
+      ['bellBtn', 'bellBtnMob'].forEach(function (id) {
+        const el = document.getElementById(id);
+        if (el) { const dd = bootstrap.Dropdown.getInstance(el); if (dd) dd.hide(); }
+      });
     });
   }
 
