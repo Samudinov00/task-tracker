@@ -208,8 +208,12 @@
     <i class="bi bi-people-fill"></i>
     <span>Команда</span>
   </a>
-  {% endif %}
-
+  <a href="{{ url_for('analytics') }}"
+     class="bottom-tab-item {% if request.url.path == '/analytics/' %}active{% endif %}">
+    <i class="bi bi-bar-chart-fill"></i>
+    <span>Аналитика</span>
+  </a>
+  {% else %}
   <a href="{{ url_for('notifications') }}"
      class="bottom-tab-item position-relative {% if '/notifications' in request.url.path %}active{% endif %}">
     <i class="bi bi-bell-fill"></i>
@@ -218,6 +222,7 @@
     <span class="bottom-tab-badge-dot">{{ unread_notifications_count }}</span>
     {% endif %}
   </a>
+  {% endif %}
 
   <a href="{{ url_for('profile') }}"
      class="bottom-tab-item {% if request.url.path == '/accounts/profile/' %}active{% endif %}">

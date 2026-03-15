@@ -1010,4 +1010,9 @@ textarea.form-control-autogrow {
   /* CSS-страховка: даже если body.sidebar-open добавится через JS */
   body.sidebar-open .sidebar-backdrop { display: none !important; }
   body.sidebar-open { overflow: initial !important; }
+
+  /* Заголовок по центру между иконкой меню и аватаром */
+  .topbar-title {
+    text-align: center;
+  }
 }
