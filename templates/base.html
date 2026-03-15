@@ -87,7 +87,13 @@
 
       <span class="topbar-title">{% block page_title %}{% endblock %}</span>
 
-      <div class="ms-auto d-flex align-items-center gap-2">
+      {# Таймер сессии на мобильном — всегда виден в топбаре, не прятать в dropdown #}
+      <span class="session-timer-topbar-mobile d-lg-none text-muted ms-auto" id="sessionTimerTopbarMobile"
+            style="font-size:.72rem;white-space:nowrap;font-variant-numeric:tabular-nums">
+        <i class="bi bi-clock me-1"></i><span id="sessionTimerTopbarMobileVal">30:00</span>
+      </span>
+
+      <div class="d-flex align-items-center gap-2">
 
         {# Колокольчик #}
         <div class="dropdown">
@@ -135,13 +141,7 @@
                 {{ user.get_role_display() }}
               </span>
             </li>
-            {# Таймер сессии — виден только на мобильном (на lg+ он в топбаре) #}
-            <li class="d-lg-none">
-              <span class="dropdown-item-text session-timer-mobile" id="sessionTimerMobile">
-                <i class="bi bi-clock me-1"></i>
-                <span id="sessionTimerMobileVal">30:00</span>
-              </span>
-            </li>
+            {# Таймер сессии в dropdown удалён: теперь он постоянно виден в топбаре на мобильном #}
             <li><hr class="dropdown-divider my-1"></li>
             <li>
               <a class="dropdown-item" href="{{ url_for('profile') }}">
@@ -234,13 +234,32 @@
       updateToggleIcon();
     }
   }
-  toggle.addEventListener('touchend', onToggle, { passive: false });
-  toggle.addEventListener('click', onToggle);
+  /* Флаг предотвращает двойное срабатывание: на touch-устройствах после
+     touchend браузер генерирует синтетический click (~300ms спустя).
+     e.preventDefault() не всегда его подавляет на Android Chrome. */
+  let touchHandled = false;
+  toggle.addEventListener('touchend', function(e) {
+    touchHandled = true;
+    onToggle(e);
+    setTimeout(function() { touchHandled = false; }, 400);
+  }, { passive: false });
+  toggle.addEventListener('click', function(e) {
+    if (touchHandled) return;
+    onToggle(e);
+  });
 
   if (closeBtn) {
     function onClose(e) { e.preventDefault(); closeSidebar(); }
-    closeBtn.addEventListener('touchend', onClose, { passive: false });
-    closeBtn.addEventListener('click', onClose);
+    let closeTouchHandled = false;
+    closeBtn.addEventListener('touchend', function(e) {
+      closeTouchHandled = true;
+      onClose(e);
+      setTimeout(function() { closeTouchHandled = false; }, 400);
+    }, { passive: false });
+    closeBtn.addEventListener('click', function(e) {
+      if (closeTouchHandled) return;
+      onClose(e);
+    });
   }
 
   if (backdrop) {
@@ -297,13 +316,15 @@
   const WARN_SEC    = 5  * 60;
   const DEBOUNCE_MS = 10_000;
 
-  const timerEl       = document.getElementById('sessionTimer');
-  const timerMobileEl = document.getElementById('sessionTimerMobileVal');
-  const timerMobileWrap = document.getElementById('sessionTimerMobile');
+  const timerEl            = document.getElementById('sessionTimer');
+  const timerMobileEl      = document.getElementById('sessionTimerMobileVal');
+  const timerMobileWrap    = document.getElementById('sessionTimerMobile');
+  const timerTopbarMobileEl   = document.getElementById('sessionTimerTopbarMobileVal');
+  const timerTopbarMobileWrap = document.getElementById('sessionTimerTopbarMobile');
   const logoutUrl = '{{ url_for("logout") }}';
   const pingUrl   = '/session/ping/';
 
-  if (!timerEl && !timerMobileEl) return;
+  if (!timerEl && !timerMobileEl && !timerTopbarMobileEl) return;
 
   let remaining = TIMEOUT_SEC;
   let debounceId = null;
@@ -326,6 +347,14 @@
       timerMobileEl.textContent = txt;
       if (timerMobileWrap) {
         timerMobileWrap.classList.toggle('warn', remaining <= WARN_SEC);
+      }
+    }
+    if (timerTopbarMobileEl) {
+      timerTopbarMobileEl.textContent = txt;
+      if (timerTopbarMobileWrap) {
+        timerTopbarMobileWrap.style.color = remaining <= WARN_SEC
+          ? 'var(--bs-danger, #dc3545)'
+          : '';
       }
     }
   }

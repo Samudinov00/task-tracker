@@ -10,7 +10,10 @@
   .metric-card.green { border-color: #198754; }
   .metric-card.orange { border-color: #fd7e14; }
   .metric-card.red { border-color: #dc3545; }
-  .chart-container { position: relative; height: 300px; }
+  /* Mobile: компактная высота, desktop: полная */
+  .chart-container { position: relative; height: 220px; }
+  @media (min-width: 576px) { .chart-container { height: 280px; } }
+  @media (min-width: 992px) { .chart-container { height: 300px; } }
 </style>
 {% endblock %}
 
@@ -157,7 +160,8 @@ const CREATED_LABELS  = {{ created_labels_json | safe }};
 const CREATED_DATA    = {{ created_data_json | safe }};
 
 // ── Donut: задачи по статусам
-new Chart(document.getElementById('statusChart'), {
+// Легенда адаптируется при повороте устройства через ResizeObserver
+const statusChart = new Chart(document.getElementById('statusChart'), {
   type: 'doughnut',
   data: {
     labels: STATUS_LABELS,
@@ -175,6 +179,16 @@ new Chart(document.getElementById('statusChart'), {
     },
   },
 });
+// Обновляем позицию легенды при изменении размера (поворот устройства)
+if (window.ResizeObserver) {
+  new ResizeObserver(function() {
+    const pos = window.innerWidth < 576 ? 'bottom' : 'right';
+    if (statusChart.options.plugins.legend.position !== pos) {
+      statusChart.options.plugins.legend.position = pos;
+      statusChart.update();
+    }
+  }).observe(document.getElementById('statusChart'));
+}
 
 // ── Bar: задачи по приоритетам
 new Chart(document.getElementById('priorityChart'), {
