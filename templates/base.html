@@ -200,9 +200,14 @@
     if (isMobile() && document.body.classList.contains('sidebar-open')) {
       toggleIcon.className = 'bi bi-x-lg fs-5';
       toggle.title = 'Закрыть меню';
+    } else if (!isMobile()) {
+      toggleIcon.className = 'bi bi-list fs-5';
+      toggle.title = document.body.classList.contains('sidebar-collapsed')
+        ? 'Развернуть меню'
+        : 'Свернуть меню';
     } else {
       toggleIcon.className = 'bi bi-list fs-5';
-      toggle.title = 'Свернуть меню';
+      toggle.title = 'Открыть меню';
     }
   }
 
@@ -226,6 +231,7 @@
     } else {
       document.body.classList.toggle('sidebar-collapsed');
       localStorage.setItem('sidebar_collapsed', document.body.classList.contains('sidebar-collapsed'));
+      updateToggleIcon();
     }
   }
   toggle.addEventListener('touchend', onToggle, { passive: false });
@@ -239,17 +245,10 @@
 
   if (backdrop) {
     backdrop.addEventListener('click', closeSidebar);
-    backdrop.addEventListener('touchstart', function(e) {
-      const touch = e.touches[0];
-      this.style.pointerEvents = 'none';
-      const el = document.elementFromPoint(touch.clientX, touch.clientY);
-      this.style.pointerEvents = '';
+    backdrop.addEventListener('touchend', function(e) {
+      e.preventDefault();
       closeSidebar();
-      if (el && el !== this) {
-        const target = el.closest('button, a[href], input[type="submit"], [type="submit"]');
-        if (target) target.click();
-      }
-    }, { passive: true });
+    }, { passive: false });
   }
 
   document.querySelectorAll('.sidebar-link').forEach(link => {
@@ -286,6 +285,7 @@
   if (!isMobile() && localStorage.getItem('sidebar_collapsed') === 'true') {
     document.body.classList.add('sidebar-collapsed');
   }
+  updateToggleIcon();
 })();
 </script>
 {% if user %}
