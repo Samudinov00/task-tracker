@@ -18,199 +18,221 @@
 {% if user %}
 <div id="wrapper">
 
-{# ── Боковая панель ─────────────────────────────────────────────────────── #}
+{# ── Sidebar ────────────────────────────────────────────────── #}
 <nav class="sidebar" id="sidebar">
-    <div class="sidebar-brand">
-      <i class="bi bi-kanban-fill"></i>
-      <span>Менеджер задач</span>
-      <button class="btn btn-ghost btn-sm ms-auto d-lg-none" id="sidebarClose"
-              style="color:#94a3b8;padding:.25rem .375rem;margin-right:-.25rem" title="Закрыть">
-        <i class="bi bi-x-lg"></i>
-      </button>
-    </div>
 
-    <div class="sidebar-nav">
-      <div class="sidebar-section-label">Навигация</div>
+  {# Brand #}
+  <div class="sidebar-brand">
+    <div class="sidebar-brand-icon"><i class="bi bi-kanban-fill"></i></div>
+    <span class="sidebar-brand-name">TaskManager</span>
+    <button class="btn-icon d-lg-none ms-auto" id="sidebarClose" title="Закрыть">
+      <i class="bi bi-x-lg" style="font-size:.9rem"></i>
+    </button>
+  </div>
+
+  {# Navigation #}
+  <div class="sidebar-nav">
+
+    <div class="nav-section">
+      <div class="nav-section-label">Рабочее пространство</div>
+
+      <a href="{{ url_for('home') }}"
+         class="nav-link {% if request.url.path == '/' %}active{% endif %}">
+        <i class="bi bi-grid-1x2-fill"></i>
+        <span class="nav-link-label">Дашборд</span>
+      </a>
 
       <a href="{{ url_for('project_list') }}"
-         class="sidebar-link {% if '/p/' in request.url.path or '/board/' in request.url.path %}active{% endif %}">
-        <i class="bi bi-folder2-open"></i><span>Проекты</span>
+         class="nav-link {% if '/p/' in request.url.path or '/board/' in request.url.path %}active{% endif %}">
+        <i class="bi bi-folder2-open"></i>
+        <span class="nav-link-label">Проекты</span>
       </a>
-
-      {% if user.is_manager() %}
-      <a href="{{ url_for('user_list') }}"
-         class="sidebar-link {% if '/accounts/users' in request.url.path %}active{% endif %}">
-        <i class="bi bi-people-fill"></i><span>Пользователи</span>
-      </a>
-      <a href="{{ url_for('analytics') }}"
-         class="sidebar-link {% if request.url.path == '/analytics/' %}active{% endif %}">
-        <i class="bi bi-bar-chart-fill"></i><span>Аналитика</span>
-      </a>
-      <a href="{{ url_for('status_logs') }}"
-         class="sidebar-link {% if request.url.path == '/logs/' %}active{% endif %}">
-        <i class="bi bi-journal-text"></i><span>Логи статусов</span>
-      </a>
-      {% endif %}
 
       <a href="{{ url_for('notifications') }}"
-         class="sidebar-link {% if '/notifications' in request.url.path %}active{% endif %}">
-        <i class="bi bi-bell-fill"></i>
-        <span>Уведомления</span>
+         class="nav-link {% if '/notifications' in request.url.path %}active{% endif %}">
+        <i class="bi bi-bell"></i>
+        <span class="nav-link-label">Уведомления</span>
         {% if (unread_notifications_count | default(0)) > 0 %}
-        <span class="badge bg-danger rounded-pill ms-auto">{{ unread_notifications_count }}</span>
+        <span class="nav-link-badge">{{ unread_notifications_count }}</span>
         {% endif %}
       </a>
+    </div>
 
-      <hr class="sidebar-divider">
+    {% if user.is_manager() %}
+    <div class="nav-section">
+      <div class="nav-section-label">Управление</div>
 
-      <div class="sidebar-section-label">Аккаунт</div>
-
-      <a href="{{ url_for('profile') }}"
-         class="sidebar-link {% if request.url.path == '/accounts/profile/' %}active{% endif %}">
-        <i class="bi bi-person-circle"></i><span>Профиль</span>
+      <a href="{{ url_for('user_list') }}"
+         class="nav-link {% if '/accounts/users' in request.url.path %}active{% endif %}">
+        <i class="bi bi-people"></i>
+        <span class="nav-link-label">Пользователи</span>
       </a>
 
-      <a href="{{ url_for('logout') }}" class="sidebar-link text-danger-soft">
-        <i class="bi bi-box-arrow-left"></i><span>Выход</span>
+      <a href="{{ url_for('analytics') }}"
+         class="nav-link {% if request.url.path == '/analytics/' %}active{% endif %}">
+        <i class="bi bi-bar-chart"></i>
+        <span class="nav-link-label">Аналитика</span>
+      </a>
+
+      <a href="{{ url_for('status_logs') }}"
+         class="nav-link {% if request.url.path == '/logs/' %}active{% endif %}">
+        <i class="bi bi-journal-text"></i>
+        <span class="nav-link-label">Логи</span>
       </a>
     </div>
-  </nav>
+    {% endif %}
+
+    <div class="nav-section">
+      <div class="nav-section-label">Аккаунт</div>
+
+      <a href="{{ url_for('profile') }}"
+         class="nav-link {% if request.url.path == '/accounts/profile/' %}active{% endif %}">
+        <i class="bi bi-person-circle"></i>
+        <span class="nav-link-label">Профиль</span>
+      </a>
+
+      <a href="{{ url_for('logout') }}" class="nav-link nav-link-danger">
+        <i class="bi bi-box-arrow-left"></i>
+        <span class="nav-link-label">Выход</span>
+      </a>
+    </div>
+
+  </div>
+
+  {# User card at bottom #}
+  <div class="sidebar-footer">
+    <a href="{{ url_for('profile') }}" class="sidebar-user text-decoration-none">
+      <div class="avatar-xs avatar-initials flex-shrink-0">{{ user.get_initials() }}</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name">{{ user.get_display_name() }}</div>
+        <div class="sidebar-user-role">{{ user.get_role_display() }}</div>
+      </div>
+    </a>
+  </div>
+
+</nav>
 
 <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 <div class="notif-backdrop" id="notifBackdrop"></div>
 
-{# ── Основной контент ───────────────────────────────────────────────────── #}
+{# ── Main content wrapper ───────────────────────────────────── #}
 <div id="page-content-wrapper">
 
-    {# Топ-бар #}
-    <header class="topbar">
+  {# Topbar #}
+  <header class="topbar">
 
-      {# ═══ Мобильная шапка (<768px): ТОЛЬКО иконка | заголовок | аватар ═══ #}
-      {# Отдельный div без каких-либо скрытых элементов — ничего лишнего #}
-      <div class="topbar-mobile d-flex d-md-none align-items-center w-100">
-        <a href="{{ url_for('profile') }}"
-           class="btn btn-sm btn-ghost flex-shrink-0"
-           style="width:44px;justify-content:center"
-           title="Меню">
-          <i class="bi bi-list fs-5"></i>
-        </a>
-        <span class="topbar-title text-center flex-grow-1 px-2">{% block page_title %}{% endblock %}</span>
-        <a href="{{ url_for('profile') }}"
-           class="btn btn-ghost btn-sm flex-shrink-0 d-flex align-items-center justify-content-center"
-           style="width:44px"
-           aria-label="Профиль">
-          <div class="avatar-xs avatar-initials">{{ user.get_initials() }}</div>
-        </a>
-      </div>
-
-      {# ═══ Планшет/Десктоп (≥768px) ═══ #}
-      {# Десктопный toggle сайдбара (≥992px) #}
-      <button class="btn btn-sm btn-ghost d-none d-lg-flex align-items-center" id="sidebarToggle" title="Свернуть меню">
-        <i class="bi bi-list fs-5" id="sidebarToggleIcon"></i>
-      </button>
-
-      {# Заголовок — только на планшете/десктопе (мобильный заголовок выше) #}
-      <span class="topbar-title d-none d-md-block">{{ self.page_title() }}</span>
-
-      {# Таймер сессии — только на планшете (768-991px) #}
-      <span class="session-timer-topbar-mobile d-none d-md-inline d-lg-none text-muted ms-auto" id="sessionTimerTopbarMobile"
-            style="font-size:.72rem;white-space:nowrap;font-variant-numeric:tabular-nums">
-        <i class="bi bi-clock me-1"></i><span id="sessionTimerTopbarMobileVal">30:00</span>
-      </span>
-
-      {# Правый блок: колокол + аватар/меню — только планшет/десктоп #}
-      <div class="d-none d-md-flex align-items-center gap-2">
-
-        {# Колокольчик #}
-        <div class="dropdown">
-          <button class="btn btn-ghost btn-sm position-relative" id="bellBtn"
-                  data-bs-toggle="dropdown" data-bs-auto-close="outside"
-                  data-bs-display="static"
-                  aria-expanded="false">
-            <i class="bi bi-bell fs-5"></i>
-            <span class="notif-badge d-none" id="notifBadge">0</span>
-          </button>
-          <div class="dropdown-menu dropdown-menu-end notif-dropdown shadow-lg p-0"
-               id="notifDropdown">
-            <div class="notif-header px-3 py-2 d-flex justify-content-between align-items-center">
-              <span class="fw-semibold">Уведомления</span>
-              <button class="btn btn-link btn-sm p-0 text-muted" id="markAllReadBtn">
-                Прочитать все
-              </button>
-            </div>
-            <div id="notifList" class="notif-list">
-              <div class="text-center text-muted py-3 small">Загрузка…</div>
-            </div>
-            <div class="notif-footer text-center py-2">
-              <a href="{{ url_for('notifications') }}" class="btn btn-link btn-sm">
-                Все уведомления
-              </a>
-            </div>
-          </div>
-        </div>
-
-        {# Планшет: аватар — прямая ссылка (нет сайдбара) #}
-        <a href="{{ url_for('profile') }}"
-           class="btn btn-ghost btn-sm d-md-flex d-lg-none align-items-center"
-           aria-label="Профиль">
-          <div class="avatar-xs avatar-initials">{{ user.get_initials() }}</div>
-        </a>
-
-        {# Десктоп: полное меню с именем, таймером и dropdown #}
-        <div class="dropdown d-none d-lg-block">
-          <button class="btn btn-ghost btn-sm d-flex align-items-center gap-2"
-                  data-bs-toggle="dropdown" data-bs-display="static">
-            <div class="avatar-xs avatar-initials">{{ user.get_initials() }}</div>
-            <div class="d-flex flex-column align-items-start lh-1">
-              <span style="font-size:.875rem">{{ user.get_display_name() }}</span>
-              <span id="sessionTimer" class="text-muted" style="font-size:.68rem">30:00</span>
-            </div>
-            <i class="bi bi-chevron-down small"></i>
-          </button>
-          <ul class="dropdown-menu dropdown-menu-end shadow">
-            <li>
-              <span class="dropdown-item-text text-muted small">
-                {{ user.get_role_display() }}
-              </span>
-            </li>
-            <li><hr class="dropdown-divider my-1"></li>
-            <li>
-              <a class="dropdown-item" href="{{ url_for('profile') }}">
-                <i class="bi bi-person me-2"></i>Профиль
-              </a>
-            </li>
-            <li>
-              <a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
-                <i class="bi bi-box-arrow-left me-2"></i>Выход
-              </a>
-            </li>
-          </ul>
-        </div>
-
-      </div>{# /d-none d-md-flex #}
-    </header>
-
-    {# Flash-сообщения #}
-    <div class="px-3 px-md-4 pt-3">
-      {% for message in get_flashed_messages(request) %}
-        <div class="alert alert-{{ message.tags or 'info' }} alert-dismissible fade show" role="alert">
-          {{ message.message }}
-          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-      {% endfor %}
+    {# Mobile (<768px): burger | title | avatar #}
+    <div class="topbar-mobile d-flex d-md-none align-items-center w-100" style="gap:.25rem">
+      <a href="{{ url_for('profile') }}" class="btn-icon flex-shrink-0" title="Профиль">
+        <i class="bi bi-list" style="font-size:1.2rem"></i>
+      </a>
+      <span class="topbar-title text-center flex-grow-1 px-1">{% block page_title %}{% endblock %}</span>
+      <a href="{{ url_for('profile') }}" class="btn-icon flex-shrink-0" aria-label="Профиль">
+        <div class="avatar-xs avatar-initials">{{ user.get_initials() }}</div>
+      </a>
     </div>
 
-    {# Контент страницы #}
-    <main class="page-content">
-      {% block content %}{% endblock %}
-    </main>
-  </div>{# /page-content-wrapper #}
+    {# Desktop/Tablet (≥768px) #}
+    <button class="btn-icon d-none d-lg-flex" id="sidebarToggle" title="Свернуть меню">
+      <i class="bi bi-list" style="font-size:1.2rem" id="sidebarToggleIcon"></i>
+    </button>
 
-{# ── Bottom Tab Bar: только мобильный (< lg) ────────────────── #}
-<nav class="bottom-tab-bar d-lg-none" aria-label="Основная навигация">
+    <span class="topbar-title d-none d-md-block">{{ self.page_title() }}</span>
+
+    {# Tablet session timer #}
+    <span class="d-none d-md-inline d-lg-none text-muted ms-auto"
+          id="sessionTimerTopbarMobile"
+          style="font-size:.68rem;white-space:nowrap;font-variant-numeric:tabular-nums">
+      <i class="bi bi-clock me-1"></i><span id="sessionTimerTopbarMobileVal">30:00</span>
+    </span>
+
+    {# Right actions: bell + user — tablet/desktop only #}
+    <div class="d-none d-md-flex align-items-center ms-auto gap-1">
+
+      {# Notification bell #}
+      <div class="dropdown">
+        <button class="btn-icon position-relative" id="bellBtn"
+                data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                data-bs-display="static" aria-expanded="false">
+          <i class="bi bi-bell"></i>
+          <span class="notif-badge d-none" id="notifBadge">0</span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-end notif-dropdown p-0" id="notifDropdown">
+          <div class="notif-header px-3 py-2 d-flex justify-content-between align-items-center">
+            <span class="fw-semibold" style="font-size:.825rem">Уведомления</span>
+            <button class="btn btn-link btn-sm p-0 text-muted" id="markAllReadBtn"
+                    style="font-size:.775rem">Прочитать все</button>
+          </div>
+          <div id="notifList" class="notif-list">
+            <div class="text-center text-muted py-4" style="font-size:.825rem">Загрузка…</div>
+          </div>
+          <div class="notif-footer text-center py-2">
+            <a href="{{ url_for('notifications') }}" class="btn btn-link btn-sm"
+               style="font-size:.775rem">Все уведомления</a>
+          </div>
+        </div>
+      </div>
+
+      {# Tablet: avatar link #}
+      <a href="{{ url_for('profile') }}" class="btn-icon d-md-flex d-lg-none" aria-label="Профиль">
+        <div class="avatar-xs avatar-initials">{{ user.get_initials() }}</div>
+      </a>
+
+      {# Desktop: user dropdown #}
+      <div class="dropdown d-none d-lg-block">
+        <button class="topbar-user-btn" data-bs-toggle="dropdown" data-bs-display="static">
+          <div class="avatar-xs avatar-initials">{{ user.get_initials() }}</div>
+          <div class="d-flex flex-column align-items-start" style="line-height:1">
+            <span class="topbar-user-name">{{ user.get_display_name() }}</span>
+            <span id="sessionTimer" class="session-timer-text">30:00</span>
+          </div>
+          <i class="bi bi-chevron-down" style="font-size:.65rem;color:var(--text-subtle)"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li>
+            <span class="dropdown-item-text text-muted" style="font-size:.75rem">
+              {{ user.get_role_display() }}
+            </span>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="{{ url_for('profile') }}">
+            <i class="bi bi-person me-2"></i>Профиль
+          </a></li>
+          <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
+            <i class="bi bi-box-arrow-left me-2"></i>Выход
+          </a></li>
+        </ul>
+      </div>
+
+    </div>{# /d-none d-md-flex #}
+  </header>
+
+  {# Flash messages #}
+  {% set messages = get_flashed_messages(request) %}
+  {% if messages %}
+  <div class="px-3 pt-3" style="padding-left:1.5rem;padding-right:1.5rem">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags or 'info' }} alert-dismissible fade show" role="alert"
+         style="font-size:.825rem">
+      {{ message.message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# Page content #}
+  <main class="page-content">
+    {% block content %}{% endblock %}
+  </main>
+
+</div>{# /page-content-wrapper #}
+
+{# ── Mobile bottom tab bar ──────────────────────────────────── #}
+<nav class="bottom-tab-bar d-lg-none" aria-label="Навигация">
 
   <a href="{{ url_for('project_list') }}"
-     class="bottom-tab-item {% if '/p/' in request.url.path or '/board/' in request.url.path or request.url.path == '/' or '/projects' in request.url.path %}active{% endif %}">
+     class="bottom-tab-item {% if '/p/' in request.url.path or '/board/' in request.url.path or request.url.path == '/' %}active{% endif %}">
     <i class="bi bi-folder2-open"></i>
     <span>Проекты</span>
   </a>
@@ -218,18 +240,18 @@
   {% if user.is_manager() %}
   <a href="{{ url_for('user_list') }}"
      class="bottom-tab-item {% if '/accounts/users' in request.url.path %}active{% endif %}">
-    <i class="bi bi-people-fill"></i>
+    <i class="bi bi-people"></i>
     <span>Команда</span>
   </a>
   <a href="{{ url_for('analytics') }}"
      class="bottom-tab-item {% if request.url.path == '/analytics/' %}active{% endif %}">
-    <i class="bi bi-bar-chart-fill"></i>
+    <i class="bi bi-bar-chart"></i>
     <span>Аналитика</span>
   </a>
   {% else %}
   <a href="{{ url_for('notifications') }}"
      class="bottom-tab-item position-relative {% if '/notifications' in request.url.path %}active{% endif %}">
-    <i class="bi bi-bell-fill"></i>
+    <i class="bi bi-bell"></i>
     <span>Уведомления</span>
     {% if (unread_notifications_count | default(0)) > 0 %}
     <span class="bottom-tab-badge-dot">{{ unread_notifications_count }}</span>
@@ -248,13 +270,13 @@
 </div>{# /wrapper #}
 
 {% else %}
-  {# Страницы без авторизации (логин) #}
   {% block auth_content %}{% endblock %}
 {% endif %}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script src="{{ static('js/notifications.js') }}"></script>
+
 <script>
 (function () {
   const toggle     = document.getElementById('sidebarToggle');
@@ -269,55 +291,34 @@
 
   function updateToggleIcon() {
     if (!toggleIcon) return;
-    if (isMobile() && document.body.classList.contains('sidebar-open')) {
-      toggleIcon.className = 'bi bi-x-lg fs-5';
-      toggle.title = 'Закрыть меню';
-    } else if (!isMobile()) {
-      toggleIcon.className = 'bi bi-list fs-5';
-      toggle.title = document.body.classList.contains('sidebar-collapsed')
-        ? 'Развернуть меню'
-        : 'Свернуть меню';
-    } else {
-      toggleIcon.className = 'bi bi-list fs-5';
-      toggle.title = 'Открыть меню';
-    }
+    toggleIcon.className = document.body.classList.contains('sidebar-collapsed')
+      ? 'bi bi-layout-sidebar-inset'
+      : 'bi bi-list';
+    toggleIcon.style.fontSize = '1.2rem';
   }
 
-  /* justClosed предотвращает повторное открытие сайдбара сразу после закрытия.
-     На Android Chrome synthetic click может прийти через 300-500ms после touchend,
-     поэтому таймаут выставлен с запасом — 800ms. */
-  let justClosed = false;
-  let justClosedTimer = null;
+  let justClosed = false, justClosedTimer = null;
 
   function openSidebar() {
-    /* Ниже lg (<992px) сайдбар не открывается — нижняя панель заменяет его */
     if (window.innerWidth < 992) return;
     if (justClosed) return;
     document.body.classList.add('sidebar-open');
     updateToggleIcon();
-    /* Пушим состояние в History — кнопка «Назад» на Android закроет сайдбар */
     if (isMobile() && !(history.state && history.state.sidebarOpen === true)) {
       history.pushState({ sidebarOpen: true }, '');
     }
-    document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(function (el) {
-      var dd = bootstrap.Dropdown.getInstance(el);
-      if (dd) dd.hide();
-    });
   }
   function closeSidebar() {
     if (!document.body.classList.contains('sidebar-open')) return;
     document.body.classList.remove('sidebar-open');
     clearTimeout(justClosedTimer);
     justClosed = true;
-    justClosedTimer = setTimeout(function() { justClosed = false; }, 800);
+    justClosedTimer = setTimeout(function () { justClosed = false; }, 800);
     updateToggleIcon();
   }
 
-  /* Кнопка «Назад» на Android закрывает сайдбар вместо перехода назад */
-  window.addEventListener('popstate', function(e) {
-    if (document.body.classList.contains('sidebar-open')) {
-      closeSidebar();
-    }
+  window.addEventListener('popstate', function () {
+    if (document.body.classList.contains('sidebar-open')) closeSidebar();
   });
 
   function onToggle(e) {
@@ -330,92 +331,54 @@
       updateToggleIcon();
     }
   }
-  /* touchHandled предотвращает двойное срабатывание: на touch-устройствах после
-     touchstart/touchend браузер генерирует синтетический click (~300ms спустя).
-     Используем touchstart (не touchend) для немедленной реакции. */
+
   let touchHandled = false;
-  toggle.addEventListener('touchstart', function(e) {
-    e.preventDefault();
-    touchHandled = true;
-    onToggle(e);
-    setTimeout(function() { touchHandled = false; }, 800);
+  toggle.addEventListener('touchstart', function (e) {
+    e.preventDefault(); touchHandled = true; onToggle(e);
+    setTimeout(function () { touchHandled = false; }, 800);
   }, { passive: false });
-  toggle.addEventListener('click', function(e) {
-    if (touchHandled) return;
-    onToggle(e);
-  });
+  toggle.addEventListener('click', function (e) { if (!touchHandled) onToggle(e); });
 
   if (closeBtn) {
-    function onClose(e) { e.preventDefault(); closeSidebar(); }
-    let closeTouchHandled = false;
-    closeBtn.addEventListener('touchstart', function(e) {
-      e.preventDefault();
-      closeTouchHandled = true;
-      onClose(e);
-      setTimeout(function() { closeTouchHandled = false; }, 800);
+    let ct = false;
+    closeBtn.addEventListener('touchstart', function (e) {
+      e.preventDefault(); ct = true; closeSidebar();
+      setTimeout(function () { ct = false; }, 800);
     }, { passive: false });
-    closeBtn.addEventListener('click', function(e) {
-      if (closeTouchHandled) return;
-      onClose(e);
-    });
+    closeBtn.addEventListener('click', function (e) { if (!ct) { e.preventDefault(); closeSidebar(); } });
   }
 
   if (backdrop) {
-    /* touchstart вместо touchend: реагируем немедленно, e.preventDefault()
-       гарантированно блокирует все последующие события (touchend, click). */
-    let backdropTouchHandled = false;
-    backdrop.addEventListener('touchstart', function(e) {
-      e.preventDefault();
-      backdropTouchHandled = true;
-      closeSidebar();
-      setTimeout(function() { backdropTouchHandled = false; }, 800);
+    let bt = false;
+    backdrop.addEventListener('touchstart', function (e) {
+      e.preventDefault(); bt = true; closeSidebar();
+      setTimeout(function () { bt = false; }, 800);
     }, { passive: false });
-    backdrop.addEventListener('click', function() {
-      if (backdropTouchHandled) return;
-      closeSidebar();
-    });
+    backdrop.addEventListener('click', function () { if (!bt) closeSidebar(); });
   }
 
-  document.querySelectorAll('.sidebar-link').forEach(link => {
-    link.addEventListener('click', () => { if (isMobile()) closeSidebar(); });
-  });
-
-  document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(function (el) {
-    el.addEventListener('show.bs.dropdown', function () {
-      if (isMobile()) closeSidebar();
-    });
+  document.querySelectorAll('.nav-link').forEach(function (link) {
+    link.addEventListener('click', function () { if (isMobile()) closeSidebar(); });
   });
 
   const notifBackdrop = document.getElementById('notifBackdrop');
   const bellBtn       = document.getElementById('bellBtn');
   if (bellBtn && notifBackdrop) {
     bellBtn.addEventListener('show.bs.dropdown', function () {
-      if (isMobile()) {
-        notifBackdrop.classList.add('show');
-        document.body.classList.add('notif-open');
-      }
+      if (isMobile()) { notifBackdrop.classList.add('show'); document.body.classList.add('notif-open'); }
     });
     bellBtn.addEventListener('hide.bs.dropdown', function () {
-      notifBackdrop.classList.remove('show');
-      document.body.classList.remove('notif-open');
+      notifBackdrop.classList.remove('show'); document.body.classList.remove('notif-open');
     });
     notifBackdrop.addEventListener('click', function () {
-      var dd = bootstrap.Dropdown.getInstance(bellBtn);
+      const dd = bootstrap.Dropdown.getInstance(bellBtn);
       if (dd) dd.hide();
     });
   }
 
-  window.addEventListener('resize', () => {
-    if (!isMobile()) {
-      /* Десктоп: обычный режим */
-      closeSidebar();
-    } else {
-      /* Переход на мобильный/планшет: закрываем сайдбар принудительно
-         (иначе body.sidebar-open остаётся от desktop-сессии и сайдбар
-          выезжает поверх контента даже при display:none в CSS) */
-      closeSidebar();
-      document.body.classList.remove('sidebar-collapsed');
-    }
+  window.addEventListener('resize', function () {
+    closeSidebar();
+    if (isMobile()) document.body.classList.remove('sidebar-collapsed');
     updateToggleIcon();
   });
 
@@ -425,24 +388,23 @@
   updateToggleIcon();
 })();
 </script>
+
 {% if user %}
 <script>
 (function () {
   'use strict';
-
   const TIMEOUT_SEC = 30 * 60;
-  const WARN_SEC    = 5  * 60;
-  const DEBOUNCE_MS = 10_000;
+  const WARN_SEC    = 5 * 60;
+  const DEBOUNCE_MS = 10000;
 
-  const timerEl            = document.getElementById('sessionTimer');
-  const timerMobileEl      = document.getElementById('sessionTimerMobileVal');
-  const timerMobileWrap    = document.getElementById('sessionTimerMobile');
-  const timerTopbarMobileEl   = document.getElementById('sessionTimerTopbarMobileVal');
-  const timerTopbarMobileWrap = document.getElementById('sessionTimerTopbarMobile');
+  const timerEl       = document.getElementById('sessionTimer');
+  const timerMobEl    = document.getElementById('sessionTimerMobileVal');
+  const timerTopbarEl = document.getElementById('sessionTimerTopbarMobileVal');
+  const timerTopbarWrap = document.getElementById('sessionTimerTopbarMobile');
   const logoutUrl = '{{ url_for("logout") }}';
   const pingUrl   = '/session/ping/';
 
-  if (!timerEl && !timerMobileEl && !timerTopbarMobileEl) return;
+  if (!timerEl && !timerMobEl && !timerTopbarEl) return;
 
   let remaining = TIMEOUT_SEC;
   let debounceId = null;
@@ -451,41 +413,24 @@
     const m = String(Math.floor(remaining / 60)).padStart(2, '0');
     const s = String(remaining % 60).padStart(2, '0');
     const txt = m + ':' + s;
+    const warn = remaining <= WARN_SEC;
 
     if (timerEl) {
       timerEl.textContent = txt;
-      if (remaining <= WARN_SEC) {
-        timerEl.style.color = 'var(--bs-danger, #dc3545)';
-      } else {
-        timerEl.style.color = '';
-        timerEl.className = 'text-muted';
-      }
+      timerEl.className = 'session-timer-text' + (warn ? ' warn' : '');
     }
-    if (timerMobileEl) {
-      timerMobileEl.textContent = txt;
-      if (timerMobileWrap) {
-        timerMobileWrap.classList.toggle('warn', remaining <= WARN_SEC);
-      }
-    }
-    if (timerTopbarMobileEl) {
-      timerTopbarMobileEl.textContent = txt;
-      if (timerTopbarMobileWrap) {
-        timerTopbarMobileWrap.style.color = remaining <= WARN_SEC
-          ? 'var(--bs-danger, #dc3545)'
-          : '';
-      }
+    if (timerMobEl) timerMobEl.textContent = txt;
+    if (timerTopbarEl) {
+      timerTopbarEl.textContent = txt;
+      if (timerTopbarWrap) timerTopbarWrap.style.color = warn ? '#ef4444' : '';
     }
   }
 
   const ticker = setInterval(function () {
     remaining -= 1;
     renderTimer();
-    if (remaining <= 0) {
-      clearInterval(ticker);
-      window.location.href = logoutUrl;
-    }
+    if (remaining <= 0) { clearInterval(ticker); window.location.href = logoutUrl; }
   }, 1000);
-
   renderTimer();
 
   function onActivity() {
@@ -493,10 +438,7 @@
     renderTimer();
     clearTimeout(debounceId);
     debounceId = setTimeout(function () {
-      fetch(pingUrl, {
-        method: 'POST',
-        credentials: 'same-origin',
-      }).catch(function () {});
+      fetch(pingUrl, { method: 'POST', credentials: 'same-origin' }).catch(function () {});
     }, DEBOUNCE_MS);
   }
 
@@ -507,6 +449,7 @@
 })();
 </script>
 {% endif %}
+
 {% block extra_js %}{% endblock %}
 </body>
 </html>

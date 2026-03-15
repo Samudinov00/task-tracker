@@ -7,81 +7,105 @@
 <div class="page-header">
   <div>
     <h1 class="page-header-title">Проекты</h1>
-    <div class="page-header-sub">Найдено: {{ projects|length }}</div>
+    <div class="page-header-sub">{{ projects|length }} {% if projects|length == 1 %}проект{% elif projects|length in [2,3,4] %}проекта{% else %}проектов{% endif %}</div>
   </div>
   {% if user.is_manager() %}
   <a href="{{ url_for('project_create') }}" class="btn btn-primary btn-sm">
-    <i class="bi bi-plus-lg"></i><span class="d-none d-sm-inline ms-1">Новый проект</span>
+    <i class="bi bi-plus-lg"></i>
+    <span class="d-none d-sm-inline">Новый проект</span>
   </a>
   {% endif %}
 </div>
 
-<div class="d-flex flex-column gap-3">
+<div class="row g-3">
   {% for project in projects %}
-  <div class="card project-card">
-    <div class="card-body p-3 p-md-4 position-relative">
+  <div class="col-12 col-md-6 col-xl-4">
+    <div class="card project-card h-100">
+      <div class="card-body p-4 position-relative">
 
-      {# Кнопка «три точки» — всегда в правом верхнем углу карточки #}
-      {% if user.is_manager() %}
-      <div class="dropdown position-absolute" style="top:.75rem;right:.75rem">
-        <button class="btn btn-ghost btn-sm text-muted" data-bs-toggle="dropdown" aria-expanded="false">
-          <i class="bi bi-three-dots-vertical"></i>
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-          <li>
-            <a class="dropdown-item" href="{{ url_for('project_edit', uuid=project.uuid) }}">
-              <i class="bi bi-pencil me-2"></i>Редактировать
-            </a>
-          </li>
-          <li>
-            <a class="dropdown-item text-danger" href="{{ url_for('project_delete', uuid=project.uuid) }}">
-              <i class="bi bi-trash me-2"></i>Удалить
-            </a>
-          </li>
-        </ul>
-      </div>
-      {% endif %}
-
-      {# Название и описание — слева, с отступом под кнопку меню #}
-      <div class="mb-2" style="padding-right:2.25rem">
-        <h5 class="fw-bold mb-1">{{ project.name }}</h5>
-        {% if project.description %}
-        <div class="text-muted" style="font-size:.875rem">{{ project.description[:120] }}{% if project.description|length > 120 %}…{% endif %}</div>
-        {% endif %}
-      </div>
-
-      {# Кнопки навигации — outline, менее акцентные #}
-      <div class="d-flex gap-2 mb-3">
-        <a href="{{ url_for('kanban', project_uuid=project.uuid) }}" class="btn btn-outline-primary btn-sm">
-          <i class="bi bi-kanban me-1"></i><span class="d-none d-sm-inline">Канбан</span>
-        </a>
-        <a href="{{ url_for('project_detail', uuid=project.uuid) }}" class="btn btn-outline-secondary btn-sm">
-          <i class="bi bi-list-task me-1"></i><span class="d-none d-sm-inline">Задачи</span>
-        </a>
-      </div>
-
-      {# Прогресс-бар 2px — минималистичный, процент мелким текстом #}
-      <div class="d-flex align-items-center gap-2">
-        <div class="progress flex-grow-1" style="height:2px;border-radius:1px;background:#f1f5f9">
-          <div class="progress-bar bg-success" role="progressbar" style="width:{{ project.get_progress() }}%"></div>
+        {# Three-dot menu #}
+        {% if user.is_manager() %}
+        <div class="dropdown position-absolute" style="top:.875rem;right:.875rem">
+          <button class="btn-icon" data-bs-toggle="dropdown" aria-expanded="false"
+                  style="width:32px;height:32px;border-radius:var(--r-sm)">
+            <i class="bi bi-three-dots-vertical" style="font-size:.85rem"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li>
+              <a class="dropdown-item" href="{{ url_for('project_edit', uuid=project.uuid) }}">
+                <i class="bi bi-pencil me-2"></i>Редактировать
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item text-danger" href="{{ url_for('project_delete', uuid=project.uuid) }}">
+                <i class="bi bi-trash me-2"></i>Удалить
+              </a>
+            </li>
+          </ul>
         </div>
-        <span style="font-size:.68rem;color:#94a3b8;min-width:2rem;text-align:right">{{ project.get_progress() }}%</span>
-      </div>
+        {% endif %}
 
-    </div>
-    {# Футер: slate-400, мелкий шрифт — не отвлекает от названия #}
-    <div class="card-footer d-flex gap-4" style="color:#94a3b8;font-size:.72rem">
-      <span><i class="bi bi-person me-1"></i>{{ project.manager.get_display_name() }}</span>
-      <span><i class="bi bi-calendar me-1"></i>{{ project.created_at.strftime('%d.%m.%Y') if project.created_at else '—' }}</span>
+        {# Title & description #}
+        <div class="mb-3" style="padding-right:2rem">
+          <h5 class="fw-bold mb-1" style="font-size:.95rem;letter-spacing:-.01em">{{ project.name }}</h5>
+          {% if project.description %}
+          <div style="font-size:.775rem;color:var(--text-muted);line-height:1.5">
+            {{ project.description[:100] }}{% if project.description|length > 100 %}…{% endif %}
+          </div>
+          {% endif %}
+        </div>
+
+        {# Action buttons #}
+        <div class="d-flex gap-2 mb-4">
+          <a href="{{ url_for('kanban', project_uuid=project.uuid) }}"
+             class="btn btn-sm btn-primary">
+            <i class="bi bi-kanban me-1"></i>
+            <span class="d-none d-sm-inline">Канбан</span>
+          </a>
+          <a href="{{ url_for('project_detail', uuid=project.uuid) }}"
+             class="btn btn-sm"
+             style="background:var(--surface-2);border:1px solid var(--border);color:var(--text-2)">
+            <i class="bi bi-list-task me-1"></i>
+            <span class="d-none d-sm-inline">Список</span>
+          </a>
+        </div>
+
+        {# Progress #}
+        <div class="d-flex align-items-center gap-2">
+          <div class="progress flex-grow-1" style="height:3px;border-radius:2px">
+            <div class="progress-bar bg-success" style="width:{{ project.get_progress() }}%"></div>
+          </div>
+          <span style="font-size:.65rem;color:var(--text-subtle);min-width:2rem;text-align:right;font-variant-numeric:tabular-nums">
+            {{ project.get_progress() }}%
+          </span>
+        </div>
+
+      </div>
+      <div class="card-footer d-flex gap-3 align-items-center">
+        <div class="avatar-xs avatar-initials" style="font-size:.5rem;flex-shrink:0">
+          {{ project.manager.get_initials() }}
+        </div>
+        <span style="font-size:.75rem;color:var(--text-muted)">{{ project.manager.get_display_name() }}</span>
+        <span class="ms-auto" style="font-size:.72rem;color:var(--text-subtle)">
+          {{ project.created_at.strftime('%d.%m.%Y') if project.created_at else '—' }}
+        </span>
+      </div>
     </div>
   </div>
   {% else %}
-  <div class="card">
-    <div class="card-body text-center py-5">
-      <i class="bi bi-folder2 text-muted mb-3 d-block" style="font-size:3rem"></i>
-      <h5 class="text-muted mb-1">
-        {% if user.is_manager() %}Создайте первый проект{% else %}Вы не добавлены ни в один проект{% endif %}
-      </h5>
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-folder2 text-muted mb-3 d-block" style="font-size:3rem;opacity:.4"></i>
+        <h5 class="text-muted mb-1" style="font-weight:600">
+          {% if user.is_manager() %}Создайте первый проект{% else %}Вы не добавлены ни в один проект{% endif %}
+        </h5>
+        {% if user.is_manager() %}
+        <a href="{{ url_for('project_create') }}" class="btn btn-primary btn-sm mt-3">
+          <i class="bi bi-plus-lg me-1"></i>Новый проект
+        </a>
+        {% endif %}
+      </div>
     </div>
   </div>
   {% endfor %}

@@ -5,51 +5,53 @@
 
 {% block content %}
 
+{# Header #}
 <div class="page-header">
   <div>
-    <h1 class="page-header-title">Дашборд</h1>
-    <div class="page-header-sub">Добро пожаловать, {{ user.get_display_name() }}</div>
+    <h1 class="page-header-title">Добро пожаловать, {{ user.get_display_name().split()[0] }} 👋</h1>
+    <div class="page-header-sub">Вот что происходит с вашими проектами</div>
   </div>
   {% if user.is_manager() %}
-  <a href="{{ url_for('project_create') }}" class="btn btn-primary btn-sm page-header-actions">
-    <i class="bi bi-plus-lg me-1"></i>Новый проект
+  <a href="{{ url_for('project_create') }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i>
+    <span class="d-none d-sm-inline">Новый проект</span>
   </a>
   {% endif %}
 </div>
 
-{# ── Ключевые метрики ──────────────────────────────────────────────────────── #}
+{# Stat cards #}
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3">
     <div class="stat-card stat-card--blue">
       <div class="stat-card__icon"><i class="bi bi-folder2-open"></i></div>
-      <div class="stat-card__body">
+      <div>
         <div class="stat-card__value">{{ total_projects }}</div>
-        <div class="stat-card__label">Проектов</div>
+        <div class="stat-card__label">Проекты</div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
     <div class="stat-card stat-card--gray">
       <div class="stat-card__icon"><i class="bi bi-list-task"></i></div>
-      <div class="stat-card__body">
+      <div>
         <div class="stat-card__value">{{ total_tasks }}</div>
-        <div class="stat-card__label">Задач всего</div>
+        <div class="stat-card__label">Всего задач</div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
     <div class="stat-card stat-card--green">
       <div class="stat-card__icon"><i class="bi bi-check-circle-fill"></i></div>
-      <div class="stat-card__body">
+      <div>
         <div class="stat-card__value">{{ production_count }}</div>
-        <div class="stat-card__label">В эксплуатации</div>
+        <div class="stat-card__label">В продакшне</div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="stat-card stat-card--yellow">
+    <div class="stat-card stat-card--rose">
       <div class="stat-card__icon"><i class="bi bi-alarm-fill"></i></div>
-      <div class="stat-card__body">
+      <div>
         <div class="stat-card__value">{{ overdue_count }}</div>
         <div class="stat-card__label">Просрочено</div>
       </div>
@@ -57,48 +59,57 @@
   </div>
 </div>
 
-{# ── Сводка по статусам ────────────────────────────────────────────────────── #}
+{# Status summary #}
+{% if statuses %}
 <div class="card mb-4">
-  <div class="card-header fw-semibold">Сводка по статусам</div>
+  <div class="card-header">
+    <i class="bi bi-diagram-3 me-2 text-muted"></i>Сводка по статусам
+  </div>
   <div class="card-body">
-    <div class="row g-3">
+    <div class="row g-2">
       {% for s in statuses %}
-      <div class="col-6 col-md-3">
-        <div class="d-flex align-items-center gap-3 rounded-3 p-3"
-             style="background:#f8fafc;border:1px solid #e2e8f0;min-height:64px">
-          <div class="fw-bold fs-3" style="min-width:2.5rem;text-align:center;line-height:1">{{ s.count }}</div>
-          <div>
-            <span class="badge bg-{{ s.badge }}">{{ s.label }}</span>
-          </div>
+      <div class="col-6 col-sm-4 col-lg-3">
+        <div class="d-flex align-items-center gap-3 rounded px-3 py-2"
+             style="background:var(--surface-2);border:1px solid var(--border)">
+          <div style="font-size:1.5rem;font-weight:700;color:var(--text);min-width:2rem;line-height:1">{{ s.count }}</div>
+          <span class="badge bg-{{ s.badge }}" style="font-size:.7rem">{{ s.label }}</span>
         </div>
       </div>
       {% endfor %}
     </div>
   </div>
 </div>
+{% endif %}
 
-{# ── Последние задачи + проекты ────────────────────────────────────────────── #}
+{# Recent tasks + projects #}
 <div class="row g-4">
+
   <div class="col-lg-7">
     <div class="card h-100">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <span class="fw-semibold">Последние задачи</span>
-        <a href="{{ url_for('project_list') }}" class="btn btn-sm btn-outline-primary">Все проекты</a>
+        <span><i class="bi bi-clock-history me-2 text-muted"></i>Последние задачи</span>
+        <a href="{{ url_for('project_list') }}" class="btn btn-sm btn-ghost"
+           style="font-size:.75rem;color:var(--brand)">Все проекты →</a>
       </div>
       <div class="list-group list-group-flush">
         {% for task in recent_tasks %}
         <a href="{{ url_for('task_detail', uuid=task.uuid) }}"
-           class="list-group-item list-group-item-action py-3 px-4">
-          <div class="d-flex justify-content-between align-items-center gap-2">
+           class="list-group-item list-group-item-action px-4 py-3">
+          <div class="d-flex justify-content-between align-items-start gap-3">
             <div class="min-w-0">
-              <div class="fw-semibold line-clamp-2 {% if task.is_overdue() %}text-danger{% endif %}">{{ task.title }}</div>
-              <div class="text-muted text-truncate" style="font-size:.85rem;margin-top:.2rem">{{ task.project.name }}</div>
+              <div class="fw-semibold line-clamp-2 {% if task.is_overdue() %}text-danger{% endif %}"
+                   style="font-size:.825rem">{{ task.title }}</div>
+              <div class="text-muted mt-1" style="font-size:.75rem">{{ task.project.name }}</div>
             </div>
-            <span class="badge bg-{{ task.get_status_badge() }} flex-shrink-0">{{ task.get_status_display() }}</span>
+            <span class="badge bg-{{ task.get_status_badge() }} flex-shrink-0"
+                  style="font-size:.65rem">{{ task.get_status_display() }}</span>
           </div>
         </a>
         {% else %}
-        <div class="list-group-item text-center text-muted py-5">Задач пока нет.</div>
+        <div class="list-group-item text-center py-5">
+          <i class="bi bi-inbox text-muted mb-2 d-block" style="font-size:2rem"></i>
+          <div class="text-muted" style="font-size:.825rem">Задач пока нет</div>
+        </div>
         {% endfor %}
       </div>
     </div>
@@ -107,29 +118,37 @@
   <div class="col-lg-5">
     <div class="card h-100">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <span class="fw-semibold">Мои проекты</span>
-        <a href="{{ url_for('project_create') }}" class="btn btn-sm btn-primary">
-          <i class="bi bi-plus-lg"></i>
+        <span><i class="bi bi-folder2-open me-2 text-muted"></i>Мои проекты</span>
+        {% if user.is_manager() %}
+        <a href="{{ url_for('project_create') }}" class="btn btn-sm btn-primary"
+           style="width:28px;height:28px;padding:0;border-radius:6px">
+          <i class="bi bi-plus-lg" style="font-size:.8rem"></i>
         </a>
+        {% endif %}
       </div>
       <div class="list-group list-group-flush">
         {% for project in projects %}
         <a href="{{ url_for('kanban', project_uuid=project.uuid) }}"
-           class="list-group-item list-group-item-action py-3 px-4">
-          <div class="fw-semibold mb-2">{{ project.name }}</div>
-          <div class="d-flex align-items-center gap-3">
-            <div class="progress flex-grow-1" style="height:8px;border-radius:4px">
+           class="list-group-item list-group-item-action px-4 py-3">
+          <div class="fw-semibold mb-2" style="font-size:.825rem">{{ project.name }}</div>
+          <div class="d-flex align-items-center gap-2">
+            <div class="progress flex-grow-1" style="height:4px;border-radius:2px">
               <div class="progress-bar bg-success" style="width:{{ project.get_progress() }}%"></div>
             </div>
-            <span class="text-muted" style="font-size:.85rem;min-width:2.5rem;text-align:right">{{ project.get_progress() }}%</span>
+            <span style="font-size:.72rem;color:var(--text-subtle);min-width:2.25rem;text-align:right">
+              {{ project.get_progress() }}%
+            </span>
           </div>
         </a>
         {% else %}
-        <div class="list-group-item text-center text-muted py-5">Создайте первый проект.</div>
+        <div class="list-group-item text-center py-5">
+          <i class="bi bi-folder2 text-muted mb-2 d-block" style="font-size:2rem"></i>
+          <div class="text-muted" style="font-size:.825rem">Нет проектов</div>
+        </div>
         {% endfor %}
       </div>
     </div>
   </div>
-</div>
 
+</div>
 {% endblock %}

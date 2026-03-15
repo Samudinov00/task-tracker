@@ -14,141 +14,150 @@
   </nav>
 </div>
 
+<div class="row justify-content-center">
+<div class="col-xl-8">
 <div class="card">
-  <div class="card-header fw-semibold">{{ title }}</div>
+  <div class="card-header">{{ title }}</div>
   <div class="card-body p-4">
     <form method="post" novalidate>
 
       {% if user.is_executor() %}
-        <div class="row g-4">
-          <div class="col-md-6">
-            <label class="form-label">Статус</label>
-            <select name="status_id" class="form-select">
-              {% for status in project_statuses %}
-                <option value="{{ status.id }}" {% if task and task.status_id == status.id %}selected{% endif %}>{{ status.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
+      {# Executor: only status change #}
+      <div class="mb-4">
+        <label class="form-label">Статус</label>
+        <select name="status_id" class="form-select">
+          {% for status in project_statuses %}
+          <option value="{{ status.id }}" {% if task and task.status_id == status.id %}selected{% endif %}>
+            {{ status.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
 
       {% else %}
-        <div class="row g-4 mb-4">
-          <div class="col-12">
-            <label class="form-label">Название</label>
-            <input type="text" name="title" class="form-control"
-                   value="{{ task.title if task else '' }}">
-            {% if errors.title %}
-              <div class="invalid-feedback d-block">{{ errors.title }}</div>
-            {% endif %}
-          </div>
-          <div class="col-12">
-            <label class="form-label">Описание</label>
-            <textarea name="description" class="form-control" rows="4">{{ task.description if task else '' }}</textarea>
-          </div>
-        </div>
-
-        <div class="row g-4 mb-4">
-          <div class="col-md-6">
-            <label class="form-label">Статус</label>
-            <select name="status_id" class="form-select">
-              {% for status in project_statuses %}
-                <option value="{{ status.id }}" {% if task and task.status_id == status.id %}selected{% endif %}>{{ status.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Приоритет</label>
-            <select name="priority" class="form-select">
-              {% for value, label in priority_choices %}
-                <option value="{{ value }}" {% if task and task.priority == value %}selected{% elif not task and value == 'medium' %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
-
-        <div class="row g-4 mb-4">
-          <div class="col-md-6">
-            <label class="form-label">Исполнитель</label>
-            <select name="assignee" class="form-select" id="id_assignee">
-              <option value="">— Не назначен —</option>
-              {% for a in assignees %}
-                <option value="{{ a.id }}" {% if task and task.assignee_id == a.id %}selected{% endif %}>
-                  {{ a.get_display_name() }}
-                </option>
-              {% endfor %}
-            </select>
-            {% if manager_id %}
-            <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="btn-self-assign"
-                    title="Назначить себя исполнителем">
-              <i class="bi bi-person-check me-1"></i>Назначить себя
-            </button>
-            {% endif %}
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Дедлайн</label>
-            <input type="date" name="deadline" class="form-control"
-                   value="{{ task.deadline.strftime('%Y-%m-%d') if task and task.deadline else '' }}">
-          </div>
-        </div>
-
-        {% if user.is_manager() %}
-        <div class="row g-4 mb-4">
-          <div class="col-12">
-            <label class="form-label">Клиенты</label>
-            <div class="border rounded p-3">
-              {% for client in task_clients %}
-                <div class="form-check">
-                  <input class="form-check-input" type="checkbox"
-                         name="clients" value="{{ client.id }}"
-                         id="client_{{ client.id }}"
-                         {% if task and client in task.clients %}checked{% endif %}>
-                  <label class="form-check-label" for="client_{{ client.id }}">
-                    {{ client.get_display_name() }}
-                  </label>
-                </div>
-              {% else %}
-                <span class="text-muted">Нет клиентов в системе</span>
-              {% endfor %}
-            </div>
-          </div>
-        </div>
+      {# Manager / Admin: full form #}
+      <div class="mb-4">
+        <label class="form-label">Название задачи</label>
+        <input type="text" name="title" class="form-control"
+               placeholder="Введите название"
+               value="{{ task.title if task else '' }}">
+        {% if errors.title %}
+        <div class="invalid-feedback d-block">{{ errors.title }}</div>
         {% endif %}
+      </div>
 
+      <div class="mb-4">
+        <label class="form-label">Описание</label>
+        <textarea name="description" class="form-control" rows="4"
+                  placeholder="Подробное описание задачи…">{{ task.description if task else '' }}</textarea>
+      </div>
+
+      <div class="row g-4 mb-4">
+        <div class="col-md-6">
+          <label class="form-label">Статус</label>
+          <select name="status_id" class="form-select">
+            {% for status in project_statuses %}
+            <option value="{{ status.id }}" {% if task and task.status_id == status.id %}selected{% endif %}>
+              {{ status.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Приоритет</label>
+          <select name="priority" class="form-select">
+            {% for value, label in priority_choices %}
+            <option value="{{ value }}"
+              {% if task and task.priority == value %}selected
+              {% elif not task and value == 'medium' %}selected{% endif %}>
+              {{ label }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="row g-4 mb-4">
+        <div class="col-md-6">
+          <label class="form-label">Исполнитель</label>
+          <select name="assignee" class="form-select" id="id_assignee">
+            <option value="">— Не назначен —</option>
+            {% for a in assignees %}
+            <option value="{{ a.id }}" {% if task and task.assignee_id == a.id %}selected{% endif %}>
+              {{ a.get_display_name() }}
+            </option>
+            {% endfor %}
+          </select>
+          {% if manager_id %}
+          <button type="button" class="btn btn-sm btn-ghost mt-2" id="btn-self-assign"
+                  style="font-size:.75rem">
+            <i class="bi bi-person-check me-1"></i>Назначить себя
+          </button>
+          {% endif %}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Дедлайн</label>
+          <input type="date" name="deadline" class="form-control"
+                 value="{{ task.deadline.strftime('%Y-%m-%d') if task and task.deadline else '' }}">
+        </div>
+      </div>
+
+      {% if user.is_manager() and task_clients %}
+      <div class="mb-4">
+        <label class="form-label">Клиенты</label>
+        <div class="border rounded p-3" style="background:var(--surface-2)">
+          {% for client in task_clients %}
+          <div class="form-check py-1">
+            <input class="form-check-input" type="checkbox"
+                   name="clients" value="{{ client.id }}"
+                   id="client_{{ client.id }}"
+                   {% if task and client in task.clients %}checked{% endif %}>
+            <label class="form-check-label" for="client_{{ client.id }}"
+                   style="font-size:.825rem;cursor:pointer">
+              {{ client.get_display_name() }}
+            </label>
+          </div>
+          {% else %}
+          <span class="text-muted" style="font-size:.8rem">Нет клиентов</span>
+          {% endfor %}
+        </div>
+      </div>
       {% endif %}
 
-      <div class="d-flex gap-3 pt-2 border-top mt-2">
+      {% endif %}{# /manager #}
+
+      <div class="d-flex gap-2 pt-3 mt-1 border-top">
         <button type="submit" class="btn btn-primary" id="submit-btn">
-          <i class="bi bi-save me-2"></i>Сохранить
+          <i class="bi bi-check-lg me-1"></i>Сохранить
         </button>
         {% if task %}
-        <a href="{{ url_for('task_detail', uuid=task.uuid) }}" class="btn btn-outline-secondary">Отмена</a>
+        <a href="{{ url_for('task_detail', uuid=task.uuid) }}" class="btn btn-ghost">Отмена</a>
         {% else %}
-        <a href="{{ url_for('kanban', project_uuid=project.uuid) }}" class="btn btn-outline-secondary">Отмена</a>
+        <a href="{{ url_for('kanban', project_uuid=project.uuid) }}" class="btn btn-ghost">Отмена</a>
         {% endif %}
       </div>
     </form>
   </div>
 </div>
+</div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  document.querySelector('form').addEventListener('submit', function () {
-    const btn = document.getElementById('submit-btn');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Сохранение...';
+document.querySelector('form').addEventListener('submit', function () {
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Сохранение…';
+});
+{% if manager_id %}
+const selfAssignBtn = document.getElementById('btn-self-assign');
+if (selfAssignBtn) {
+  selfAssignBtn.addEventListener('click', function () {
+    const select = document.getElementById('id_assignee');
+    if (select) select.value = '{{ manager_id }}';
   });
-
-  {% if manager_id %}
-  const selfAssignBtn = document.getElementById('btn-self-assign');
-  if (selfAssignBtn) {
-    selfAssignBtn.addEventListener('click', function () {
-      const select = document.getElementById('id_assignee');
-      if (select) {
-        select.value = '{{ manager_id }}';
-      }
-    });
-  }
-  {% endif %}
+}
+{% endif %}
 </script>
 {% endblock %}
