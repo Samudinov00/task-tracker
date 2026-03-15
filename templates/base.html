@@ -98,16 +98,16 @@
 
       <span class="topbar-title">{% block page_title %}{% endblock %}</span>
 
-      {# Таймер сессии на мобильном — всегда виден в топбаре, не прятать в dropdown #}
-      <span class="session-timer-topbar-mobile d-lg-none text-muted ms-auto" id="sessionTimerTopbarMobile"
+      {# Таймер сессии — только на планшете (768-991px), на мобильном скрыт #}
+      <span class="session-timer-topbar-mobile d-none d-md-inline d-lg-none text-muted ms-auto" id="sessionTimerTopbarMobile"
             style="font-size:.72rem;white-space:nowrap;font-variant-numeric:tabular-nums">
         <i class="bi bi-clock me-1"></i><span id="sessionTimerTopbarMobileVal">30:00</span>
       </span>
 
       <div class="d-flex align-items-center gap-2">
 
-        {# Колокольчик #}
-        <div class="dropdown">
+        {# Колокольчик — скрыт на мобильном (<768px), там есть вкладка в bottom nav #}
+        <div class="dropdown d-none d-md-flex">
           <button class="btn btn-ghost btn-sm position-relative" id="bellBtn"
                   data-bs-toggle="dropdown" data-bs-auto-close="outside"
                   data-bs-display="static"

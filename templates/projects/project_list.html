@@ -60,17 +60,17 @@
         </a>
       </div>
 
-      {# Прогресс-бар тонкий, процент — мелким текстом справа #}
+      {# Прогресс-бар 2px — минималистичный, процент мелким текстом #}
       <div class="d-flex align-items-center gap-2">
-        <div class="progress flex-grow-1" style="height:4px;border-radius:2px">
+        <div class="progress flex-grow-1" style="height:2px;border-radius:1px;background:#f1f5f9">
           <div class="progress-bar bg-success" role="progressbar" style="width:{{ project.get_progress() }}%"></div>
         </div>
-        <span style="font-size:.72rem;color:#adb5bd;min-width:2rem;text-align:right">{{ project.get_progress() }}%</span>
+        <span style="font-size:.68rem;color:#94a3b8;min-width:2rem;text-align:right">{{ project.get_progress() }}%</span>
       </div>
 
     </div>
-    {# Футер: иконки Admin и Дата — бледный серый, выровнены по нижней кромке #}
-    <div class="card-footer d-flex gap-4" style="color:#adb5bd;font-size:.8rem">
+    {# Футер: slate-400, мелкий шрифт — не отвлекает от названия #}
+    <div class="card-footer d-flex gap-4" style="color:#94a3b8;font-size:.72rem">
       <span><i class="bi bi-person me-1"></i>{{ project.manager.get_display_name() }}</span>
       <span><i class="bi bi-calendar me-1"></i>{{ project.created_at.strftime('%d.%m.%Y') if project.created_at else '—' }}</span>
     </div>
