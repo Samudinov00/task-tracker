@@ -290,8 +290,8 @@
   let justClosedTimer = null;
 
   function openSidebar() {
-    /* На мобильных (<768px) сайдбар не открывается — навигация через нижнюю панель */
-    if (window.innerWidth < 768) return;
+    /* Ниже lg (<992px) сайдбар не открывается — нижняя панель заменяет его */
+    if (window.innerWidth < 992) return;
     if (justClosed) return;
     document.body.classList.add('sidebar-open');
     updateToggleIcon();
@@ -407,10 +407,13 @@
 
   window.addEventListener('resize', () => {
     if (!isMobile()) {
+      /* Десктоп: обычный режим */
       closeSidebar();
     } else {
-      /* При переходе на мобильный убираем desktop-класс collapse,
-         чтобы он не мешал мобильному overlay-режиму */
+      /* Переход на мобильный/планшет: закрываем сайдбар принудительно
+         (иначе body.sidebar-open остаётся от desktop-сессии и сайдбар
+          выезжает поверх контента даже при display:none в CSS) */
+      closeSidebar();
       document.body.classList.remove('sidebar-collapsed');
     }
     updateToggleIcon();
