@@ -125,11 +125,20 @@
         </div>
 
         {# Аватар / меню пользователя #}
-        <div class="dropdown">
+
+        {# Мобильный: только аватар — прямая ссылка на профиль, без dropdown #}
+        <a href="{{ url_for('profile') }}"
+           class="btn btn-ghost btn-sm d-lg-none"
+           aria-label="Профиль">
+          <div class="avatar-xs avatar-initials">{{ user.get_initials() }}</div>
+        </a>
+
+        {# Десктоп: полное меню с именем, таймером и dropdown #}
+        <div class="dropdown d-none d-lg-block">
           <button class="btn btn-ghost btn-sm d-flex align-items-center gap-2"
                   data-bs-toggle="dropdown" data-bs-display="static">
             <div class="avatar-xs avatar-initials">{{ user.get_initials() }}</div>
-            <div class="d-none d-lg-flex flex-column align-items-start lh-1">
+            <div class="d-flex flex-column align-items-start lh-1">
               <span style="font-size:.875rem">{{ user.get_display_name() }}</span>
               <span id="sessionTimer" class="text-muted" style="font-size:.68rem">30:00</span>
             </div>
@@ -141,7 +150,6 @@
                 {{ user.get_role_display() }}
               </span>
             </li>
-            {# Таймер сессии в dropdown удалён: теперь он постоянно виден в топбаре на мобильном #}
             <li><hr class="dropdown-divider my-1"></li>
             <li>
               <a class="dropdown-item" href="{{ url_for('profile') }}">
