@@ -211,27 +211,40 @@
     }
   }
 
-  /* Флаг предотвращает повторное открытие сайдбара сразу после закрытия.
-     На Android Chrome e.preventDefault() на touchend не всегда отменяет
-     синтетический click: после того как backdrop скрывается, click
-     «проваливается» на кнопку toggle в топбаре и открывает сайдбар снова. */
+  /* justClosed предотвращает повторное открытие сайдбара сразу после закрытия.
+     На Android Chrome synthetic click может прийти через 300-500ms после touchend,
+     поэтому таймаут выставлен с запасом — 800ms. */
   let justClosed = false;
+  let justClosedTimer = null;
 
   function openSidebar() {
     if (justClosed) return;
     document.body.classList.add('sidebar-open');
     updateToggleIcon();
+    /* Пушим состояние в History — кнопка «Назад» на Android закроет сайдбар */
+    if (isMobile() && !(history.state && history.state.sidebarOpen === true)) {
+      history.pushState({ sidebarOpen: true }, '');
+    }
     document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(function (el) {
       var dd = bootstrap.Dropdown.getInstance(el);
       if (dd) dd.hide();
     });
   }
   function closeSidebar() {
+    if (!document.body.classList.contains('sidebar-open')) return;
     document.body.classList.remove('sidebar-open');
+    clearTimeout(justClosedTimer);
     justClosed = true;
-    setTimeout(function() { justClosed = false; }, 400);
+    justClosedTimer = setTimeout(function() { justClosed = false; }, 800);
     updateToggleIcon();
   }
+
+  /* Кнопка «Назад» на Android закрывает сайдбар вместо перехода назад */
+  window.addEventListener('popstate', function(e) {
+    if (document.body.classList.contains('sidebar-open')) {
+      closeSidebar();
+    }
+  });
 
   function onToggle(e) {
     e.preventDefault();
@@ -243,14 +256,15 @@
       updateToggleIcon();
     }
   }
-  /* Флаг предотвращает двойное срабатывание: на touch-устройствах после
-     touchend браузер генерирует синтетический click (~300ms спустя).
-     e.preventDefault() не всегда его подавляет на Android Chrome. */
+  /* touchHandled предотвращает двойное срабатывание: на touch-устройствах после
+     touchstart/touchend браузер генерирует синтетический click (~300ms спустя).
+     Используем touchstart (не touchend) для немедленной реакции. */
   let touchHandled = false;
-  toggle.addEventListener('touchend', function(e) {
+  toggle.addEventListener('touchstart', function(e) {
+    e.preventDefault();
     touchHandled = true;
     onToggle(e);
-    setTimeout(function() { touchHandled = false; }, 400);
+    setTimeout(function() { touchHandled = false; }, 800);
   }, { passive: false });
   toggle.addEventListener('click', function(e) {
     if (touchHandled) return;
@@ -260,10 +274,11 @@
   if (closeBtn) {
     function onClose(e) { e.preventDefault(); closeSidebar(); }
     let closeTouchHandled = false;
-    closeBtn.addEventListener('touchend', function(e) {
+    closeBtn.addEventListener('touchstart', function(e) {
+      e.preventDefault();
       closeTouchHandled = true;
       onClose(e);
-      setTimeout(function() { closeTouchHandled = false; }, 400);
+      setTimeout(function() { closeTouchHandled = false; }, 800);
     }, { passive: false });
     closeBtn.addEventListener('click', function(e) {
       if (closeTouchHandled) return;
@@ -272,11 +287,19 @@
   }
 
   if (backdrop) {
-    backdrop.addEventListener('click', closeSidebar);
-    backdrop.addEventListener('touchend', function(e) {
+    /* touchstart вместо touchend: реагируем немедленно, e.preventDefault()
+       гарантированно блокирует все последующие события (touchend, click). */
+    let backdropTouchHandled = false;
+    backdrop.addEventListener('touchstart', function(e) {
       e.preventDefault();
+      backdropTouchHandled = true;
       closeSidebar();
+      setTimeout(function() { backdropTouchHandled = false; }, 800);
     }, { passive: false });
+    backdrop.addEventListener('click', function() {
+      if (backdropTouchHandled) return;
+      closeSidebar();
+    });
   }
 
   document.querySelectorAll('.sidebar-link').forEach(link => {
@@ -308,7 +331,16 @@
     });
   }
 
-  window.addEventListener('resize', () => { if (!isMobile()) { closeSidebar(); } updateToggleIcon(); });
+  window.addEventListener('resize', () => {
+    if (!isMobile()) {
+      closeSidebar();
+    } else {
+      /* При переходе на мобильный убираем desktop-класс collapse,
+         чтобы он не мешал мобильному overlay-режиму */
+      document.body.classList.remove('sidebar-collapsed');
+    }
+    updateToggleIcon();
+  });
 
   if (!isMobile() && localStorage.getItem('sidebar_collapsed') === 'true') {
     document.body.classList.add('sidebar-collapsed');
