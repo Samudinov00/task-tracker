@@ -6,7 +6,10 @@
 {% block extra_css %}
 <style>
   .kanban-board { overflow-x: auto; padding-bottom: 1rem; }
-  .kanban-column { min-width: 300px; max-width: 360px; flex: 1 1 300px; }
+  /* mobile: min-width из main.css (270px), desktop: 300px */
+  @media (min-width: 992px) {
+    .kanban-column { min-width: 300px; max-width: 360px; flex: 1 1 300px; }
+  }
   .kanban-col-body { min-height: 500px; }
   .task-card { cursor: grab; }
   .task-card:active { cursor: grabbing; }
@@ -29,6 +32,8 @@
     background: #1e293b;
     color: #fff;
     padding: .75rem 1.5rem;
+    /* iOS safe area: home indicator / Android gesture nav */
+    padding-bottom: calc(.75rem + env(safe-area-inset-bottom, 0px));
     z-index: 1050;
     display: none;
     align-items: center;
@@ -41,6 +46,17 @@
   .priority-medium   { background: #fef9c3; color: #713f12; }
   .priority-high     { background: #ffedd5; color: #9a3412; }
   .priority-critical { background: #fee2e2; color: #991b1b; }
+  /* подсказка о перетаскивании — только на мобильных (touch) */
+  .kanban-drag-hint {
+    display: none;
+    font-size: .8rem;
+    color: #94a3b8;
+    text-align: center;
+    padding: .375rem 0 .75rem;
+  }
+  @media (hover: none) and (pointer: coarse) {
+    .kanban-drag-hint { display: block; }
+  }
 </style>
 {% endblock %}
 
@@ -123,6 +139,8 @@
   </div>
 </div>
 
+<p class="kanban-drag-hint"><i class="bi bi-arrows-move me-1"></i>Удерживайте карточку, чтобы переместить её в другую колонку</p>
+
 <div class="kanban-board d-flex gap-3 align-items-start" id="kanbanBoard">
 
   {% for col in kanban_columns %}
@@ -159,7 +177,7 @@
               </a>
               {% if user.is_manager() %}
               <div class="dropdown ms-2 flex-shrink-0">
-                <button class="btn btn-ghost btn-sm p-0 lh-1" style="width:22px" data-bs-toggle="dropdown"
+                <button class="btn btn-ghost btn-sm p-0 lh-1" style="width:36px;min-height:36px" data-bs-toggle="dropdown"
                         onclick="event.stopPropagation()">
                   <i class="bi bi-three-dots-vertical"></i>
                 </button>
