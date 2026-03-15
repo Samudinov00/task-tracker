@@ -1003,15 +1003,19 @@ textarea.form-control-autogrow {
   }
 }
 
-/* ── Мобильный (<768px): сайдбар полностью скрыт, навигация через bottom bar ── */
-@media (max-width: 767.98px) {
-  /* Полностью убираем сайдбар из визуального потока */
+/* ── Mobile + Tablet (<992px): сайдбар полностью скрыт ────────────────────────
+   Ключевой фикс: ранее display:none применялся только до 767.98px.
+   На планшете (768-991px) при ресайзе с десктопа body.sidebar-open оставался
+   в DOM → sidebar выезжал поверх контента через transform:translateX(0)!important.
+   Расширяем до 991.98px — ниже lg сайдбар не рендерится вообще. ── */
+@media (max-width: 991.98px) {
   .sidebar { display: none !important; }
-  /* CSS-страховка: даже если body.sidebar-open добавится через JS */
   body.sidebar-open .sidebar-backdrop { display: none !important; }
   body.sidebar-open { overflow: initial !important; }
+}
 
-  /* Мобильная шапка — отдельный div, занимает всю ширину топбара */
+/* ── Мобильная шапка (<768px) ── */
+@media (max-width: 767.98px) {
   .topbar { padding: 0; }
   .topbar-mobile { padding: 0 .25rem; }
 }
