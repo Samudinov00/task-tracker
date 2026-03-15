@@ -909,8 +909,11 @@ textarea.form-control-autogrow {
   /* Учёт safe-area на iOS (вырез под Home-indicator) */
   height: calc(var(--bottom-bar-h) + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  background: #fff;
-  border-top: 1px solid var(--border);
+  /* Стекло-эффект: полупрозрачный фон + размытие */
+  background: rgba(255, 255, 255, .88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(226, 232, 240, .7);
   box-shadow: 0 -2px 12px rgba(0, 0, 0, .08);
   display: flex;
   align-items: stretch;
@@ -982,4 +985,16 @@ textarea.form-control-autogrow {
     bottom: calc(var(--bottom-bar-h) + env(safe-area-inset-bottom, 0px)) !important;
     border-radius: 1rem 1rem 0 0;
   }
+}
+
+/* ── Мобильный (<768px): сайдбар заблокирован, нижняя панель — основная навигация ── */
+@media (max-width: 767.98px) {
+  /* CSS-страховка: даже если body.sidebar-open добавится через JS,
+     сайдбар остаётся скрытым — навигация через bottom tab bar */
+  body.sidebar-open .sidebar {
+    transform: translateX(-100%) !important;
+    pointer-events: none !important;
+  }
+  body.sidebar-open .sidebar-backdrop { display: none !important; }
+  body.sidebar-open { overflow: initial !important; }
 }

@@ -81,6 +81,14 @@
 
     {# Топ-бар #}
     <header class="topbar">
+      {# Мобильный бургер (<768px): открывает профиль, сайдбар не трогает #}
+      <a href="{{ url_for('profile') }}"
+         class="btn btn-sm btn-ghost d-flex d-md-none align-items-center"
+         title="Профиль">
+        <i class="bi bi-list fs-5"></i>
+      </a>
+
+      {# Десктопный toggle (≥992px): сворачивает/разворачивает сайдбар #}
       <button class="btn btn-sm btn-ghost d-none d-lg-flex align-items-center" id="sidebarToggle" title="Свернуть меню">
         <i class="bi bi-list fs-5" id="sidebarToggleIcon"></i>
       </button>
@@ -261,6 +269,8 @@
   let justClosedTimer = null;
 
   function openSidebar() {
+    /* На мобильных (<768px) сайдбар не открывается — навигация через нижнюю панель */
+    if (window.innerWidth < 768) return;
     if (justClosed) return;
     document.body.classList.add('sidebar-open');
     updateToggleIcon();
