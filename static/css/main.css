@@ -510,8 +510,8 @@ body.notif-open          { overflow: hidden; }
 
 /* ── Bootstrap card переопределения: Mobile First ───────────── */
 .card {
-  /* border-slate-200 вместо тени — flat/Linear-стиль */
-  border: 1px solid #e2e8f0;
+  /* border-slate-100 — ещё мягче, карточки «плавают» на фоне */
+  border: 1px solid #f1f5f9;
   border-radius: var(--card-radius);
   box-shadow: none;
   /* Scale при нажатии — тактильный отклик на мобильном */
@@ -601,6 +601,29 @@ body.notif-open          { overflow: hidden; }
 .project-card:active {
   transform: scale(.97) !important;
   box-shadow: none !important;
+}
+
+/* Футер карточки проекта — чуть прозрачнее, не перетягивает внимание */
+.project-card .card-footer { opacity: 0.6; }
+
+/* ── FAB «Новый проект» (mobile only) ──────────────────────── */
+@media (max-width: 767.98px) {
+  .btn-fab {
+    position: fixed;
+    bottom: calc(var(--bottom-bar-h) + env(safe-area-inset-bottom, 0px) + 1rem);
+    right: 1rem;
+    width: 48px;
+    height: 48px;
+    min-height: 48px;
+    border-radius: 50%;
+    padding: 0;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.35);
+    z-index: 200;
+  }
+  .btn-fab .fab-label { display: none; }
 }
 
 /* ── Страница входа ─────────────────────────────────────────── */
@@ -924,11 +947,11 @@ textarea.form-control-autogrow {
   /* Учёт safe-area на iOS (вырез под Home-indicator) */
   height: calc(var(--bottom-bar-h) + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  /* Стекло-эффект: полупрозрачный фон + размытие */
-  background: rgba(255, 255, 255, .88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-top: 1px solid rgba(226, 232, 240, .7);
+  /* Apple-style стекло: полупрозрачный фон + размытие */
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
   box-shadow: 0 -2px 12px rgba(0, 0, 0, .08);
   display: flex;
   align-items: stretch;

@@ -10,8 +10,8 @@
     <div class="page-header-sub">Найдено: {{ projects|length }}</div>
   </div>
   {% if user.is_manager() %}
-  <a href="{{ url_for('project_create') }}" class="btn btn-primary btn-sm">
-    <i class="bi bi-plus-lg"></i><span class="d-none d-sm-inline ms-1">Новый проект</span>
+  <a href="{{ url_for('project_create') }}" class="btn btn-primary btn-sm btn-fab">
+    <i class="bi bi-plus-lg"></i><span class="fab-label d-none d-sm-inline ms-1">Новый проект</span>
   </a>
   {% endif %}
 </div>
