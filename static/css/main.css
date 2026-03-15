@@ -897,3 +897,89 @@ textarea.form-control-autogrow {
     gap: .25rem !important;
   }
 }
+
+/* ── Bottom Tab Bar ─────────────────────────────────────────── */
+:root {
+  --bottom-bar-h: 60px;
+}
+
+.bottom-tab-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  /* Учёт safe-area на iOS (вырез под Home-indicator) */
+  height: calc(var(--bottom-bar-h) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: #fff;
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, .08);
+  display: flex;
+  align-items: stretch;
+  z-index: 1030;
+}
+
+.bottom-tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .2rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: .62rem;
+  font-weight: 500;
+  letter-spacing: .01em;
+  padding: .375rem .25rem;
+  position: relative;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--transition), background var(--transition);
+}
+.bottom-tab-item i {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+.bottom-tab-item:hover,
+.bottom-tab-item:focus { color: var(--primary); text-decoration: none; }
+
+.bottom-tab-item.active { color: var(--primary); }
+.bottom-tab-item.active::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 20%; right: 20%;
+  height: 3px;
+  background: var(--primary);
+  border-radius: 0 0 3px 3px;
+}
+
+/* Бейдж с количеством непрочитанных уведомлений */
+.bottom-tab-badge-dot {
+  position: absolute;
+  top: 4px;
+  /* Сдвигаем вправо от центра иконки */
+  left: calc(50% + 6px);
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  font-size: .58rem;
+  font-weight: 700;
+  background: #ef4444;
+  color: #fff;
+  border-radius: 8px;
+  line-height: 16px;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Мобильный: padding-bottom контента, чтобы не перекрывался панелью */
+@media (max-width: 991.98px) {
+  main.page-content {
+    padding-bottom: calc(var(--bottom-bar-h) + env(safe-area-inset-bottom, 0px) + .75rem);
+  }
+
+  /* Bottom Sheet уведомлений — поднимаем над нижней панелью */
+  .notif-dropdown {
+    bottom: calc(var(--bottom-bar-h) + env(safe-area-inset-bottom, 0px)) !important;
+    border-radius: 1rem 1rem 0 0;
+  }
+}
