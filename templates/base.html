@@ -84,30 +84,45 @@
 
     {# Топ-бар #}
     <header class="topbar">
-      {# Мобильный бургер (<768px): открывает профиль, сайдбар не трогает #}
-      <a href="{{ url_for('profile') }}"
-         class="btn btn-sm btn-ghost d-flex d-md-none align-items-center"
-         title="Профиль">
-        <i class="bi bi-list fs-5"></i>
-      </a>
 
-      {# Десктопный toggle (≥992px): сворачивает/разворачивает сайдбар #}
+      {# ═══ Мобильная шапка (<768px): ТОЛЬКО иконка | заголовок | аватар ═══ #}
+      {# Отдельный div без каких-либо скрытых элементов — ничего лишнего #}
+      <div class="topbar-mobile d-flex d-md-none align-items-center w-100">
+        <a href="{{ url_for('profile') }}"
+           class="btn btn-sm btn-ghost flex-shrink-0"
+           style="width:44px;justify-content:center"
+           title="Меню">
+          <i class="bi bi-list fs-5"></i>
+        </a>
+        <span class="topbar-title text-center flex-grow-1 px-2">{% block page_title %}{% endblock %}</span>
+        <a href="{{ url_for('profile') }}"
+           class="btn btn-ghost btn-sm flex-shrink-0 d-flex align-items-center justify-content-center"
+           style="width:44px"
+           aria-label="Профиль">
+          <div class="avatar-xs avatar-initials">{{ user.get_initials() }}</div>
+        </a>
+      </div>
+
+      {# ═══ Планшет/Десктоп (≥768px) ═══ #}
+      {# Десктопный toggle сайдбара (≥992px) #}
       <button class="btn btn-sm btn-ghost d-none d-lg-flex align-items-center" id="sidebarToggle" title="Свернуть меню">
         <i class="bi bi-list fs-5" id="sidebarToggleIcon"></i>
       </button>
 
-      <span class="topbar-title">{% block page_title %}{% endblock %}</span>
+      {# Заголовок — только на планшете/десктопе (мобильный заголовок выше) #}
+      <span class="topbar-title d-none d-md-block">{{ self.page_title() }}</span>
 
-      {# Таймер сессии — только на планшете (768-991px), на мобильном скрыт #}
+      {# Таймер сессии — только на планшете (768-991px) #}
       <span class="session-timer-topbar-mobile d-none d-md-inline d-lg-none text-muted ms-auto" id="sessionTimerTopbarMobile"
             style="font-size:.72rem;white-space:nowrap;font-variant-numeric:tabular-nums">
         <i class="bi bi-clock me-1"></i><span id="sessionTimerTopbarMobileVal">30:00</span>
       </span>
 
-      <div class="d-flex align-items-center gap-2">
+      {# Правый блок: колокол + аватар/меню — только планшет/десктоп #}
+      <div class="d-none d-md-flex align-items-center gap-2">
 
-        {# Колокольчик — скрыт на мобильном (<768px), там есть вкладка в bottom nav #}
-        <div class="dropdown d-none d-md-flex">
+        {# Колокольчик #}
+        <div class="dropdown">
           <button class="btn btn-ghost btn-sm position-relative" id="bellBtn"
                   data-bs-toggle="dropdown" data-bs-auto-close="outside"
                   data-bs-display="static"
@@ -115,7 +130,6 @@
             <i class="bi bi-bell fs-5"></i>
             <span class="notif-badge d-none" id="notifBadge">0</span>
           </button>
-
           <div class="dropdown-menu dropdown-menu-end notif-dropdown shadow-lg p-0"
                id="notifDropdown">
             <div class="notif-header px-3 py-2 d-flex justify-content-between align-items-center">
@@ -135,11 +149,9 @@
           </div>
         </div>
 
-        {# Аватар / меню пользователя #}
-
-        {# Мобильный: только аватар — прямая ссылка на профиль, без dropdown #}
+        {# Планшет: аватар — прямая ссылка (нет сайдбара) #}
         <a href="{{ url_for('profile') }}"
-           class="btn btn-ghost btn-sm d-lg-none"
+           class="btn btn-ghost btn-sm d-md-flex d-lg-none align-items-center"
            aria-label="Профиль">
           <div class="avatar-xs avatar-initials">{{ user.get_initials() }}</div>
         </a>
@@ -174,7 +186,8 @@
             </li>
           </ul>
         </div>
-      </div>
+
+      </div>{# /d-none d-md-flex #}
     </header>
 
     {# Flash-сообщения #}
