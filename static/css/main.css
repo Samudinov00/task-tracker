@@ -1,8 +1,12 @@
 /* ============================================================
-   SaaS Task Manager — Design System v2
+   SaaS Task Manager — Design System v3
    Brand: Indigo #6366f1 | Font: Inter
    Mobile-first: base → sm(576) → md(768) → lg(992) → xl(1200)
+   Modern CSS: @layer, color-mix(), container queries, :has()
    ============================================================ */
+
+/* ── 0. Layer Declaration ───────────────────────────────────── */
+@layer reset, tokens, layout, components, utilities;
 
 /* ── 1. Design Tokens ───────────────────────────────────────── */
 :root {
@@ -71,8 +75,8 @@ body {
   overflow-x: hidden;
   max-width: 100%;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 1.65;
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
@@ -178,11 +182,11 @@ body.sidebar-open { overflow: hidden; }
 .nav-section { padding: .75rem 0 .25rem; }
 .nav-section-label {
   padding: 0 .875rem .25rem;
-  font-size: .65rem;
+  font-size: .7rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: .08em;
-  color: rgba(255,255,255,.22);
+  color: rgba(255,255,255,.28);
   white-space: nowrap;
 }
 
@@ -191,10 +195,10 @@ body.sidebar-open { overflow: hidden; }
   align-items: center;
   gap: .625rem;
   padding: .45rem .875rem;
-  min-height: 38px;
+  min-height: 40px;
   color: var(--sidebar-text);
   text-decoration: none;
-  font-size: .825rem;
+  font-size: .875rem;
   font-weight: 500;
   white-space: nowrap;
   border-radius: var(--r-sm);
@@ -226,9 +230,9 @@ body.sidebar-open { overflow: hidden; }
   margin-left: auto;
   background: #ef4444;
   color: #fff;
-  font-size: .6rem;
+  font-size: .65rem;
   font-weight: 700;
-  padding: .1em .4em;
+  padding: .1em .45em;
   border-radius: 10px;
   min-width: 18px;
   text-align: center;
@@ -439,7 +443,7 @@ main.page-content {
 
 .card-header {
   padding: .875rem 1.25rem;
-  font-size: .825rem;
+  font-size: .875rem;
   font-weight: 600;
   background: transparent;
   border-bottom: 1px solid var(--border);
@@ -450,7 +454,7 @@ main.page-content {
   padding: .75rem 1.25rem;
   background: var(--surface-2);
   border-top: 1px solid var(--border);
-  font-size: .8rem;
+  font-size: .825rem;
 }
 @media (max-width: 767.98px) {
   .card-header { padding: .75rem 1rem; }
@@ -548,7 +552,7 @@ main.page-content {
   box-shadow: 0 0 0 3px var(--brand-ring);
 }
 .form-label {
-  font-size: .775rem;
+  font-size: .8rem;
   font-weight: 600;
   color: var(--text-2);
   margin-bottom: .375rem;
@@ -572,9 +576,9 @@ textarea.form-control-autogrow {
 
 /* ── 12. Badges ─────────────────────────────────────────────── */
 .badge {
-  font-size: .7rem;
+  font-size: .72rem;
   font-weight: 600;
-  padding: .2em .55em;
+  padding: .22em .6em;
   border-radius: var(--r-xs);
   letter-spacing: .01em;
 }
@@ -596,7 +600,7 @@ textarea.form-control-autogrow {
 
 /* ── 13. Tables ─────────────────────────────────────────────── */
 .table th {
-  font-size: .7rem;
+  font-size: .72rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: .06em;
@@ -609,7 +613,7 @@ textarea.form-control-autogrow {
 .table td {
   padding: .75rem 1rem;
   vertical-align: middle;
-  font-size: .825rem;
+  font-size: .875rem;
   border-bottom: 1px solid var(--border-light);
   color: var(--text-2);
 }
@@ -745,7 +749,7 @@ textarea.form-control-autogrow {
   letter-spacing: -.02em;
 }
 .stat-card__label {
-  font-size: .72rem;
+  font-size: .75rem;
   font-weight: 500;
   color: var(--text-muted);
   margin-top: .2rem;
@@ -869,9 +873,9 @@ textarea.form-control-autogrow {
 .task-card:active { cursor: grabbing; transform: scale(.98); }
 .task-card .card-body { padding: .75rem; }
 .task-card-title {
-  font-size: .825rem;
+  font-size: .875rem;
   font-weight: 500;
-  line-height: 1.4;
+  line-height: 1.45;
   color: var(--text);
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -1075,7 +1079,7 @@ textarea.form-control-autogrow {
   gap: .2rem;
   color: var(--text-muted);
   text-decoration: none;
-  font-size: .58rem;
+  font-size: .625rem;
   font-weight: 600;
   letter-spacing: .02em;
   padding: .375rem .25rem;
@@ -1189,7 +1193,7 @@ textarea.form-control-autogrow {
 /* Active state for Bootstrap navbar links */
 a.list-group-item-action {
   color: var(--text-2);
-  font-size: .825rem;
+  font-size: .875rem;
   transition: background var(--ease);
 }
 a.list-group-item-action:hover { background: var(--surface-2) !important; color: var(--text); }
@@ -1200,7 +1204,7 @@ a.list-group-item-action:hover { background: var(--surface-2) !important; color:
 .progress-bar.bg-success { background: #10b981 !important; }
 
 /* Alerts */
-.alert { border-radius: var(--r-sm); font-size: .825rem; }
+.alert { border-radius: var(--r-sm); font-size: .875rem; }
 
 /* Dropdown */
 .dropdown-menu {
@@ -1208,15 +1212,77 @@ a.list-group-item-action:hover { background: var(--surface-2) !important; color:
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-lg);
   padding: .375rem;
-  font-size: .825rem;
+  font-size: .875rem;
 }
 .dropdown-item {
   border-radius: var(--r-sm);
-  padding: .45rem .75rem;
+  padding: .5rem .75rem;
   color: var(--text-2);
-  font-size: .825rem;
+  font-size: .875rem;
   transition: background var(--ease);
 }
 .dropdown-item:hover { background: var(--surface-2); color: var(--text); }
 .dropdown-item.text-danger:hover { background: #fff1f2; }
 .dropdown-divider { border-color: var(--border); margin: .25rem 0; }
+
+/* ── 26. Modern CSS enhancements ────────────────────────────── */
+
+/* color-mix() — progressive hover tints (falls back gracefully) */
+@supports (color: color-mix(in srgb, red, blue)) {
+  .btn-primary:hover {
+    background: color-mix(in srgb, var(--brand) 82%, #000);
+    border-color: color-mix(in srgb, var(--brand) 82%, #000);
+  }
+  .btn-primary:focus {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 28%, transparent);
+  }
+  .nav-link:hover { background: color-mix(in srgb, #fff 7%, transparent); }
+  .card-hover:hover { border-color: color-mix(in srgb, var(--border) 60%, var(--brand)); }
+}
+
+/* Container queries — stat cards adapt to their own container width */
+@supports (container-type: inline-size) {
+  .stat-card { container-type: inline-size; }
+
+  @container (max-width: 180px) {
+    .stat-card__value { font-size: 1.25rem; }
+    .stat-card__label { font-size: .7rem; }
+    .stat-card__icon  { width: 36px; height: 36px; font-size: 1rem; }
+  }
+}
+
+/* :has() — highlight overdue task cards */
+@supports selector(:has(+ *)) {
+  .list-group-item:has(.text-danger) {
+    background: #fff8f8;
+    border-left: 3px solid #fca5a5;
+  }
+}
+
+/* Topbar logo button (mobile) */
+.topbar-logo-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  border-radius: var(--r-sm);
+  padding: 2px;
+  transition: opacity var(--ease);
+  flex-shrink: 0;
+}
+.topbar-logo-btn:hover { opacity: .8; }
+
+/* ── 27. Sidebar hidden on all sub-desktop viewports ────────── */
+/* Sidebar replaced entirely by bottom tab bar on mobile & tablet */
+@media (max-width: 991.98px) {
+  .sidebar,
+  .sidebar-backdrop {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+  /* Ensure page is never locked behind ghost sidebar-open state */
+  body.sidebar-open {
+    overflow: unset !important;
+  }
+}
