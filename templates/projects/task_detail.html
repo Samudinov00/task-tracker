@@ -67,7 +67,8 @@
 
         <div class="border-top p-4">
           <form method="post" novalidate>
-            <textarea name="text" class="form-control" rows="3" placeholder="Написать комментарий…"></textarea>
+            <textarea name="text" class="form-control form-control-autogrow" rows="3"
+                      placeholder="Написать комментарий…"></textarea>
             <div class="mt-3 text-end">
               <button type="submit" name="comment_submit" class="btn btn-primary">
                 <i class="bi bi-send me-2"></i>Отправить
@@ -185,4 +186,22 @@
   </div>
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Полифил автоувеличения textarea для браузеров без field-sizing
+(function () {
+  document.querySelectorAll('textarea.form-control-autogrow').forEach(function (ta) {
+    // Если field-sizing уже поддерживается браузером — ничего не делаем
+    if ('fieldSizing' in ta.style) return;
+    function resize() {
+      ta.style.height = 'auto';
+      ta.style.height = Math.min(ta.scrollHeight, 240) + 'px';
+    }
+    ta.addEventListener('input', resize);
+    resize();
+  });
+})();
+</script>
 {% endblock %}

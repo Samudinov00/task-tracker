@@ -135,6 +135,13 @@
                 {{ user.get_role_display() }}
               </span>
             </li>
+            {# Таймер сессии — виден только на мобильном (на lg+ он в топбаре) #}
+            <li class="d-lg-none">
+              <span class="dropdown-item-text session-timer-mobile" id="sessionTimerMobile">
+                <i class="bi bi-clock me-1"></i>
+                <span id="sessionTimerMobileVal">30:00</span>
+              </span>
+            </li>
             <li><hr class="dropdown-divider my-1"></li>
             <li>
               <a class="dropdown-item" href="{{ url_for('profile') }}">
@@ -290,11 +297,13 @@
   const WARN_SEC    = 5  * 60;
   const DEBOUNCE_MS = 10_000;
 
-  const timerEl   = document.getElementById('sessionTimer');
+  const timerEl       = document.getElementById('sessionTimer');
+  const timerMobileEl = document.getElementById('sessionTimerMobileVal');
+  const timerMobileWrap = document.getElementById('sessionTimerMobile');
   const logoutUrl = '{{ url_for("logout") }}';
   const pingUrl   = '/session/ping/';
 
-  if (!timerEl) return;
+  if (!timerEl && !timerMobileEl) return;
 
   let remaining = TIMEOUT_SEC;
   let debounceId = null;
@@ -302,13 +311,22 @@
   function renderTimer() {
     const m = String(Math.floor(remaining / 60)).padStart(2, '0');
     const s = String(remaining % 60).padStart(2, '0');
-    timerEl.textContent = m + ':' + s;
+    const txt = m + ':' + s;
 
-    if (remaining <= WARN_SEC) {
-      timerEl.style.color = 'var(--bs-danger, #dc3545)';
-    } else {
-      timerEl.style.color = '';
-      timerEl.className = 'text-muted';
+    if (timerEl) {
+      timerEl.textContent = txt;
+      if (remaining <= WARN_SEC) {
+        timerEl.style.color = 'var(--bs-danger, #dc3545)';
+      } else {
+        timerEl.style.color = '';
+        timerEl.className = 'text-muted';
+      }
+    }
+    if (timerMobileEl) {
+      timerMobileEl.textContent = txt;
+      if (timerMobileWrap) {
+        timerMobileWrap.classList.toggle('warn', remaining <= WARN_SEC);
+      }
     }
   }
 
