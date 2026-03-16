@@ -432,7 +432,7 @@ body.sidebar-open { overflow: hidden; }
   font-size: .875rem;
   font-weight: 500;
   white-space: nowrap;
-  border-left: 2px solid transparent;
+  border-left: 3px solid transparent;
   margin: 1px 0;
   transition: background var(--ease), color var(--ease), border-color var(--ease);
   position: relative;
@@ -450,9 +450,9 @@ body.sidebar-open { overflow: hidden; }
   color: #f1f5f9;
 }
 .nav-link.active {
-  background: rgba(59,130,246,.15);
-  color: #93c5fd;
-  border-left-color: #3b82f6;
+  background: rgba(59,130,246,.18);
+  color: #bfdbfe;
+  border-left-color: #60a5fa;
   font-weight: 600;
 }
 .nav-link-badge {
