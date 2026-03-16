@@ -162,6 +162,22 @@ html { overflow-x: hidden; }
   border-color: #3b82f6 !important;
 }
 
+/* ── Mobile sidebar overlay (outside @layer for max priority) ── */
+@media (max-width: 991.98px) {
+  body.sidebar-open .sidebar {
+    transform: translateX(0) !important;
+    display: flex !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+  body.sidebar-open .sidebar-backdrop {
+    display: block !important;
+  }
+  body.sidebar-open {
+    overflow: hidden !important;
+  }
+}
+
 /* ── Table ───────────────────────────────────────────────────── */
 .table { --bs-table-bg: transparent; color: #1e293b; }
 .table > :not(caption) > * > * { background-color: transparent !important; color: #1e293b !important; }
