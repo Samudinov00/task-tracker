@@ -78,7 +78,7 @@
 
         {# Comment form #}
         <div class="border-top p-4">
-          <form method="post" novalidate>
+          <form method="post" action="{{ url_for('task_comment_post', uuid=task.uuid) }}" novalidate>
             <textarea name="text" class="form-control form-control-autogrow" rows="3"
                       placeholder="Напишите комментарий…"
                       style="font-size:.875rem;border-radius:var(--r-sm)"></textarea>
