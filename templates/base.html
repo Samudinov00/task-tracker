@@ -324,61 +324,41 @@
   }, { passive: false });
   toggle.addEventListener('click', function (e) { if (!touchHandled) onToggle(e); });
 
-  // Mobile hamburger button
-  const toggleMob = document.getElementById('sidebarToggleMob');
+  // Mobile sidebar open/close via inline styles (bypasses CSS !important)
   const sidebarEl  = document.getElementById('sidebar');
   const backdropEl = document.getElementById('sidebarBackdrop');
-  if (toggleMob && sidebarEl) {
+
+  function openMobileSidebar() {
+    if (!sidebarEl) return;
+    sidebarEl.style.setProperty('display',        'flex',          'important');
+    sidebarEl.style.setProperty('visibility',     'visible',       'important');
+    sidebarEl.style.setProperty('transform',      'translateX(0)', 'important');
+    sidebarEl.style.setProperty('pointer-events', 'auto',          'important');
+    if (backdropEl) backdropEl.style.setProperty('display', 'block', 'important');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeMobileSidebar() {
+    if (!sidebarEl) return;
+    sidebarEl.style.removeProperty('display');
+    sidebarEl.style.removeProperty('visibility');
+    sidebarEl.style.removeProperty('transform');
+    sidebarEl.style.removeProperty('pointer-events');
+    if (backdropEl) backdropEl.style.removeProperty('display');
+    document.body.style.overflow = '';
+  }
+
+  const toggleMob = document.getElementById('sidebarToggleMob');
+  if (toggleMob) {
     toggleMob.addEventListener('click', function () {
-      const isOpen = sidebarEl.style.transform === 'translateX(0px)';
-      if (isOpen) {
-        sidebarEl.style.removeProperty('display');
-        sidebarEl.style.removeProperty('visibility');
-        sidebarEl.style.removeProperty('transform');
-        sidebarEl.style.removeProperty('pointer-events');
-        if (backdropEl) backdropEl.style.removeProperty('display');
-        document.body.style.overflow = '';
-      } else {
-        sidebarEl.style.setProperty('display',     'flex',           'important');
-        sidebarEl.style.setProperty('visibility',  'visible',        'important');
-        sidebarEl.style.setProperty('transform',   'translateX(0)',  'important');
-        sidebarEl.style.setProperty('pointer-events', 'auto',        'important');
-        if (backdropEl) { backdropEl.style.setProperty('display', 'block', 'important'); }
-        document.body.style.overflow = 'hidden';
-      }
+      sidebarEl && sidebarEl.style.getPropertyValue('transform') ? closeMobileSidebar() : openMobileSidebar();
     });
-    if (backdropEl) {
-      backdropEl.addEventListener('click', function () {
-        sidebarEl.style.removeProperty('display');
-        sidebarEl.style.removeProperty('visibility');
-        sidebarEl.style.removeProperty('transform');
-        sidebarEl.style.removeProperty('pointer-events');
-        backdropEl.style.removeProperty('display');
-        document.body.style.overflow = '';
-      });
-    }
   }
-
-  if (closeBtn) {
-    let ct = false;
-    closeBtn.addEventListener('touchstart', function (e) {
-      e.preventDefault(); ct = true; closeSidebar();
-      setTimeout(function () { ct = false; }, 800);
-    }, { passive: false });
-    closeBtn.addEventListener('click', function (e) { if (!ct) { e.preventDefault(); closeSidebar(); } });
-  }
-
-  if (backdrop) {
-    let bt = false;
-    backdrop.addEventListener('touchstart', function (e) {
-      e.preventDefault(); bt = true; closeSidebar();
-      setTimeout(function () { bt = false; }, 800);
-    }, { passive: false });
-    backdrop.addEventListener('click', function () { if (!bt) closeSidebar(); });
-  }
+  if (backdropEl) backdropEl.addEventListener('click', closeMobileSidebar);
+  if (closeBtn)   closeBtn.addEventListener('click',   closeMobileSidebar);
 
   document.querySelectorAll('.nav-link').forEach(function (link) {
-    link.addEventListener('click', function () { if (isMobile()) closeSidebar(); });
+    link.addEventListener('click', function () { if (isMobile()) closeMobileSidebar(); });
   });
 
   const notifBackdrop = document.getElementById('notifBackdrop');
