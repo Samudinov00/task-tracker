@@ -83,7 +83,7 @@
                       placeholder="Напишите комментарий…"
                       style="font-size:.875rem;border-radius:var(--r-sm)"></textarea>
             <div class="mt-2 text-end">
-              <button type="submit" name="comment_submit" class="btn btn-primary btn-sm">
+              <button type="submit" name="comment_submit" id="commentSubmitBtn" class="btn btn-primary btn-sm" disabled>
                 <i class="bi bi-send me-1"></i>Отправить
               </button>
             </div>
@@ -239,6 +239,15 @@
 {% block extra_js %}
 <script>
 (function () {
+  // Кнопка комментария — активна только при наличии текста
+  var commentTextarea  = document.querySelector('textarea[name="text"]');
+  var commentSubmitBtn = document.getElementById('commentSubmitBtn');
+  if (commentTextarea && commentSubmitBtn) {
+    commentTextarea.addEventListener('input', function () {
+      commentSubmitBtn.disabled = !this.value.trim();
+    });
+  }
+
   var showAllBtn = document.getElementById('historyShowAll');
   if (showAllBtn) {
     showAllBtn.addEventListener('click', function () {
