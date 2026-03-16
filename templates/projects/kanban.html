@@ -16,10 +16,10 @@
     color: var(--text-muted);
   }
   .task-card-overdue {
-    border-color: #fca5a5 !important;
-    background: #fff7f7 !important;
+    border-color: rgba(239,68,68,.35) !important;
+    background: var(--danger-bg) !important;
   }
-  .task-card-overdue .task-card-title { color: #dc2626; }
+  .task-card-overdue .task-card-title { color: var(--danger); }
 </style>
 {% endblock %}
 
@@ -36,12 +36,11 @@
   </div>
   <div class="d-flex gap-2 flex-wrap">
     <a href="{{ url_for('project_detail', uuid=project.uuid) }}"
-       class="btn btn-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text-2)">
+       class="btn btn-sm btn-secondary">
       <i class="bi bi-list-task me-1"></i><span class="d-none d-sm-inline">Список</span>
     </a>
     {% if user.is_manager() %}
-    <button id="bulkToggleBtn"
-            class="btn btn-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text-2)">
+    <button id="bulkToggleBtn" class="btn btn-sm btn-secondary">
       <i class="bi bi-check2-square me-1"></i><span class="d-none d-sm-inline">Выбор</span>
     </button>
     <a href="{{ url_for('task_create', project_uuid=project.uuid) }}" class="btn btn-primary btn-sm">

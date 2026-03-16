@@ -6,21 +6,21 @@
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-lg-5 col-md-7">
-    <div class="card" style="border-color:#fecaca">
+    <div class="card" style="border-color:rgba(239,68,68,.3)">
       <div class="card-body p-5 text-center">
         <div class="mx-auto mb-4 d-flex align-items-center justify-content-center"
-             style="width:56px;height:56px;border-radius:50%;background:#fff1f2">
-          <i class="bi bi-trash" style="font-size:1.5rem;color:#ef4444"></i>
+             style="width:56px;height:56px;border-radius:50%;background:var(--danger-bg)">
+          <i class="bi bi-trash" style="font-size:1.5rem;color:var(--danger)"></i>
         </div>
-        <h5 class="fw-bold mb-2" style="font-size:1rem">Удалить задачу?</h5>
-        <p class="text-muted mb-4" style="font-size:.825rem">
-          «<strong style="color:var(--text)">{{ task.title }}</strong>» — комментарии и вся история будут удалены. Это действие нельзя отменить.
+        <h5 class="fw-bold mb-2" style="font-size:1rem;color:var(--text-1)">Удалить задачу?</h5>
+        <p class="mb-4" style="font-size:.875rem;color:var(--text-2)">
+          «<strong style="color:var(--text-1)">{{ task.title }}</strong>» — комментарии и вся история будут удалены. Это действие нельзя отменить.
         </p>
         <form method="post" class="d-flex gap-2 justify-content-center">
-          <button type="submit" class="btn btn-sm" style="background:#ef4444;border-color:#ef4444;color:#fff">
+          <button type="submit" class="btn btn-sm btn-danger">
             <i class="bi bi-trash me-1"></i>Удалить
           </button>
-          <a href="{{ url_for('kanban', project_uuid=task.project.uuid) }}" class="btn btn-sm btn-ghost">
+          <a href="{{ url_for('kanban', project_uuid=task.project.uuid) }}" class="btn btn-sm btn-secondary">
             Отмена
           </a>
         </form>

@@ -41,17 +41,17 @@
           </td>
           <td>
             <span class="badge"
-                  style="font-size:.65rem;{% if u.is_manager() %}background:#fee2e2;color:#b91c1c{% elif u.is_executor() %}background:#eef2ff;color:#4338ca{% else %}background:#f0fdf4;color:#15803d{% endif %}">
+                  style="font-size:.65rem;{% if u.is_manager() %}background:var(--danger-bg);color:var(--danger){% elif u.is_executor() %}background:var(--accent-light);color:#A5B4FC{% else %}background:var(--success-bg);color:var(--success){% endif %}">
               {{ u.get_role_display() }}
             </span>
           </td>
           <td>
             {% if u.is_active %}
-            <span class="badge" style="background:#f0fdf4;color:#15803d;font-size:.65rem">
+            <span class="badge" style="background:var(--success-bg);color:var(--success);font-size:.65rem">
               <i class="bi bi-check-circle me-1"></i>Активен
             </span>
             {% else %}
-            <span class="badge" style="background:var(--surface-2);color:var(--text-muted);font-size:.65rem">
+            <span class="badge" style="background:var(--bg-elevated);color:var(--text-2);font-size:.65rem">
               Отключён
             </span>
             {% endif %}
@@ -67,7 +67,7 @@
                 <i class="bi bi-key" style="font-size:.8rem"></i>
               </a>
               <a href="{{ url_for('user_delete', pk=u.id) }}" class="btn-icon" title="Удалить"
-                 style="width:32px;height:32px;border-radius:var(--r-sm);border:1px solid #fecaca;color:#ef4444">
+                 style="width:32px;height:32px;border-radius:var(--radius-sm);border:1px solid rgba(239,68,68,.3);color:var(--danger)">
                 <i class="bi bi-trash" style="font-size:.8rem"></i>
               </a>
             </div>
