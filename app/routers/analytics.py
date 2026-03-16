@@ -12,8 +12,8 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
-from app.dependencies import get_db, require_manager
-from app.models.project import Notification, Project, Task, PRIORITY_CHOICES
+from app.dependencies import get_db, get_unread_count, require_manager
+from app.models.project import Project, Task, PRIORITY_CHOICES
 from app.models.user import User
 from app.utils import templates
 
@@ -83,7 +83,7 @@ async def analytics(request: Request, db: Session = Depends(get_db)):
     production_count = sum(1 for t in all_tasks if t.status_obj and t.status_obj.is_final)
     overdue_count = sum(1 for t in all_tasks if t.deadline and t.deadline < today and not (t.status_obj and t.status_obj.is_final))
 
-    unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
+    unread_count = get_unread_count(db, user.id)
     return templates.TemplateResponse(
         "projects/analytics.html",
         {

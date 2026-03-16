@@ -73,9 +73,6 @@ class User(Base):
         full = f"{self.first_name} {self.last_name}".strip()
         return full if full else self.username
 
-    def get_full_name(self) -> str:
-        return self.get_display_name()
-
     def get_role_display(self) -> str:
         return ROLE_LABELS.get(self.role, self.role)
 

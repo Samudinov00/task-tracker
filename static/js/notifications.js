@@ -62,14 +62,17 @@
           return;
         }
         listEl.innerHTML = items.map(n => `
-          <div class="notif-item ${n.is_read ? '' : 'unread'}"
-               onclick="location.href='${n.task_url || '#'}'">
+          <div class="notif-item ${n.is_read ? '' : 'unread'}" data-url="${escHtml(n.task_url || '')}">
             <div class="small">${escHtml(n.message)}</div>
             <div class="text-muted" style="font-size:.72rem;margin-top:2px">
               ${escHtml(n.created_at)}
             </div>
           </div>
         `).join('');
+        listEl.querySelectorAll('.notif-item[data-url]').forEach(el => {
+          const url = el.dataset.url;
+          if (url) el.addEventListener('click', () => { location.href = url; });
+        });
         badges.forEach(b => b.classList.add('d-none'));
       })
       .catch(() => {

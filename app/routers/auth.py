@@ -1,14 +1,15 @@
 """
 Роуты аутентификации: вход, выход, пинг сессии, Telegram Login.
 """
+import logging
 import time
 
 from fastapi import APIRouter, Depends, Form, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.config import REMEMBER_ME_MAX_AGE, SESSION_MAX_AGE, TELEGRAM_BOT_USERNAME, SITE_URL
-from app.database import SessionLocal
+from app.dependencies import get_db
 from app.models.user import User
 from app.utils import flash, templates
 from app.telegram import (
@@ -18,15 +19,23 @@ from app.telegram import (
     get_pending_reg, set_pending_reg, delete_pending_reg,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+def _login_error(request: Request, error: str) -> HTMLResponse:
+    """Ответ с ошибкой для страницы входа через Telegram."""
+    return templates.TemplateResponse(
+        "accounts/login.html",
+        {
+            "request": request,
+            "error": error,
+            "telegram_bot_username": TELEGRAM_BOT_USERNAME,
+            "site_url": SITE_URL,
+            "show_password_form": False,
+        },
+    )
 
 
 @router.get("/accounts/login/", response_class=HTMLResponse, name="login")
@@ -50,21 +59,11 @@ async def login_get(request: Request):
 @router.get("/accounts/telegram-callback/", name="telegram_callback")
 async def telegram_callback(request: Request, db: Session = Depends(get_db)):
     """Callback от Telegram Login Widget."""
-    import logging
-    logger = logging.getLogger(__name__)
     data = dict(request.query_params)
     logger.warning("Telegram callback data: %s", {k: v for k, v in data.items() if k != "hash"})
 
     if not validate_telegram_auth(data):
-        return templates.TemplateResponse(
-            "accounts/login.html",
-            {
-                "request": request,
-                "error": "Ошибка проверки данных Telegram. Попробуйте ещё раз.",
-                "telegram_bot_username": TELEGRAM_BOT_USERNAME, "site_url": SITE_URL,
-                "show_password_form": False,
-            },
-        )
+        return _login_error(request, "Ошибка проверки данных Telegram. Попробуйте ещё раз.")
 
     telegram_id = int(data.get("id", 0))
     tg_username = data.get("username", "")
@@ -81,15 +80,7 @@ async def telegram_callback(request: Request, db: Session = Depends(get_db)):
             db.commit()
 
     if not user:
-        return templates.TemplateResponse(
-            "accounts/login.html",
-            {
-                "request": request,
-                "error": "Ваш Telegram-аккаунт не привязан к системе. Обратитесь к менеджеру.",
-                "telegram_bot_username": TELEGRAM_BOT_USERNAME, "site_url": SITE_URL,
-                "show_password_form": False,
-            },
-        )
+        return _login_error(request, "Ваш Telegram-аккаунт не привязан к системе. Обратитесь к менеджеру.")
 
     request.session["user_id"] = user.id
     request.session["last_activity"] = time.time()
@@ -137,7 +128,6 @@ async def logout(request: Request):
 @router.post("/bot/webhook/", name="bot_webhook", include_in_schema=False)
 async def bot_webhook(request: Request, db: Session = Depends(get_db)):
     """Webhook от Telegram Bot."""
-    from fastapi.responses import JSONResponse
     try:
         data = await request.json()
     except Exception:
@@ -280,29 +270,11 @@ async def login_by_code(
     """Вход по коду из Telegram-бота."""
     telegram_id = validate_login_code(code.strip())
     if not telegram_id:
-        return templates.TemplateResponse(
-            "accounts/login.html",
-            {
-                "request": request,
-                "error": "Неверный или истёкший код. Отправьте /login боту снова.",
-                "telegram_bot_username": TELEGRAM_BOT_USERNAME,
-                "site_url": SITE_URL,
-                "show_password_form": False,
-            },
-        )
+        return _login_error(request, "Неверный или истёкший код. Отправьте /login боту снова.")
 
     user = db.query(User).filter(User.telegram_id == telegram_id, User.is_active == True).first()
     if not user:
-        return templates.TemplateResponse(
-            "accounts/login.html",
-            {
-                "request": request,
-                "error": "Аккаунт не найден.",
-                "telegram_bot_username": TELEGRAM_BOT_USERNAME,
-                "site_url": SITE_URL,
-                "show_password_form": False,
-            },
-        )
+        return _login_error(request, "Аккаунт не найден.")
 
     request.session["user_id"] = user.id
     request.session["last_activity"] = time.time()
@@ -311,7 +283,6 @@ async def login_by_code(
 
 @router.post("/session/ping/", name="session_ping")
 async def session_ping(request: Request):
-    from fastapi.responses import JSONResponse
     if request.session.get("user_id"):
         request.session["last_activity"] = time.time()
     return JSONResponse({"ok": True})

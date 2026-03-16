@@ -32,12 +32,8 @@ def set_pending_reg(telegram_id: int, tg_username: str, step: str) -> None:
     from app.models.user import PendingRegistration
     db = SessionLocal()
     try:
-        existing = db.query(PendingRegistration).filter(PendingRegistration.telegram_id == telegram_id).first()
-        if existing:
-            existing.step = step
-            existing.tg_username = tg_username
-        else:
-            db.add(PendingRegistration(telegram_id=telegram_id, tg_username=tg_username, step=step))
+        obj = PendingRegistration(telegram_id=telegram_id, tg_username=tg_username, step=step)
+        db.merge(obj)
         db.commit()
     finally:
         db.close()
@@ -78,12 +74,11 @@ def validate_login_code(code: str) -> Optional[int]:
     from app.models.user import LoginCode
     db = SessionLocal()
     try:
-        entry = db.query(LoginCode).filter(LoginCode.code == code).first()
+        entry = db.query(LoginCode).filter(
+            LoginCode.code == code,
+            LoginCode.expires >= time.time(),
+        ).first()
         if not entry:
-            return None
-        if time.time() > entry.expires:
-            db.delete(entry)
-            db.commit()
             return None
         telegram_id = entry.telegram_id
         db.delete(entry)

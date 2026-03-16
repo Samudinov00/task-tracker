@@ -10,6 +10,15 @@ from app.database import SessionLocal
 from app.models.user import User
 
 
+def get_unread_count(db: Session, user_id: int) -> int:
+    """Количество непрочитанных уведомлений для пользователя."""
+    from app.models.project import Notification
+    return db.query(Notification).filter(
+        Notification.user_id == user_id,
+        Notification.is_read == False,
+    ).count()
+
+
 # ── Сессия БД ────────────────────────────────────────────────────────────────
 def get_db():
     db = SessionLocal()

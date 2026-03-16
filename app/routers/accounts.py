@@ -1,7 +1,7 @@
 """
 Роуты управления пользователями (аналог accounts/views.py).
 """
-from fastapi import APIRouter, Depends, Form, Request, UploadFile, File
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -14,6 +14,13 @@ ROLE_CHOICES = list(ROLE_LABELS.items())
 from app.utils import flash, templates
 
 router = APIRouter()
+
+
+def _get_user_or_404(db, pk: int) -> "User":
+    user = db.query(User).filter(User.id == pk).first()
+    if not user:
+        raise HTTPException(status_code=404)
+    return user
 
 
 # ── Профиль ──────────────────────────────────────────────────────────────────
@@ -165,10 +172,7 @@ async def user_create_post(
 @router.get("/accounts/users/{pk}/edit/", response_class=HTMLResponse, name="user_edit")
 async def user_edit_get(request: Request, pk: int, db: Session = Depends(get_db)):
     manager = require_manager(request, db)
-    edit_user = db.query(User).filter(User.id == pk).first()
-    if not edit_user:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404)
+    edit_user = _get_user_or_404(db, pk)
     return templates.TemplateResponse(
         "accounts/user_form.html",
         {
@@ -194,10 +198,7 @@ async def user_edit_post(
     is_active: bool = Form(False),
 ):
     manager = require_manager(request, db)
-    edit_user = db.query(User).filter(User.id == pk).first()
-    if not edit_user:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404)
+    edit_user = _get_user_or_404(db, pk)
 
     errors = {}
     existing = db.query(User).filter(User.username == username, User.id != pk).first()
@@ -236,10 +237,7 @@ async def user_edit_post(
 @router.get("/accounts/users/{pk}/set-password/", response_class=HTMLResponse, name="user_set_password")
 async def user_set_password_get(request: Request, pk: int, db: Session = Depends(get_db)):
     manager = require_manager(request, db)
-    target = db.query(User).filter(User.id == pk).first()
-    if not target:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404)
+    target = _get_user_or_404(db, pk)
     return templates.TemplateResponse(
         "accounts/user_set_password.html",
         {"request": request, "user": manager, "target": target, "errors": {}},
@@ -255,10 +253,7 @@ async def user_set_password_post(
     new_password2: str = Form(...),
 ):
     manager = require_manager(request, db)
-    target = db.query(User).filter(User.id == pk).first()
-    if not target:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404)
+    target = _get_user_or_404(db, pk)
 
     errors = {}
     if not new_password1:
@@ -283,10 +278,7 @@ async def user_set_password_post(
 @router.get("/accounts/users/{pk}/delete/", response_class=HTMLResponse, name="user_delete")
 async def user_delete_get(request: Request, pk: int, db: Session = Depends(get_db)):
     manager = require_manager(request, db)
-    target = db.query(User).filter(User.id == pk).first()
-    if not target:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404)
+    target = _get_user_or_404(db, pk)
     return templates.TemplateResponse(
         "accounts/user_confirm_delete.html",
         {"request": request, "user": manager, "target": target},
@@ -296,10 +288,7 @@ async def user_delete_get(request: Request, pk: int, db: Session = Depends(get_d
 @router.post("/accounts/users/{pk}/delete/", name="user_delete_post")
 async def user_delete_post(request: Request, pk: int, db: Session = Depends(get_db)):
     manager = require_manager(request, db)
-    target = db.query(User).filter(User.id == pk).first()
-    if not target:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404)
+    target = _get_user_or_404(db, pk)
     db.delete(target)
     db.commit()
     flash(request, "Пользователь удалён.", "success")

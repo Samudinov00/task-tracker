@@ -5,7 +5,7 @@ import csv
 import io
 import json
 import uuid as uuid_lib
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
@@ -14,14 +14,14 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 from typing import List, Optional
 
 from app.database import SessionLocal
-from app.dependencies import get_db, require_auth, require_manager
+from app.dependencies import get_db, get_unread_count, require_auth, require_manager
 from app.models.project import (
     Comment, Notification, Project, ProjectStatus, Task,
     TaskChangeLog, TaskStatusLog,
     DEFAULT_STATUSES, STATUS_COLOR_CHOICES, PRIORITY_CHOICES,
     TYPE_TASK_ASSIGNED, TYPE_TASK_STATUS, TYPE_COMMENT,
 )
-from app.models.user import User
+from app.models.user import User, ROLE_EXECUTOR, ROLE_CLIENT
 from app.utils import flash, templates
 from app import telegram as tg
 
@@ -67,6 +67,38 @@ def _get_task_by_uuid(db: Session, uuid_str) -> Task:
     return task
 
 
+def _get_manager_tg(db: Session, manager_id: int, acting_user_id: int) -> int | None:
+    """Telegram ID менеджера проекта, если он не является текущим пользователем."""
+    if manager_id == acting_user_id:
+        return None
+    manager = db.query(User).filter(User.id == manager_id).first()
+    return manager.telegram_id if manager else None
+
+
+def _notify_status_change(
+    db: Session, task: Task, user: "User",
+    old_status_name: str, new_status_name: str,
+) -> None:
+    """Создаёт TaskStatusLog, уведомление в БД и Telegram при смене статуса."""
+    db.add(TaskStatusLog(
+        task_id=task.id, changed_by_id=user.id,
+        old_status=old_status_name, new_status=new_status_name,
+    ))
+    recipients = set()
+    if task.assignee_id and task.assignee_id != user.id:
+        recipients.add(task.assignee_id)
+    if task.project.manager_id != user.id:
+        recipients.add(task.project.manager_id)
+    _notify(db, list(recipients), task.id, TYPE_TASK_STATUS,
+            f"Статус задачи «{task.title}» изменён на «{new_status_name}»")
+    assignee_tg = task.assignee.telegram_id if task.assignee and task.assignee_id != user.id else None
+    manager_tg = _get_manager_tg(db, task.project.manager_id, user.id)
+    if assignee_tg or manager_tg:
+        tg.notify_task_status_changed(
+            assignee_tg, task.title, old_status_name, new_status_name, str(task.uuid), manager_tg,
+        )
+
+
 def _create_default_statuses(db: Session, project: Project) -> None:
     for s in DEFAULT_STATUSES:
         status = ProjectStatus(
@@ -107,7 +139,7 @@ async def project_list(request: Request, db: Session = Depends(get_db)):
             .order_by(Project.created_at.desc())
             .all()
         )
-    unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
+    unread_count = get_unread_count(db, user.id)
     return templates.TemplateResponse(
         "projects/project_list.html",
         {"request": request, "user": user, "projects": projects, "unread_notifications_count": unread_count},
@@ -117,8 +149,8 @@ async def project_list(request: Request, db: Session = Depends(get_db)):
 @router.get("/p/create/", response_class=HTMLResponse, name="project_create")
 async def project_create_get(request: Request, db: Session = Depends(get_db)):
     user = require_manager(request, db)
-    executors = db.query(User).filter(User.role == "executor").all()
-    clients = db.query(User).filter(User.role == "client").all()
+    executors = db.query(User).filter(User.role == ROLE_EXECUTOR).all()
+    clients = db.query(User).filter(User.role == ROLE_CLIENT).all()
     return templates.TemplateResponse(
         "projects/project_form.html",
         {
@@ -147,8 +179,8 @@ async def project_create_post(
         errors["name"] = "Название обязательно."
 
     if errors:
-        executors = db.query(User).filter(User.role == "executor").all()
-        clients = db.query(User).filter(User.role == "client").all()
+        executors = db.query(User).filter(User.role == ROLE_EXECUTOR).all()
+        clients = db.query(User).filter(User.role == ROLE_CLIENT).all()
         return templates.TemplateResponse(
             "projects/project_form.html",
             {
@@ -196,7 +228,7 @@ async def project_detail(request: Request, uuid: uuid_lib.UUID, db: Session = De
     tasks = tasks_q.all()
     done_count = sum(1 for t in tasks if t.status_obj and t.status_obj.is_final)
     in_work_count = len(tasks) - done_count
-    unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
+    unread_count = get_unread_count(db, user.id)
     return templates.TemplateResponse(
         "projects/project_detail.html",
         {
@@ -214,8 +246,8 @@ async def project_edit_get(request: Request, uuid: uuid_lib.UUID, db: Session = 
     project = _get_project_by_uuid(db, uuid)
     if project.manager_id != user.id:
         raise HTTPException(status_code=403)
-    all_executors = db.query(User).filter(User.role == "executor").all()
-    all_clients = db.query(User).filter(User.role == "client").all()
+    all_executors = db.query(User).filter(User.role == ROLE_EXECUTOR).all()
+    all_clients = db.query(User).filter(User.role == ROLE_CLIENT).all()
     return templates.TemplateResponse(
         "projects/project_form.html",
         {
@@ -247,8 +279,8 @@ async def project_edit_post(request: Request, uuid: uuid_lib.UUID, db: Session =
         errors["name"] = "Название обязательно."
 
     if errors:
-        all_executors = db.query(User).filter(User.role == "executor").all()
-        all_clients = db.query(User).filter(User.role == "client").all()
+        all_executors = db.query(User).filter(User.role == ROLE_EXECUTOR).all()
+        all_clients = db.query(User).filter(User.role == ROLE_CLIENT).all()
         return templates.TemplateResponse(
             "projects/project_form.html",
             {
@@ -275,7 +307,7 @@ async def project_delete_get(request: Request, uuid: uuid_lib.UUID, db: Session 
     project = _get_project_by_uuid(db, uuid)
     if project.manager_id != user.id:
         raise HTTPException(status_code=403)
-    unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
+    unread_count = get_unread_count(db, user.id)
     return templates.TemplateResponse(
         "projects/project_confirm_delete.html",
         {"request": request, "user": user, "project": project, "unread_notifications_count": unread_count},
@@ -465,7 +497,7 @@ async def kanban(request: Request, project_uuid: uuid_lib.UUID, db: Session = De
         for s in project.statuses
     ]
 
-    unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
+    unread_count = get_unread_count(db, user.id)
     return templates.TemplateResponse(
         "projects/kanban.html",
         {
@@ -475,7 +507,7 @@ async def kanban(request: Request, project_uuid: uuid_lib.UUID, db: Session = De
             "deadline_filter": deadline_filter,
             "priority_choices": PRIORITY_CHOICES,
             "unread_notifications_count": unread_count,
-            "today": date.today(),
+            "today": today,
         },
     )
 
@@ -513,7 +545,6 @@ async def task_move(request: Request, task_uuid: uuid_lib.UUID, db: Session = De
     new_status_name = valid_ids[new_status_id].name
 
     task.status_id = new_status_id
-    db.commit()
 
     for idx, tuuid_str in enumerate(column_ids):
         try:
@@ -521,27 +552,11 @@ async def task_move(request: Request, task_uuid: uuid_lib.UUID, db: Session = De
             db.query(Task).filter(Task.uuid == tuuid, Task.project_id == task.project_id).update({"order": idx})
         except Exception:
             pass
-    db.commit()
 
     if old_status_name != new_status_name:
-        status_log = TaskStatusLog(
-            task_id=task.id, changed_by_id=user.id,
-            old_status=old_status_name, new_status=new_status_name,
-        )
-        db.add(status_log)
-        db.commit()
-        recipients = set()
-        if task.assignee_id and task.assignee_id != user.id:
-            recipients.add(task.assignee_id)
-        if task.project.manager_id != user.id:
-            recipients.add(task.project.manager_id)
-        _notify(db, list(recipients), task.id, TYPE_TASK_STATUS, f"Статус задачи «{task.title}» изменён на «{new_status_name}»")
-        assignee_tg = task.assignee.telegram_id if task.assignee and task.assignee_id != user.id else None
-        manager = db.query(User).filter(User.id == task.project.manager_id).first()
-        manager_tg = manager.telegram_id if manager and task.project.manager_id != user.id else None
-        if assignee_tg or manager_tg:
-            tg.notify_task_status_changed(assignee_tg, task.title, old_status_name, new_status_name, str(task.uuid), manager_tg)
+        _notify_status_change(db, task, user, old_status_name, new_status_name)
 
+    db.commit()
     return JSONResponse({"success": True})
 
 
@@ -572,7 +587,6 @@ async def kanban_state_api(request: Request, project_uuid: uuid_lib.UUID, db: Se
             "comment_count": len(task.comments),
         })
 
-    from datetime import datetime
     return JSONResponse({"tasks": tasks_data, "updated_at": datetime.utcnow().isoformat()})
 
 
@@ -630,7 +644,7 @@ async def task_detail(request: Request, uuid: uuid_lib.UUID, db: Session = Depen
         })
     history.sort(key=lambda x: x["changed_at"], reverse=True)
 
-    unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
+    unread_count = get_unread_count(db, user.id)
     return templates.TemplateResponse(
         "projects/task_detail.html",
         {
@@ -687,7 +701,7 @@ async def task_create_get(request: Request, project_uuid: uuid_lib.UUID, db: Ses
 
     assignees = list(project.executors) + [user]
     task_clients_list = list(project.clients)
-    unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
+    unread_count = get_unread_count(db, user.id)
     return templates.TemplateResponse(
         "projects/task_form.html",
         {
@@ -736,15 +750,14 @@ async def task_create_post(
     deadline = None
     if deadline_str:
         try:
-            from datetime import date as date_type
-            deadline = date_type.fromisoformat(deadline_str)
+            deadline = date.fromisoformat(deadline_str)
         except ValueError:
             errors["deadline"] = "Неверный формат даты."
 
     if errors:
         assignees = list(project.executors) + [user]
         task_clients_list = list(project.clients)
-        unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
+        unread_count = get_unread_count(db, user.id)
         return templates.TemplateResponse(
             "projects/task_form.html",
             {
@@ -774,12 +787,10 @@ async def task_create_post(
     if assignee_id and assignee_id != user.id:
         _notify(db, [assignee_id], task.id, TYPE_TASK_ASSIGNED, f"Вам назначена задача «{task.title}» в проекте «{project.name}»")
         assignee = db.query(User).filter(User.id == assignee_id).first()
-        manager_obj = db.query(User).filter(User.id == project.manager_id).first()
-        manager_tg = manager_obj.telegram_id if manager_obj and project.manager_id != user.id else None
         tg.notify_task_assigned(
             assignee.telegram_id if assignee else None,
             task.title, project.name, str(task.uuid),
-            manager_tg,
+            _get_manager_tg(db, project.manager_id, user.id),
         )
 
     flash(request, f"Задача «{title}» создана.", "success")
@@ -801,7 +812,7 @@ async def task_edit_get(request: Request, uuid: uuid_lib.UUID, db: Session = Dep
 
     assignees = list(project.executors) + [project.manager]
     task_clients_list = list(project.clients)
-    unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
+    unread_count = get_unread_count(db, user.id)
     return templates.TemplateResponse(
         "projects/task_form.html",
         {
@@ -888,19 +899,16 @@ async def task_edit_post(request: Request, uuid: uuid_lib.UUID, db: Session = De
             task.assignee_id = new_assignee_id
             if new_assignee_id and new_assignee_id != user.id:
                 _notify(db, [new_assignee_id], task.id, TYPE_TASK_ASSIGNED, f"Вам назначена задача «{task.title}»")
-                manager_obj2 = db.query(User).filter(User.id == task.project.manager_id).first()
-                manager_tg2 = manager_obj2.telegram_id if manager_obj2 and task.project.manager_id != user.id else None
                 tg.notify_task_assigned(
                     new_user.telegram_id if new_user else None,
                     task.title, task.project.name, str(task.uuid),
-                    manager_tg2,
+                    _get_manager_tg(db, task.project.manager_id, user.id),
                 )
 
         deadline_str = form.get("deadline", "")
         if deadline_str:
             try:
-                from datetime import date as date_type
-                new_deadline = date_type.fromisoformat(deadline_str)
+                new_deadline = date.fromisoformat(deadline_str)
                 if new_deadline != task.deadline:
                     db.add(TaskChangeLog(task_id=task.id, changed_by_id=user.id, field_name="Дедлайн", old_value=str(task.deadline or ""), new_value=str(new_deadline)))
                 task.deadline = new_deadline
@@ -917,18 +925,7 @@ async def task_edit_post(request: Request, uuid: uuid_lib.UUID, db: Session = De
     # Log status change if changed
     if task.status_id != old_status_id:
         new_status_name = valid_status_ids[task.status_id].name if task.status_id in valid_status_ids else ""
-        db.add(TaskStatusLog(task_id=task.id, changed_by_id=user.id, old_status=old_status_name, new_status=new_status_name))
-        recipients = set()
-        if task.assignee_id and task.assignee_id != user.id:
-            recipients.add(task.assignee_id)
-        if project.manager_id != user.id:
-            recipients.add(project.manager_id)
-        _notify(db, list(recipients), task.id, TYPE_TASK_STATUS, f"Статус задачи «{task.title}» изменён на «{new_status_name}»")
-        assignee_tg2 = task.assignee.telegram_id if task.assignee and task.assignee_id != user.id else None
-        manager_obj3 = db.query(User).filter(User.id == project.manager_id).first()
-        manager_tg3 = manager_obj3.telegram_id if manager_obj3 and project.manager_id != user.id else None
-        if assignee_tg2 or manager_tg3:
-            tg.notify_task_status_changed(assignee_tg2, task.title, old_status_name, new_status_name, str(task.uuid), manager_tg3)
+        _notify_status_change(db, task, user, old_status_name, new_status_name)
 
     db.commit()
     flash(request, "Задача обновлена.", "success")
@@ -941,7 +938,7 @@ async def task_delete_get(request: Request, uuid: uuid_lib.UUID, db: Session = D
     task = _get_task_by_uuid(db, uuid)
     if task.project.manager_id != user.id:
         raise HTTPException(status_code=403)
-    unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
+    unread_count = get_unread_count(db, user.id)
     return templates.TemplateResponse(
         "projects/task_confirm_delete.html",
         {"request": request, "user": user, "task": task, "unread_notifications_count": unread_count},
@@ -1028,7 +1025,7 @@ async def bulk_task_update(request: Request, db: Session = Depends(get_db)):
                 updated += 1
 
     elif action == "change_assignee":
-        new_assignee = db.query(User).filter(User.id == int(value), User.role == "executor").first()
+        new_assignee = db.query(User).filter(User.id == int(value), User.role == ROLE_EXECUTOR).first()
         if not new_assignee:
             flash(request, "Исполнитель не найден.", "danger")
             return RedirectResponse(url=referer, status_code=302)
@@ -1086,7 +1083,7 @@ async def status_logs(request: Request, db: Session = Depends(get_db)):
     executor_id_list = [r[0] for r in executor_ids_q.all() if r[0]]
     executors = db.query(User).filter(User.id.in_(executor_id_list)).all()
 
-    unread_count = db.query(Notification).filter(Notification.user_id == user.id, Notification.is_read == False).count()
+    unread_count = get_unread_count(db, user.id)
     return templates.TemplateResponse(
         "projects/status_logs.html",
         {
