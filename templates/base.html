@@ -121,13 +121,11 @@
   {# Topbar #}
   <header class="topbar">
 
-    {# Mobile (<768px): logo | title | bell + avatar #}
+    {# Mobile (<768px): hamburger | title | bell + avatar #}
     <div class="topbar-mobile d-flex d-md-none align-items-center w-100" style="gap:.375rem">
-      <a href="{{ url_for('home') }}" class="topbar-logo-btn flex-shrink-0" aria-label="Главная">
-        <div class="sidebar-brand-icon" style="width:30px;height:30px;font-size:.9rem">
-          <i class="bi bi-kanban-fill"></i>
-        </div>
-      </a>
+      <button class="btn-icon flex-shrink-0" id="sidebarToggleMob" aria-label="Меню">
+        <i class="bi bi-list" style="font-size:1.3rem"></i>
+      </button>
       <span class="topbar-title flex-grow-1 px-1 text-truncate">{% block page_title %}{% endblock %}</span>
       <div class="d-flex align-items-center gap-1 flex-shrink-0">
         <div class="dropdown">
@@ -288,7 +286,6 @@
   let justClosed = false, justClosedTimer = null;
 
   function openSidebar() {
-    if (window.innerWidth < 992) return;
     if (justClosed) return;
     document.body.classList.add('sidebar-open');
     updateToggleIcon();
@@ -326,6 +323,17 @@
     setTimeout(function () { touchHandled = false; }, 800);
   }, { passive: false });
   toggle.addEventListener('click', function (e) { if (!touchHandled) onToggle(e); });
+
+  // Mobile hamburger button
+  const toggleMob = document.getElementById('sidebarToggleMob');
+  if (toggleMob) {
+    let thMob = false;
+    toggleMob.addEventListener('touchstart', function (e) {
+      e.preventDefault(); thMob = true; onToggle(e);
+      setTimeout(function () { thMob = false; }, 800);
+    }, { passive: false });
+    toggleMob.addEventListener('click', function (e) { if (!thMob) onToggle(e); });
+  }
 
   if (closeBtn) {
     let ct = false;
