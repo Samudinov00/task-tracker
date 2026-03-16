@@ -5,34 +5,21 @@
 
 {% block extra_css %}
 <style>
-/* ── Мобильный заголовок страницы ── */
-.mobile-page-header {
-  display: none;
-  text-align: center;
-  padding: 1.25rem 1rem .75rem;
-  position: relative;
-}
-.mobile-page-header .mobile-avatar {
-  position: absolute;
-  right: 1rem;
-  top: 1.25rem;
-}
-@media (max-width: 991.98px) {
-  .mobile-page-header { display: block; }
-  .desktop-page-header { display: none; }
-}
-
 /* ── Карточки проектов ── */
 .project-card-body {
   padding: .875rem .875rem .625rem;
 }
 .project-action-btn {
-  width: 36px; height: 36px;
+  width: auto;
+  padding: 0 .75rem;
+  height: 36px;
   border-radius: 10px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: .95rem;
+  gap: .375rem;
+  font-size: .825rem;
+  font-weight: 500;
   border: none;
   cursor: pointer;
   text-decoration: none;
@@ -40,31 +27,10 @@
   flex-shrink: 0;
 }
 .project-action-btn:active { transform: scale(.93); }
-.project-action-btn.btn-kanban {
-  background: #3b82f6;
-  color: #fff;
-}
-.project-action-btn.btn-list {
-  background: #e2e8f0;
-  color: #475569;
-}
+.project-action-btn.btn-kanban { background: #3b82f6; color: #fff; }
+.project-action-btn.btn-list { background: #e2e8f0; color: #475569; }
 .project-action-btn.btn-kanban:hover { background: #2563eb; color: #fff; }
 .project-action-btn.btn-list:hover { background: #cbd5e1; color: #334155; }
-
-/* Desktop: показывать текст на кнопках */
-@media (min-width: 992px) {
-  .project-action-btn {
-    width: auto;
-    padding: 0 .75rem;
-    gap: .375rem;
-    font-size: .825rem;
-    font-weight: 500;
-  }
-  .project-action-btn .btn-icon-label { display: inline; }
-}
-@media (max-width: 991.98px) {
-  .project-action-btn .btn-icon-label { display: none; }
-}
 
 /* ── Градиентный прогресс-бар ── */
 .progress-gradient {
@@ -79,55 +45,13 @@
   background: linear-gradient(90deg, #3b82f6, #06b6d4);
   transition: width .4s ease;
 }
-
-/* ── FAB кнопка ── */
-.fab-add {
-  position: fixed;
-  bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 1rem);
-  right: 1.25rem;
-  background: #3b82f6;
-  color: #fff;
-  border: none;
-  border-radius: 999px;
-  padding: .75rem 1.25rem;
-  font-size: .875rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-  box-shadow: 0 4px 20px rgba(59,130,246,.4);
-  text-decoration: none;
-  z-index: 100;
-  transition: transform .15s, box-shadow .15s;
-}
-.fab-add:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(59,130,246,.5); color: #fff; }
-.fab-add:active { transform: scale(.96); }
-@media (min-width: 992px) { .fab-add { display: none; } }
 </style>
 {% endblock %}
 
 {% block content %}
 
-{# ── Мобильный заголовок (вместо page-header) ── #}
-<div class="mobile-page-header">
-  <h1 style="font-size:1.25rem;font-weight:700;color:var(--text-1);margin:0 0 .2rem">Проекты</h1>
-  <p style="font-size:.825rem;color:var(--text-2);margin:0">
-    {{ projects|length }}
-    {% if projects|length == 1 %}проект
-    {% elif projects|length in [2,3,4] %}проекта
-    {% else %}проектов{% endif %}
-  </p>
-  <div class="mobile-avatar">
-    <a href="{{ url_for('profile') }}">
-      <div class="avatar-xs avatar-initials" style="width:34px;height:34px;font-size:.6rem">
-        {{ user.get_initials() }}
-      </div>
-    </a>
-  </div>
-</div>
-
-{# ── Десктопный заголовок ── #}
-<div class="page-header desktop-page-header">
+{# ── Заголовок ── #}
+<div class="page-header">
   <div>
     <h1 class="page-header-title">Проекты</h1>
     <div class="page-header-sub">
@@ -239,11 +163,5 @@
   {% endfor %}
 </div>
 
-{# ── FAB кнопка (только мобильная) ── #}
-{% if user.is_manager() %}
-<a href="{{ url_for('project_create') }}" class="fab-add">
-  <i class="bi bi-plus-lg"></i> Add Project
-</a>
-{% endif %}
 
 {% endblock %}

@@ -168,25 +168,6 @@ html { overflow-x: hidden; }
 .table-hover tbody tr:hover > * { background-color: #f8fafc !important; }
 thead th { color: #64748b !important; }
 
-/* ── Sidebar: force-hidden on mobile (outside @layer) ───────── */
-@media (max-width: 991.98px) {
-  .sidebar,
-  .sidebar-backdrop {
-    display: none !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-  }
-  body.sidebar-open { overflow: unset !important; }
-}
-
-/* ── Bottom tab bar: position:fixed must be outside @layer ──── */
-.bottom-tab-bar {
-  position: fixed !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  z-index: 1030 !important;
-}
 
 /* ══════════════════════════════════════════════════════════════
    TOKENS
@@ -659,81 +640,6 @@ main.page-content {
 }
 @media (min-width: 992px) {
   main.page-content { padding: var(--s5); }
-}
-
-/* ── Mobile bottom nav ──────────────────────────────────────── */
-.bottom-tab-bar {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  height: calc(var(--bottom-bar-h) + env(safe-area-inset-bottom, 0px));
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  background: var(--bg-surface);
-  border-top: 1px solid var(--border);
-  display: flex;
-  align-items: stretch;
-  z-index: 1030;
-}
-.bottom-tab-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  color: var(--text-2);
-  text-decoration: none;
-  font-size: .6rem;
-  font-weight: 600;
-  letter-spacing: .03em;
-  text-transform: uppercase;
-  padding: var(--s1);
-  position: relative;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  transition: color var(--ease);
-  min-height: 44px;
-}
-.bottom-tab-item i { font-size: 1.2rem; line-height: 1; }
-.bottom-tab-item:hover,
-.bottom-tab-item:focus { color: var(--accent); text-decoration: none; }
-.bottom-tab-item.active { color: var(--accent); }
-.bottom-tab-item.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 20%; right: 20%;
-  height: 2px;
-  background: var(--accent);
-  border-radius: 2px 2px 0 0;
-}
-.bottom-tab-badge-dot {
-  position: absolute;
-  top: 4px;
-  left: calc(50% + 5px);
-  min-width: 15px; height: 15px;
-  padding: 0 3px;
-  font-size: .55rem; font-weight: 700;
-  background: var(--danger); color: #fff;
-  border-radius: var(--radius-full);
-  line-height: 15px; text-align: center;
-  pointer-events: none;
-}
-
-/* Sidebar hidden on mobile/tablet — bottom nav takes over */
-@media (max-width: 991.98px) {
-  .sidebar,
-  .sidebar-backdrop {
-    display: none !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-  }
-  body.sidebar-open { overflow: unset !important; }
-  main.page-content {
-    padding-bottom: calc(var(--bottom-bar-h) + env(safe-area-inset-bottom, 0px) + var(--s3));
-  }
-  .notif-dropdown {
-    bottom: calc(var(--bottom-bar-h) + env(safe-area-inset-bottom, 0px)) !important;
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  }
 }
 
 /* Mobile topbar padding */

@@ -254,44 +254,6 @@
 
 </div>{# /page-content-wrapper #}
 
-{# ── Mobile bottom tab bar ──────────────────────────────────── #}
-<nav class="bottom-tab-bar d-lg-none" aria-label="Навигация">
-
-  <a href="{{ url_for('project_list') }}"
-     class="bottom-tab-item {% if '/p/' in request.url.path or '/board/' in request.url.path or request.url.path == '/' %}active{% endif %}">
-    <i class="bi bi-folder2-open"></i>
-    <span>Проекты</span>
-  </a>
-
-  {% if user.is_manager() %}
-  <a href="{{ url_for('user_list') }}"
-     class="bottom-tab-item {% if '/accounts/users' in request.url.path %}active{% endif %}">
-    <i class="bi bi-people"></i>
-    <span>Команда</span>
-  </a>
-  <a href="{{ url_for('analytics') }}"
-     class="bottom-tab-item {% if request.url.path == '/analytics/' %}active{% endif %}">
-    <i class="bi bi-bar-chart"></i>
-    <span>Аналитика</span>
-  </a>
-  {% else %}
-  <a href="{{ url_for('notifications') }}"
-     class="bottom-tab-item position-relative {% if '/notifications' in request.url.path %}active{% endif %}">
-    <i class="bi bi-bell"></i>
-    <span>Уведомления</span>
-    {% if (unread_notifications_count | default(0)) > 0 %}
-    <span class="bottom-tab-badge-dot">{{ unread_notifications_count }}</span>
-    {% endif %}
-  </a>
-  {% endif %}
-
-  <a href="{{ url_for('profile') }}"
-     class="bottom-tab-item {% if request.url.path == '/accounts/profile/' %}active{% endif %}">
-    <i class="bi bi-person-circle"></i>
-    <span>Профиль</span>
-  </a>
-
-</nav>
 
 </div>{# /wrapper #}
 
