@@ -1195,6 +1195,7 @@ textarea.form-control-autogrow {
   border: 1px solid var(--border) !important;
   border-radius: var(--radius-md) !important;
   box-shadow: none !important;
+  border-left-width: 3px !important;
   background: var(--bg-surface);
   transition: border-color var(--ease), transform .1s ease;
   cursor: grab;
@@ -1217,10 +1218,14 @@ textarea.form-control-autogrow {
 .sortable-chosen { box-shadow: 0 8px 32px rgba(0,0,0,.6) !important; transform: rotate(.8deg); }
 .sortable-drag { opacity: 0; }
 
+.task-card.priority-critical { border-left-color: #ef4444 !important; }
+.task-card.priority-high     { border-left-color: #f97316 !important; }
+.task-card.priority-medium   { border-left-color: #3b82f6 !important; }
+.task-card.priority-low      { border-left-color: #94a3b8 !important; }
+
 .kanban-drop-hint {
-  border: 2px dashed var(--border);
   border-radius: var(--radius-md);
-  padding: var(--s6);
+  padding: var(--s5) var(--s3);
   text-align: center;
   color: var(--text-3);
   font-size: .8rem;

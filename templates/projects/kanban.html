@@ -135,7 +135,7 @@
       {# Tasks #}
       <div class="kanban-col-body" id="col-{{ col.key }}" data-status="{{ col.key }}">
         {% for task in col.tasks %}
-        <div class="card task-card mb-2 {% if task.is_overdue() %}task-card-overdue{% endif %}"
+        <div class="card task-card mb-2 priority-{{ task.priority }} {% if task.is_overdue() %}task-card-overdue{% endif %}"
              data-task-uuid="{{ task.uuid }}">
           <div class="card-body">
 
@@ -190,7 +190,8 @@
                 {% endif %}
               </span>
               {% if task.deadline %}
-              <span class="{% if task.is_overdue() %}text-danger fw-semibold{% endif %}">
+              {% set days_left = (task.deadline - today).days %}
+              <span class="{% if task.is_overdue() %}text-danger fw-semibold{% elif days_left < 2 %}text-warning fw-semibold{% endif %}">
                 <i class="bi bi-calendar3 me-1"></i>{{ task.deadline.strftime('%d.%m') }}
               </span>
               {% endif %}
@@ -208,8 +209,8 @@
         </div>
         {% else %}
         <div class="kanban-drop-hint">
-          <i class="bi bi-plus-circle mb-2 d-block fs-5 text-muted"></i>
-          <div>Нет задач</div>
+          <i class="bi bi-inbox" style="font-size:1.5rem;opacity:.3;display:block;margin-bottom:.375rem"></i>
+          <div style="color:var(--text-3);font-size:.75rem">Нет задач</div>
         </div>
         {% endfor %}
       </div>

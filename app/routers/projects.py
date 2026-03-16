@@ -475,6 +475,7 @@ async def kanban(request: Request, project_uuid: uuid_lib.UUID, db: Session = De
             "deadline_filter": deadline_filter,
             "priority_choices": PRIORITY_CHOICES,
             "unread_notifications_count": unread_count,
+            "today": date.today(),
         },
     )
 
