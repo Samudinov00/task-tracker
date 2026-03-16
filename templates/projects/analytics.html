@@ -71,7 +71,7 @@
     <div class="card metric-card green h-100">
       <div class="card-body">
         <div class="text-muted mb-1" style="font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em">В продакшне</div>
-        <div class="fw-bold" style="font-size:1.75rem;color:#10b981;letter-spacing:-.02em">{{ production_count }}</div>
+        <div class="fw-bold" style="font-size:1.75rem;color:var(--success);letter-spacing:-.02em;font-variant-numeric:tabular-nums">{{ production_count }}</div>
       </div>
     </div>
   </div>
@@ -79,7 +79,7 @@
     <div class="card metric-card orange h-100">
       <div class="card-body">
         <div class="text-muted mb-1" style="font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Проектов</div>
-        <div class="fw-bold" style="font-size:1.75rem;color:#f59e0b;letter-spacing:-.02em">{{ total_projects }}</div>
+        <div class="fw-bold" style="font-size:1.75rem;color:var(--warning);letter-spacing:-.02em;font-variant-numeric:tabular-nums">{{ total_projects }}</div>
       </div>
     </div>
   </div>
@@ -110,7 +110,7 @@
   <div class="col-lg-6">
     <div class="card h-100">
       <div class="card-header">
-        <i class="bi bi-bar-chart-fill me-2" style="color:#f59e0b"></i>Задачи по приоритетам
+        <i class="bi bi-bar-chart-fill me-2" style="color:var(--warning)"></i>Задачи по приоритетам
       </div>
       <div class="card-body">
         <div class="chart-container">
@@ -126,7 +126,7 @@
   <div class="col-lg-6">
     <div class="card h-100">
       <div class="card-header">
-        <i class="bi bi-people-fill me-2" style="color:#10b981"></i>Задачи по исполнителям
+        <i class="bi bi-people-fill me-2" style="color:var(--success)"></i>Задачи по исполнителям
       </div>
       <div class="card-body">
         <div class="chart-container">
@@ -138,7 +138,7 @@
   <div class="col-lg-6">
     <div class="card h-100">
       <div class="card-header">
-        <i class="bi bi-graph-up me-2" style="color:#6366f1"></i>Создано задач за 30 дней
+        <i class="bi bi-graph-up me-2" style="color:var(--accent)"></i>Создано задач за 30 дней
       </div>
       <div class="card-body">
         <div class="chart-container">
@@ -162,9 +162,9 @@ const ASSIGNEE_DATA   = {{ assignee_data_json | safe }};
 const CREATED_LABELS  = {{ created_labels_json | safe }};
 const CREATED_DATA    = {{ created_data_json | safe }};
 
-Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+Chart.defaults.font.family = "'DM Sans', system-ui, sans-serif";
 Chart.defaults.font.size   = 12;
-Chart.defaults.color       = '#6b7280';
+Chart.defaults.color       = '#888888';
 
 const statusChart = new Chart(document.getElementById('statusChart'), {
   type: 'doughnut',
@@ -172,9 +172,9 @@ const statusChart = new Chart(document.getElementById('statusChart'), {
     labels: STATUS_LABELS,
     datasets: [{
       data: STATUS_DATA,
-      backgroundColor: ['#9ca3af','#6366f1','#f59e0b','#f97316','#10b981'],
+      backgroundColor: ['#3A3A3A','#6366f1','#F59E0B','#FB923C','#22C55E'],
       borderWidth: 2,
-      borderColor: '#fff',
+      borderColor: '#1A1A1A',
     }],
   },
   options: {
@@ -202,15 +202,15 @@ new Chart(document.getElementById('priorityChart'), {
     datasets: [{
       label: 'Задач',
       data: PRIORITY_DATA,
-      backgroundColor: ['#10b981','#f59e0b','#f97316','#ef4444'],
-      borderRadius: 4,
+      backgroundColor: ['#22C55E','#F59E0B','#FB923C','#EF4444'],
+      borderRadius: 6,
     }],
   },
   options: {
     responsive: true,
     maintainAspectRatio: false,
     plugins: { legend: { display: false } },
-    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f3f4f6' } } },
+    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#252525' } } },
   },
 });
 
@@ -222,7 +222,7 @@ new Chart(document.getElementById('assigneeChart'), {
       label: 'Задач',
       data: ASSIGNEE_DATA.length ? ASSIGNEE_DATA : [0],
       backgroundColor: '#6366f1',
-      borderRadius: 4,
+      borderRadius: 6,
     }],
   },
   options: {
@@ -230,7 +230,7 @@ new Chart(document.getElementById('assigneeChart'), {
     responsive: true,
     maintainAspectRatio: false,
     plugins: { legend: { display: false } },
-    scales: { x: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f3f4f6' } } },
+    scales: { x: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#252525' } } },
   },
 });
 
@@ -242,7 +242,7 @@ new Chart(document.getElementById('createdChart'), {
       label: 'Задач создано',
       data: CREATED_DATA,
       borderColor: '#6366f1',
-      backgroundColor: 'rgba(99,102,241,.08)',
+      backgroundColor: 'rgba(99,102,241,.12)',
       fill: true,
       tension: 0.4,
       pointRadius: 3,
@@ -254,7 +254,7 @@ new Chart(document.getElementById('createdChart'), {
     maintainAspectRatio: false,
     plugins: { legend: { display: false } },
     scales: {
-      y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f3f4f6' } },
+      y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#252525' } },
       x: { ticks: { maxTicksLimit: 10 }, grid: { display: false } },
     },
   },
