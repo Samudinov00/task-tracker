@@ -326,10 +326,31 @@
 
   // Mobile hamburger button
   const toggleMob = document.getElementById('sidebarToggleMob');
-  if (toggleMob) {
+  const sidebarEl  = document.getElementById('sidebar');
+  const backdropEl = document.getElementById('sidebarBackdrop');
+  if (toggleMob && sidebarEl) {
     toggleMob.addEventListener('click', function () {
-      document.body.classList.contains('sidebar-open') ? closeSidebar() : openSidebar();
+      const isOpen = sidebarEl.style.transform === 'translateX(0px)';
+      if (isOpen) {
+        sidebarEl.style.transform = '';
+        sidebarEl.style.display   = '';
+        if (backdropEl) backdropEl.style.display = '';
+        document.body.style.overflow = '';
+      } else {
+        sidebarEl.style.transform = 'translateX(0px)';
+        sidebarEl.style.display   = 'flex';
+        if (backdropEl) { backdropEl.style.display = 'block'; }
+        document.body.style.overflow = 'hidden';
+      }
     });
+    if (backdropEl) {
+      backdropEl.addEventListener('click', function () {
+        sidebarEl.style.transform = '';
+        sidebarEl.style.display   = '';
+        backdropEl.style.display  = '';
+        document.body.style.overflow = '';
+      });
+    }
   }
 
   if (closeBtn) {
