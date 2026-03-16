@@ -123,7 +123,7 @@
 
     {# Mobile (<768px): hamburger | title | bell + avatar #}
     <div class="topbar-mobile d-flex d-md-none align-items-center w-100" style="gap:.375rem">
-      <button class="btn-icon flex-shrink-0" id="sidebarToggleMob" aria-label="Меню">
+      <button type="button" class="btn-icon flex-shrink-0" id="sidebarToggleMob" aria-label="Меню">
         <i class="bi bi-list" style="font-size:1.3rem"></i>
       </button>
       <span class="topbar-title flex-grow-1 px-1 text-truncate">{% block page_title %}{% endblock %}</span>
@@ -327,12 +327,9 @@
   // Mobile hamburger button
   const toggleMob = document.getElementById('sidebarToggleMob');
   if (toggleMob) {
-    let thMob = false;
-    toggleMob.addEventListener('touchstart', function (e) {
-      e.preventDefault(); thMob = true; onToggle(e);
-      setTimeout(function () { thMob = false; }, 800);
-    }, { passive: false });
-    toggleMob.addEventListener('click', function (e) { if (!thMob) onToggle(e); });
+    toggleMob.addEventListener('click', function () {
+      document.body.classList.contains('sidebar-open') ? closeSidebar() : openSidebar();
+    });
   }
 
   if (closeBtn) {
