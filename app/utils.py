@@ -1,12 +1,16 @@
 """
 Утилиты: Jinja2 шаблоны, flash-сообщения, CSRF.
 """
+import time
 from typing import List, Optional
 
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
 
 from app.config import TEMPLATES_DIR, STATIC_URL
+
+# Версия статики — обновляется при каждом старте сервера
+_STATIC_VERSION = str(int(time.time()))
 
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
@@ -30,8 +34,8 @@ def get_flashed_messages(request: Request) -> List[dict]:
 # ── Jinja2 глобальные функции ─────────────────────────────────────────────────
 
 def static(path: str) -> str:
-    """Генерирует URL для статического файла."""
-    return f"{STATIC_URL}/{path}"
+    """Генерирует URL для статического файла с cache-busting версией."""
+    return f"{STATIC_URL}/{path}?v={_STATIC_VERSION}"
 
 
 # Добавляем глобальные функции в Jinja2-окружение
