@@ -332,24 +332,28 @@
     toggleMob.addEventListener('click', function () {
       const isOpen = sidebarEl.style.transform === 'translateX(0px)';
       if (isOpen) {
-        sidebarEl.style.transform = '';
-        sidebarEl.style.display   = '';
-        if (backdropEl) backdropEl.style.display = '';
+        sidebarEl.style.removeProperty('display');
+        sidebarEl.style.removeProperty('visibility');
+        sidebarEl.style.removeProperty('transform');
+        sidebarEl.style.removeProperty('pointer-events');
+        if (backdropEl) backdropEl.style.removeProperty('display');
         document.body.style.overflow = '';
       } else {
-        sidebarEl.style.transform = 'translateX(0px)';
-        sidebarEl.style.display   = 'flex';
-        if (backdropEl) { backdropEl.style.display = 'block'; }
+        sidebarEl.style.setProperty('display',     'flex',           'important');
+        sidebarEl.style.setProperty('visibility',  'visible',        'important');
+        sidebarEl.style.setProperty('transform',   'translateX(0)',  'important');
+        sidebarEl.style.setProperty('pointer-events', 'auto',        'important');
+        if (backdropEl) { backdropEl.style.setProperty('display', 'block', 'important'); }
         document.body.style.overflow = 'hidden';
-        var cs = window.getComputedStyle(sidebarEl);
-        alert('display=' + cs.display + '\ntransform=' + cs.transform + '\nvisibility=' + cs.visibility + '\nz-index=' + cs.zIndex + '\nposition=' + cs.position);
       }
     });
     if (backdropEl) {
       backdropEl.addEventListener('click', function () {
-        sidebarEl.style.transform = '';
-        sidebarEl.style.display   = '';
-        backdropEl.style.display  = '';
+        sidebarEl.style.removeProperty('display');
+        sidebarEl.style.removeProperty('visibility');
+        sidebarEl.style.removeProperty('transform');
+        sidebarEl.style.removeProperty('pointer-events');
+        backdropEl.style.removeProperty('display');
         document.body.style.overflow = '';
       });
     }
