@@ -102,7 +102,7 @@
       </div>
       <div class="card-body p-0">
         {% for entry in history %}
-        <div class="px-4 py-3 {% if not loop.last %}border-bottom{% endif %}">
+        <div class="px-4 py-3 {% if not loop.last %}border-bottom{% endif %}{% if loop.index > 5 %} history-extra d-none{% endif %}">
           <div class="d-flex align-items-center gap-2 mb-1">
             {% if entry.changed_by %}
             <div class="avatar-xs avatar-initials" style="width:20px;height:20px;font-size:.42rem">
@@ -126,6 +126,13 @@
           </div>
         </div>
         {% endfor %}
+        {% if history|length > 5 %}
+        <div class="px-4 py-2 border-top text-center">
+          <button type="button" class="btn btn-sm btn-ghost" id="historyShowAll" style="font-size:.775rem">
+            <i class="bi bi-chevron-down me-1"></i>Показать все ({{ history|length }})
+          </button>
+        </div>
+        {% endif %}
       </div>
     </div>
     {% endif %}
@@ -194,17 +201,24 @@
             </a>
           </div>
 
-          <div class="task-meta-item mb-4">
-            <div class="task-meta-label">Создал</div>
-            <span style="font-size:.825rem">{{ task.created_by.get_display_name() }}</span>
-          </div>
+        </div>
 
-          <div class="task-meta-item">
-            <div class="task-meta-label">Обновлено</div>
-            <span class="text-muted" style="font-size:.775rem">
-              {{ task.updated_at.strftime('%d.%m.%Y %H:%M') if task.updated_at else '—' }}
-            </span>
+        {# Разделитель — метаданные #}
+        <div class="border-top pt-3 mt-1">
+          <div class="d-flex justify-content-between align-items-center mb-2" style="font-size:.7rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;font-weight:600">
+            Метаданные
           </div>
+          <div class="d-flex flex-column gap-2">
+            <div class="d-flex justify-content-between align-items-center">
+              <span style="font-size:.75rem;color:var(--text-3)">Создал</span>
+              <span style="font-size:.775rem;color:var(--text-2)">{{ task.created_by.get_display_name() }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+              <span style="font-size:.75rem;color:var(--text-3)">Обновлено</span>
+              <span style="font-size:.775rem;color:var(--text-3)">{{ task.updated_at.strftime('%d.%m.%Y %H:%M') if task.updated_at else '—' }}</span>
+            </div>
+          </div>
+        </div>
 
         </div>
 
@@ -225,6 +239,16 @@
 {% block extra_js %}
 <script>
 (function () {
+  var showAllBtn = document.getElementById('historyShowAll');
+  if (showAllBtn) {
+    showAllBtn.addEventListener('click', function () {
+      document.querySelectorAll('.history-extra').forEach(function (el) {
+        el.classList.remove('d-none');
+      });
+      showAllBtn.closest('.border-top').remove();
+    });
+  }
+
   document.querySelectorAll('textarea.form-control-autogrow').forEach(function (ta) {
     if ('fieldSizing' in ta.style) return;
     function resize() { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 240) + 'px'; }
