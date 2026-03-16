@@ -3,100 +3,229 @@
 {% block title %}Проекты{% endblock %}
 {% block page_title %}Проекты{% endblock %}
 
+{% block extra_css %}
+<style>
+/* ── Мобильный заголовок страницы ── */
+.mobile-page-header {
+  display: none;
+  text-align: center;
+  padding: 1.25rem 1rem .75rem;
+  position: relative;
+}
+.mobile-page-header .mobile-avatar {
+  position: absolute;
+  right: 1rem;
+  top: 1.25rem;
+}
+@media (max-width: 991.98px) {
+  .mobile-page-header { display: block; }
+  .desktop-page-header { display: none; }
+}
+
+/* ── Карточки проектов ── */
+.project-card-body {
+  padding: .875rem .875rem .625rem;
+}
+.project-action-btn {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .95rem;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity .15s, transform .1s;
+  flex-shrink: 0;
+}
+.project-action-btn:active { transform: scale(.93); }
+.project-action-btn.btn-kanban {
+  background: #3b82f6;
+  color: #fff;
+}
+.project-action-btn.btn-list {
+  background: #e2e8f0;
+  color: #475569;
+}
+.project-action-btn.btn-kanban:hover { background: #2563eb; color: #fff; }
+.project-action-btn.btn-list:hover { background: #cbd5e1; color: #334155; }
+
+/* Desktop: показывать текст на кнопках */
+@media (min-width: 992px) {
+  .project-action-btn {
+    width: auto;
+    padding: 0 .75rem;
+    gap: .375rem;
+    font-size: .825rem;
+    font-weight: 500;
+  }
+  .project-action-btn .btn-icon-label { display: inline; }
+}
+@media (max-width: 991.98px) {
+  .project-action-btn .btn-icon-label { display: none; }
+}
+
+/* ── Градиентный прогресс-бар ── */
+.progress-gradient {
+  height: 4px;
+  border-radius: 2px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+.progress-gradient-bar {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #3b82f6, #06b6d4);
+  transition: width .4s ease;
+}
+
+/* ── FAB кнопка ── */
+.fab-add {
+  position: fixed;
+  bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 1rem);
+  right: 1.25rem;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: .75rem 1.25rem;
+  font-size: .875rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  box-shadow: 0 4px 20px rgba(59,130,246,.4);
+  text-decoration: none;
+  z-index: 100;
+  transition: transform .15s, box-shadow .15s;
+}
+.fab-add:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(59,130,246,.5); color: #fff; }
+.fab-add:active { transform: scale(.96); }
+@media (min-width: 992px) { .fab-add { display: none; } }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="page-header">
+
+{# ── Мобильный заголовок (вместо page-header) ── #}
+<div class="mobile-page-header">
+  <h1 style="font-size:1.25rem;font-weight:700;color:var(--text-1);margin:0 0 .2rem">Проекты</h1>
+  <p style="font-size:.825rem;color:var(--text-2);margin:0">
+    {{ projects|length }}
+    {% if projects|length == 1 %}проект
+    {% elif projects|length in [2,3,4] %}проекта
+    {% else %}проектов{% endif %}
+  </p>
+  <div class="mobile-avatar">
+    <a href="{{ url_for('profile') }}">
+      <div class="avatar-xs avatar-initials" style="width:34px;height:34px;font-size:.6rem">
+        {{ user.get_initials() }}
+      </div>
+    </a>
+  </div>
+</div>
+
+{# ── Десктопный заголовок ── #}
+<div class="page-header desktop-page-header">
   <div>
     <h1 class="page-header-title">Проекты</h1>
-    <div class="page-header-sub">{{ projects|length }} {% if projects|length == 1 %}проект{% elif projects|length in [2,3,4] %}проекта{% else %}проектов{% endif %}</div>
+    <div class="page-header-sub">
+      {{ projects|length }}
+      {% if projects|length == 1 %}проект
+      {% elif projects|length in [2,3,4] %}проекта
+      {% else %}проектов{% endif %}
+    </div>
   </div>
   {% if user.is_manager() %}
   <a href="{{ url_for('project_create') }}" class="btn btn-primary btn-sm">
-    <i class="bi bi-plus-lg"></i>
-    <span class="d-none d-sm-inline">Новый проект</span>
+    <i class="bi bi-plus-lg"></i> Новый проект
   </a>
   {% endif %}
 </div>
 
-<div class="row g-3">
+{# ── Список проектов ── #}
+<div class="row g-2 g-md-3">
   {% for project in projects %}
-  <div class="col-12 col-md-6 col-xl-4">
-    <div class="card project-card h-100">
-      <div class="card-body p-4 position-relative">
+  <div class="col-6 col-md-6 col-xl-4">
+    <div class="card project-card h-100" style="border-radius:14px;border:1px solid #e8edf3;box-shadow:0 2px 8px rgba(0,0,0,.06)">
 
-        {# Three-dot menu #}
-        {% if user.is_manager() %}
-        <div class="dropdown position-absolute" style="top:.875rem;right:.875rem">
-          <button class="btn-icon" data-bs-toggle="dropdown" aria-expanded="false"
-                  style="width:32px;height:32px;border-radius:var(--r-sm)">
-            <i class="bi bi-three-dots-vertical" style="font-size:.85rem"></i>
-          </button>
-          <ul class="dropdown-menu dropdown-menu-end">
-            <li>
-              <a class="dropdown-item" href="{{ url_for('project_edit', uuid=project.uuid) }}">
-                <i class="bi bi-pencil me-2"></i>Редактировать
-              </a>
-            </li>
-            <li>
-              <a class="dropdown-item text-danger" href="{{ url_for('project_delete', uuid=project.uuid) }}">
-                <i class="bi bi-trash me-2"></i>Удалить
-              </a>
-            </li>
-          </ul>
-        </div>
-        {% endif %}
+      <div class="project-card-body">
 
-        {# Title & description #}
-        <div class="mb-3" style="padding-right:2rem">
-          <h5 class="fw-bold mb-1" style="font-size:.95rem;letter-spacing:-.01em">{{ project.name }}</h5>
-          {% if project.description %}
-          <div style="font-size:.775rem;color:var(--text-muted);line-height:1.5">
-            {{ project.description[:100] }}{% if project.description|length > 100 %}…{% endif %}
+        {# Заголовок + меню #}
+        <div class="d-flex align-items-start justify-content-between mb-2" style="gap:.5rem">
+          <h5 style="font-size:.875rem;font-weight:700;color:var(--text-1);margin:0;line-height:1.35;word-break:break-word">
+            {{ project.name }}
+          </h5>
+          {% if user.is_manager() %}
+          <div class="dropdown flex-shrink-0">
+            <button class="btn-icon" data-bs-toggle="dropdown"
+                    style="width:28px;height:28px;border-radius:7px;color:var(--text-2)">
+              <i class="bi bi-three-dots-vertical" style="font-size:.8rem"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li>
+                <a class="dropdown-item" href="{{ url_for('project_edit', uuid=project.uuid) }}">
+                  <i class="bi bi-pencil me-2"></i>Редактировать
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item text-danger" href="{{ url_for('project_delete', uuid=project.uuid) }}">
+                  <i class="bi bi-trash me-2"></i>Удалить
+                </a>
+              </li>
+            </ul>
           </div>
           {% endif %}
         </div>
 
-        {# Action buttons #}
-        <div class="d-flex gap-2 mb-4">
+        {# Кнопки действий #}
+        <div class="d-flex gap-1 mb-3">
           <a href="{{ url_for('kanban', project_uuid=project.uuid) }}"
-             class="btn btn-sm btn-primary">
-            <i class="bi bi-kanban me-1"></i>
-            <span class="d-none d-sm-inline">Канбан</span>
+             class="project-action-btn btn-kanban" title="Канбан">
+            <i class="bi bi-kanban"></i>
+            <span class="btn-icon-label">Канбан</span>
           </a>
           <a href="{{ url_for('project_detail', uuid=project.uuid) }}"
-             class="btn btn-sm btn-secondary">
-            <i class="bi bi-list-task me-1"></i>
-            <span class="d-none d-sm-inline">Список</span>
+             class="project-action-btn btn-list" title="Список">
+            <i class="bi bi-list-task"></i>
+            <span class="btn-icon-label">Список</span>
           </a>
         </div>
 
-        {# Progress #}
+        {# Прогресс #}
         <div class="d-flex align-items-center gap-2">
-          <div class="progress flex-grow-1" style="height:3px;border-radius:2px">
-            <div class="progress-bar bg-success" style="width:{{ project.get_progress() }}%"></div>
+          <div class="progress-gradient flex-grow-1">
+            <div class="progress-gradient-bar" style="width:{{ project.get_progress() }}%"></div>
           </div>
-          <span style="font-size:.65rem;color:var(--text-subtle);min-width:2rem;text-align:right;font-variant-numeric:tabular-nums">
+          <span style="font-size:.68rem;color:var(--text-2);min-width:2rem;text-align:right;font-weight:600">
             {{ project.get_progress() }}%
           </span>
         </div>
 
       </div>
-      <div class="card-footer d-flex gap-3 align-items-center">
-        <div class="avatar-xs avatar-initials" style="font-size:.5rem;flex-shrink:0">
+
+      {# Футер #}
+      <div style="padding:.625rem .875rem;border-top:1px solid #f1f5f9;display:flex;align-items:center;gap:.5rem">
+        <div class="avatar-xs avatar-initials" style="width:24px;height:24px;font-size:.45rem;flex-shrink:0">
           {{ project.manager.get_initials() }}
         </div>
-        <span style="font-size:.75rem;color:var(--text-muted)">{{ project.manager.get_display_name() }}</span>
-        <span class="ms-auto" style="font-size:.72rem;color:var(--text-subtle)">
+        <span style="font-size:.72rem;color:var(--text-2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          {{ project.manager.get_display_name() }}
+        </span>
+        <span style="font-size:.68rem;color:var(--text-3);white-space:nowrap;flex-shrink:0">
           {{ project.created_at.strftime('%d.%m.%Y') if project.created_at else '—' }}
         </span>
       </div>
+
     </div>
   </div>
   {% else %}
   <div class="col-12">
     <div class="card">
       <div class="card-body text-center py-5">
-        <i class="bi bi-folder2 text-muted mb-3 d-block" style="font-size:3rem;opacity:.4"></i>
-        <h5 class="text-muted mb-1" style="font-weight:600">
+        <i class="bi bi-folder2 d-block mb-3" style="font-size:3rem;color:var(--text-3)"></i>
+        <h5 style="font-weight:600;color:var(--text-2)">
           {% if user.is_manager() %}Создайте первый проект{% else %}Вы не добавлены ни в один проект{% endif %}
         </h5>
         {% if user.is_manager() %}
@@ -109,4 +238,12 @@
   </div>
   {% endfor %}
 </div>
+
+{# ── FAB кнопка (только мобильная) ── #}
+{% if user.is_manager() %}
+<a href="{{ url_for('project_create') }}" class="fab-add">
+  <i class="bi bi-plus-lg"></i> Add Project
+</a>
+{% endif %}
+
 {% endblock %}
