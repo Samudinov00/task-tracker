@@ -4,71 +4,8 @@
 
 {% block extra_css %}
 <style>
-  html, body { background: #0a0e1a; }
-
-  .login-page {
-    min-height: 100vh;
-    min-height: 100dvh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1.5rem;
-    position: relative;
-    overflow: hidden;
-    background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(99,102,241,.25) 0%, transparent 60%),
-                radial-gradient(ellipse 60% 40% at 80% 80%, rgba(14,165,233,.12) 0%, transparent 60%),
-                #0a0e1a;
-  }
-
-  /* Subtle grid pattern overlay */
-  .login-page::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
-    background-size: 48px 48px;
-    pointer-events: none;
-  }
-
-  .login-card {
-    position: relative;
-    z-index: 1;
-    width: 100%;
-    max-width: 420px;
-    background: rgba(16,20,32,.85);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255,255,255,.08);
-    border-radius: 24px;
-    padding: 2.5rem 2rem;
-    box-shadow: 0 32px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04) inset;
-  }
-
-  .login-logo {
-    width: 56px; height: 56px;
-    border-radius: 16px;
-    background: linear-gradient(135deg, #6366f1, #4f46e5);
-    color: #fff;
-    font-size: 1.6rem;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 8px 24px rgba(99,102,241,.4);
-  }
-
-  .qr-wrapper {
-    background: #fff;
-    border-radius: 16px;
-    padding: 12px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 20px rgba(0,0,0,.4);
-  }
-  .qr-wrapper img {
-    display: block;
-    border-radius: 8px;
-  }
+  /* Login-specific overrides — light theme */
+  html, body { background: var(--bg-base) !important; }
 
   .code-input {
     letter-spacing: .5em;
@@ -77,49 +14,76 @@
     font-variant-numeric: tabular-nums;
     font-family: var(--font-mono, monospace);
     text-align: center;
-    background: rgba(255,255,255,.05) !important;
-    border: 1px solid rgba(255,255,255,.12) !important;
-    color: #fff !important;
-    border-radius: 12px !important;
+    background: var(--bg-elevated) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-1) !important;
+    border-radius: var(--radius-md) !important;
     min-height: 56px !important;
   }
   .code-input:focus {
-    background: rgba(255,255,255,.08) !important;
-    border-color: rgba(99,102,241,.6) !important;
-    box-shadow: 0 0 0 3px rgba(99,102,241,.2) !important;
+    background: var(--bg-elevated) !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px var(--accent-ring) !important;
   }
-  .code-input::placeholder { letter-spacing: .5em; color: rgba(255,255,255,.2) !important; }
+  .code-input::placeholder {
+    letter-spacing: .5em;
+    color: var(--text-3) !important;
+  }
 
   .btn-enter {
     min-height: 48px;
     font-size: .9rem;
     font-weight: 600;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #6366f1, #4f46e5);
-    border: none;
+    border-radius: var(--radius-md);
+    background: var(--accent);
+    border: 1px solid var(--accent);
     color: #fff;
-    box-shadow: 0 4px 16px rgba(99,102,241,.35);
-    transition: opacity .15s, transform .12s;
+    transition: background var(--ease), box-shadow var(--ease), transform .12s ease;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-  .btn-enter:hover { opacity: .92; transform: translateY(-1px); color: #fff; }
-  .btn-enter:active { transform: scale(.97); }
+  .btn-enter:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+    color: #fff;
+    box-shadow: 0 4px 16px var(--accent-ring);
+    transform: translateY(-1px);
+  }
+  .btn-enter:active { transform: scale(.97); color: #fff; }
 
   .divider-text {
     display: flex; align-items: center; gap: .75rem;
-    margin: 1.5rem 0;
+    margin: 1.25rem 0;
   }
   .divider-text::before,
   .divider-text::after {
     content: '';
     flex: 1; height: 1px;
-    background: rgba(255,255,255,.08);
+    background: var(--border);
   }
   .divider-text span {
     font-size: .7rem;
-    color: rgba(255,255,255,.25);
+    color: var(--text-3);
     text-transform: uppercase;
     letter-spacing: .08em;
     white-space: nowrap;
+  }
+
+  .qr-wrapper {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-sm);
+  }
+  .qr-wrapper img {
+    display: block;
+    border-radius: var(--radius-sm);
   }
 </style>
 {% endblock %}
@@ -133,21 +97,21 @@
       <div class="login-logo mx-auto mb-3">
         <i class="bi bi-kanban-fill"></i>
       </div>
-      <h1 style="font-size:1.35rem;font-weight:700;color:#fff;margin:0 0 .3rem;letter-spacing:-.02em">
+      <h1 style="font-size:1.35rem;font-weight:700;color:var(--text-1);margin:0 0 .3rem;letter-spacing:-.02em">
         TaskManager
       </h1>
-      <p style="font-size:.875rem;color:rgba(255,255,255,.45);margin:0">Войдите в свой аккаунт</p>
+      <p style="font-size:.875rem;color:var(--text-2);margin:0">Войдите в свой аккаунт</p>
     </div>
 
     {# Alerts #}
     {% if reason == 'timeout' %}
-    <div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:#fbbf24;border-radius:10px;padding:.75rem 1rem;font-size:.825rem;margin-bottom:1.25rem">
-      <i class="bi bi-clock me-2"></i>Сессия истекла. Войдите снова.
+    <div class="alert alert-warning d-flex align-items-center gap-2 py-2 px-3 mb-3" style="font-size:.825rem">
+      <i class="bi bi-clock"></i> Сессия истекла. Войдите снова.
     </div>
     {% endif %}
     {% if error %}
-    <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#f87171;border-radius:10px;padding:.75rem 1rem;font-size:.825rem;margin-bottom:1.25rem">
-      <i class="bi bi-exclamation-circle me-2"></i>{{ error }}
+    <div class="alert alert-danger d-flex align-items-center gap-2 py-2 px-3 mb-3" style="font-size:.825rem">
+      <i class="bi bi-exclamation-circle"></i> {{ error }}
     </div>
     {% endif %}
 
@@ -155,11 +119,11 @@
 
     {# QR code + instruction #}
     <div class="text-center mb-4">
-      <p style="font-size:.875rem;color:rgba(255,255,255,.6);margin:0 0 1.25rem;line-height:1.6">
+      <p style="font-size:.875rem;color:var(--text-2);margin:0 0 1.25rem;line-height:1.6">
         Для входа через Telegram используйте код. Найдите и напишите
         нашему боту
         <a href="https://t.me/{{ telegram_bot_username }}" target="_blank" rel="noopener"
-           style="color:#818cf8;font-weight:600;text-decoration:none">
+           style="color:var(--accent);font-weight:600;text-decoration:none">
           @{{ telegram_bot_username }}
         </a>. Бот пришлёт вам 6-значный код.
       </p>
@@ -169,7 +133,7 @@
              width="180" height="180"
              alt="QR-код для открытия бота в Telegram">
       </div>
-      <p style="font-size:.75rem;color:rgba(255,255,255,.3);margin:0">
+      <p style="font-size:.75rem;color:var(--text-3);margin:0">
         Сканируйте, чтобы открыть бота
       </p>
     </div>
@@ -203,10 +167,7 @@
 
     <form method="post" novalidate>
       <div class="mb-3">
-        <label class="form-label" for="id_username"
-               style="font-size:.72rem;font-weight:600;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.06em">
-          Логин
-        </label>
+        <label class="form-label" for="id_username">Логин</label>
         <input type="text" name="username" id="id_username"
                class="form-control"
                placeholder="Введите логин"
@@ -214,10 +175,7 @@
                autocomplete="username">
       </div>
       <div class="mb-4">
-        <label class="form-label" for="id_password"
-               style="font-size:.72rem;font-weight:600;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.06em">
-          Пароль
-        </label>
+        <label class="form-label" for="id_password">Пароль</label>
         <input type="password" name="password" id="id_password"
                class="form-control"
                placeholder="Введите пароль"
