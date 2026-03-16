@@ -330,6 +330,7 @@
   const backdropEl = document.getElementById('sidebarBackdrop');
   if (toggleMob && sidebarEl) {
     toggleMob.addEventListener('click', function () {
+      alert('клик работает. sidebar найден: ' + !!sidebarEl + ', transform сейчас: "' + sidebarEl.style.transform + '"');
       const isOpen = sidebarEl.style.transform === 'translateX(0px)';
       if (isOpen) {
         sidebarEl.style.transform = '';
