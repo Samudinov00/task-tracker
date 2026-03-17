@@ -51,11 +51,11 @@ fi
 
 # 3. Тянем новые образы из реестра
 log "Pulling Docker images..."
-${COMPOSE} pull web
+${COMPOSE} pull web celery
 
 # 4. Убеждаемся, что БД запущена и здорова
 log "Ensuring database is running..."
-${COMPOSE} up -d db
+${COMPOSE} up -d db redis
 log "Waiting for database to be healthy..."
 timeout 60 bash -c "until ${COMPOSE} ps db | grep -q 'healthy'; do sleep 2; done" \
     || die "База данных не стала healthy за 60 секунд."
@@ -65,6 +65,11 @@ timeout 60 bash -c "until ${COMPOSE} ps db | grep -q 'healthy'; do sleep 2; done
 # --wait       — ждать healthy-статуса нового контейнера
 log "Deploying new web container..."
 ${COMPOSE} up -d --no-deps --wait web
+
+# 5а. Перезапускаем celery с новым образом
+# celery использует тот же образ, что и web — обновляем вместе
+log "Restarting celery worker..."
+${COMPOSE} up -d --no-deps celery
 
 # 6. Перезагружаем nginx (применяем изменения конфига без downtime)
 log "Reloading nginx..."
@@ -83,3 +88,6 @@ ${COMPOSE} ps
 echo ""
 echo "Последние логи приложения:"
 ${COMPOSE} logs --tail=20 web
+echo ""
+echo "Последние логи celery:"
+${COMPOSE} logs --tail=10 celery
