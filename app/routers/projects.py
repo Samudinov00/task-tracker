@@ -115,8 +115,87 @@ def _create_default_statuses(db: Session, project: Project) -> None:
 # ── Проекты ──────────────────────────────────────────────────────────────────
 
 @router.get("/", response_class=HTMLResponse, name="home")
-async def home(request: Request):
-    return RedirectResponse(url="/p/", status_code=302)
+async def home(request: Request, db: Session = Depends(get_db)):
+    user = require_auth(request, db)
+
+    if user.is_manager():
+        projects = (
+            db.query(Project)
+            .filter(Project.manager_id == user.id)
+            .options(selectinload(Project.tasks).joinedload(Task.status_obj), selectinload(Project.statuses))
+            .order_by(Project.created_at.desc())
+            .all()
+        )
+    elif user.is_client():
+        projects = (
+            db.query(Project)
+            .filter(Project.clients.any(User.id == user.id))
+            .options(selectinload(Project.tasks).joinedload(Task.status_obj), selectinload(Project.statuses))
+            .all()
+        )
+    else:
+        projects = (
+            db.query(Project)
+            .filter(
+                or_(
+                    Project.executors.any(User.id == user.id),
+                    Project.tasks.any(Task.assignee_id == user.id),
+                )
+            )
+            .distinct()
+            .options(selectinload(Project.tasks).joinedload(Task.status_obj), selectinload(Project.statuses))
+            .all()
+        )
+
+    all_project_ids = [p.id for p in projects]
+    today = date.today()
+
+    # Recent tasks (last 8, assigned to user or in manager's projects)
+    recent_qs = (
+        db.query(Task)
+        .filter(Task.project_id.in_(all_project_ids))
+        .options(joinedload(Task.project), joinedload(Task.status_obj))
+        .order_by(Task.updated_at.desc())
+    )
+    if user.is_executor():
+        recent_qs = recent_qs.filter(Task.assignee_id == user.id)
+    recent_tasks = recent_qs.limit(8).all()
+
+    # Aggregate stats
+    all_tasks_flat = [t for p in projects for t in p.tasks]
+    total_projects = len(projects)
+    total_tasks = len(all_tasks_flat)
+    production_count = sum(1 for t in all_tasks_flat if t.status_obj and t.status_obj.is_final)
+    overdue_count = sum(
+        1 for t in all_tasks_flat
+        if t.deadline and t.deadline < today and not (t.status_obj and t.status_obj.is_final)
+    )
+
+    # Status summary — aggregate across all projects
+    status_map: dict = {}
+    for p in projects:
+        for s in p.statuses:
+            key = s.name
+            if key not in status_map:
+                status_map[key] = {"label": s.name, "badge": s.color, "count": 0}
+            status_map[key]["count"] += sum(1 for t in p.tasks if t.status_id == s.id)
+    statuses = [v for v in status_map.values() if v["count"] > 0]
+
+    unread_count = get_unread_count(db, user.id)
+    return templates.TemplateResponse(
+        "projects/dashboard.html",
+        {
+            "request": request, "user": user,
+            "total_projects": total_projects,
+            "total_tasks": total_tasks,
+            "production_count": production_count,
+            "overdue_count": overdue_count,
+            "statuses": statuses,
+            "recent_tasks": recent_tasks,
+            "projects": projects,
+            "unread_notifications_count": unread_count,
+        },
+    )
 
 
 @router.get("/p/", response_class=HTMLResponse, name="project_list")
@@ -567,7 +646,7 @@ async def kanban_state_api(request: Request, project_uuid: uuid_lib.UUID, db: Se
     _check_project_access(user, project, db)
 
     qs = db.query(Task).filter(Task.project_id == project.id).options(
-        joinedload(Task.assignee), joinedload(Task.status_obj)
+        joinedload(Task.assignee), joinedload(Task.status_obj), selectinload(Task.comments)
     )
     if user.is_executor():
         qs = qs.filter(Task.assignee_id == user.id)
@@ -1038,6 +1117,22 @@ async def bulk_task_update(request: Request, db: Session = Depends(get_db)):
             ))
             _notify(db, [new_assignee.id], task.id, TYPE_TASK_ASSIGNED, f"Вам назначена задача «{task.title}»")
             updated += 1
+
+    elif action == "change_priority":
+        valid_priorities = [c[0] for c in PRIORITY_CHOICES]
+        if value not in valid_priorities:
+            flash(request, "Неверный приоритет.", "danger")
+            return RedirectResponse(url=referer, status_code=302)
+        priority_label = dict(PRIORITY_CHOICES).get(value, value)
+        for task in tasks:
+            if task.priority != value:
+                old_label = dict(PRIORITY_CHOICES).get(task.priority, task.priority)
+                task.priority = value
+                db.add(TaskChangeLog(
+                    task_id=task.id, changed_by_id=user.id,
+                    field_name="Приоритет", old_value=old_label, new_value=priority_label,
+                ))
+                updated += 1
 
     db.commit()
     if updated:
