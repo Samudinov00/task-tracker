@@ -4,6 +4,7 @@
 import csv
 import io
 import json
+import time
 import uuid as uuid_lib
 from datetime import date, timedelta
 
@@ -18,6 +19,10 @@ from app.models.user import User
 from app.utils import templates
 
 router = APIRouter()
+
+# Простой TTL-кэш: {cache_key: (timestamp, ctx_dict)}
+_analytics_cache: dict = {}
+_CACHE_TTL = 300  # 5 минут
 
 
 def _get_export_tasks(db: Session, user: User):
@@ -48,47 +53,51 @@ async def analytics(request: Request, db: Session = Depends(get_db)):
         except Exception:
             pass
 
-    tasks_q = db.query(Task).join(Project).filter(Project.manager_id == user.id)
-    if selected_project:
-        tasks_q = tasks_q.filter(Task.project_id == selected_project.id)
+    cache_key = (user.id, selected_project.id if selected_project else None)
+    cached = _analytics_cache.get(cache_key)
+    now = time.monotonic()
 
-    all_tasks = tasks_q.options(joinedload(Task.assignee), joinedload(Task.status_obj)).all()
+    if cached and (now - cached[0]) < _CACHE_TTL:
+        ctx = cached[1]
+    else:
+        tasks_q = db.query(Task).join(Project).filter(Project.manager_id == user.id)
+        if selected_project:
+            tasks_q = tasks_q.filter(Task.project_id == selected_project.id)
 
-    status_labels = ["В работе", "Завершено"]
-    status_data = [
-        sum(1 for t in all_tasks if not (t.status_obj and t.status_obj.is_final)),
-        sum(1 for t in all_tasks if t.status_obj and t.status_obj.is_final),
-    ]
+        all_tasks = tasks_q.options(joinedload(Task.assignee), joinedload(Task.status_obj)).all()
 
-    priority_labels = [label for _, label in PRIORITY_CHOICES]
-    priority_data = [sum(1 for t in all_tasks if t.priority == key) for key, _ in PRIORITY_CHOICES]
+        status_labels = ["В работе", "Завершено"]
+        status_data = [
+            sum(1 for t in all_tasks if not (t.status_obj and t.status_obj.is_final)),
+            sum(1 for t in all_tasks if t.status_obj and t.status_obj.is_final),
+        ]
 
-    # Нагрузка по исполнителям (топ-10)
-    assignee_counts: dict = {}
-    for t in all_tasks:
-        if t.assignee:
-            name = t.assignee.get_display_name()
-            assignee_counts[name] = assignee_counts.get(name, 0) + 1
-    sorted_assignees = sorted(assignee_counts.items(), key=lambda x: -x[1])[:10]
-    assignee_labels = [a[0] for a in sorted_assignees]
-    assignee_data = [a[1] for a in sorted_assignees]
+        priority_labels = [label for _, label in PRIORITY_CHOICES]
+        priority_data = [sum(1 for t in all_tasks if t.priority == key) for key, _ in PRIORITY_CHOICES]
 
-    today = date.today()
-    dates = [today - timedelta(days=i) for i in range(29, -1, -1)]
-    created_labels = [d.strftime("%d.%m") for d in dates]
-    created_data = [sum(1 for t in all_tasks if t.created_at and t.created_at.date() == d) for d in dates]
+        assignee_counts: dict = {}
+        for t in all_tasks:
+            if t.assignee:
+                name = t.assignee.get_display_name()
+                assignee_counts[name] = assignee_counts.get(name, 0) + 1
+        sorted_assignees = sorted(assignee_counts.items(), key=lambda x: -x[1])[:10]
+        assignee_labels = [a[0] for a in sorted_assignees]
+        assignee_data = [a[1] for a in sorted_assignees]
 
-    total_tasks = len(all_tasks)
-    total_projects = len(projects)
-    production_count = sum(1 for t in all_tasks if t.status_obj and t.status_obj.is_final)
-    overdue_count = sum(1 for t in all_tasks if t.deadline and t.deadline < today and not (t.status_obj and t.status_obj.is_final))
+        today = date.today()
+        dates = [today - timedelta(days=i) for i in range(29, -1, -1)]
+        created_labels = [d.strftime("%d.%m") for d in dates]
+        created_data = [sum(1 for t in all_tasks if t.created_at and t.created_at.date() == d) for d in dates]
 
-    unread_count = get_unread_count(db, user.id)
-    return templates.TemplateResponse(
-        "projects/analytics.html",
-        {
-            "request": request, "user": user,
-            "projects": projects, "selected_project": selected_project,
+        total_tasks = len(all_tasks)
+        total_projects = len(projects)
+        production_count = sum(1 for t in all_tasks if t.status_obj and t.status_obj.is_final)
+        overdue_count = sum(
+            1 for t in all_tasks
+            if t.deadline and t.deadline < today and not (t.status_obj and t.status_obj.is_final)
+        )
+
+        ctx = {
             "total_tasks": total_tasks, "total_projects": total_projects,
             "production_count": production_count, "overdue_count": overdue_count,
             "status_labels_json": json.dumps(status_labels, ensure_ascii=False),
@@ -99,6 +108,16 @@ async def analytics(request: Request, db: Session = Depends(get_db)):
             "assignee_data_json": json.dumps(assignee_data),
             "created_labels_json": json.dumps(created_labels, ensure_ascii=False),
             "created_data_json": json.dumps(created_data),
+        }
+        _analytics_cache[cache_key] = (now, ctx)
+
+    unread_count = get_unread_count(db, user.id)
+    return templates.TemplateResponse(
+        "projects/analytics.html",
+        {
+            "request": request, "user": user,
+            "projects": projects, "selected_project": selected_project,
+            **ctx,
             "unread_notifications_count": unread_count,
         },
     )

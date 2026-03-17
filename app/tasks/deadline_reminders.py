@@ -14,6 +14,7 @@ try:
         from app.models.project import Task
         from app.models.user import User
         from app import telegram
+        from sqlalchemy.orm import joinedload
 
         db = SessionLocal()
         try:
@@ -23,6 +24,11 @@ try:
             tasks = (
                 db.query(Task)
                 .filter(Task.deadline.in_([today, tomorrow]))
+                .options(
+                    joinedload(Task.assignee),
+                    joinedload(Task.project),
+                    joinedload(Task.status_obj),
+                )
                 .all()
             )
 
@@ -33,7 +39,7 @@ try:
                 if not task.assignee_id:
                     continue
 
-                assignee = db.query(User).filter(User.id == task.assignee_id).first()
+                assignee = task.assignee
                 if not assignee or not assignee.telegram_id:
                     continue
 

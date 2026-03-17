@@ -245,6 +245,13 @@
       {% endfor %}
     </select>
 
+    <select class="form-select form-select-sm" id="bulkPrioritySelect" style="width:auto">
+      <option value="">Сменить приоритет…</option>
+      {% for pkey, plabel in priority_choices %}
+      <option value="{{ pkey }}">{{ plabel }}</option>
+      {% endfor %}
+    </select>
+
     <button type="button" class="btn btn-primary btn-sm" id="bulkApplyBtn">Применить</button>
     <button type="button" class="btn btn-sm" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:#fff" id="bulkCancelBtn">Отмена</button>
   </form>
@@ -287,9 +294,10 @@ const bulkToggleBtn  = document.getElementById('bulkToggleBtn');
 const bulkPanel      = document.getElementById('bulkPanel');
 const bulkCount      = document.getElementById('bulkCount');
 const bulkUuidCont   = document.getElementById('bulkUuidContainer');
-const bulkStatusSel  = document.getElementById('bulkStatusSelect');
-const bulkAssigneeSel= document.getElementById('bulkAssigneeSelect');
-const bulkApplyBtn   = document.getElementById('bulkApplyBtn');
+const bulkStatusSel   = document.getElementById('bulkStatusSelect');
+const bulkAssigneeSel = document.getElementById('bulkAssigneeSelect');
+const bulkPrioritySel = document.getElementById('bulkPrioritySelect');
+const bulkApplyBtn    = document.getElementById('bulkApplyBtn');
 const bulkCancelBtn  = document.getElementById('bulkCancelBtn');
 const bulkActionInp  = document.getElementById('bulkAction');
 const bulkValueInp   = document.getElementById('bulkValue');
@@ -335,6 +343,8 @@ bulkApplyBtn.addEventListener('click', () => {
     action = 'change_status'; value = bulkStatusSel.value;
   } else if (bulkAssigneeSel.value) {
     action = 'change_assignee'; value = bulkAssigneeSel.value;
+  } else if (bulkPrioritySel.value) {
+    action = 'change_priority'; value = bulkPrioritySel.value;
   } else { alert('Выберите действие.'); return; }
   bulkActionInp.value = action;
   bulkValueInp.value  = value;
